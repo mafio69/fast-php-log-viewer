@@ -162,7 +162,7 @@ if (isset($_GET['action'])) {
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
 
-<div id="app" v-cloak>
+<div id="app" v-cloak :style="{ fontSize: fontSize + 'px' }">
     <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <span class="text-xl font-bold tracking-tight">⚡ fast-php-log-viewer</span>
         <div class="flex items-center gap-2 flex-wrap">
@@ -182,6 +182,13 @@ if (isset($_GET['action'])) {
                 class="text-sm border border-gray-300 rounded px-3 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-blue-500">
             <button @click="loadEntries" title="Refresh"
                 class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition">↺</button>
+            <div class="flex items-center gap-1 border border-gray-300 rounded overflow-hidden">
+                <button @click="fontSize = Math.max(10, fontSize - 1)" title="Smaller"
+                    class="px-2 py-1.5 text-xs bg-white hover:bg-gray-100 transition">A−</button>
+                <span class="px-2 text-xs text-gray-500 select-none">{{ fontSize }}px</span>
+                <button @click="fontSize = Math.min(24, fontSize + 1)" title="Larger"
+                    class="px-2 py-1.5 text-xs bg-white hover:bg-gray-100 transition">A+</button>
+            </div>
         </div>
     </header>
 
@@ -236,7 +243,7 @@ if (isset($_GET['action'])) {
 </div>
 
 <script>
-const { createApp, ref, computed, reactive } = Vue;
+const { createApp, ref, computed, reactive, watch } = Vue;
 
 const LEVEL_STYLES = {
     DEBUG:     'background:#f3f4f6;color:#4b5563',
@@ -260,6 +267,8 @@ createApp({
         const loading      = ref(false);
         const expanded     = reactive(new Set());
         const levels       = Object.keys(LEVEL_STYLES);
+        const fontSize     = ref(parseInt(localStorage.getItem('fplv_fontsize') || '14'));
+        watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
         const levelCounts = computed(() => {
             const c = {};
@@ -318,7 +327,7 @@ createApp({
 
         return { files, entries, filtered, selectedFile, filterLevel, filterText,
                  loading, expanded, levels, levelCounts,
-                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext };
+                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize };
     }
 }).mount('#app');
 </script>
