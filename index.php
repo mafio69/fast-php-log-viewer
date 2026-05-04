@@ -23,14 +23,14 @@ if (isset($_GET['action'])) {
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
         [v-cloak] { display: none; }
-        .level-DEBUG    { @apply bg-gray-100 text-gray-600; }
-        .level-INFO     { @apply bg-blue-100 text-blue-700; }
-        .level-NOTICE   { @apply bg-cyan-100 text-cyan-700; }
-        .level-WARNING  { @apply bg-yellow-100 text-yellow-700; }
-        .level-ERROR    { @apply bg-red-100 text-red-700; }
-        .level-CRITICAL { @apply bg-red-200 text-red-800; }
-        .level-ALERT    { @apply bg-orange-200 text-orange-800; }
-        .level-EMERGENCY{ @apply bg-purple-200 text-purple-800; }
+        .level-DEBUG     { background:#f3f4f6; color:#4b5563; }
+        .level-INFO      { background:#dbeafe; color:#1d4ed8; }
+        .level-NOTICE    { background:#cffafe; color:#0e7490; }
+        .level-WARNING   { background:#fef9c3; color:#a16207; }
+        .level-ERROR     { background:#fee2e2; color:#b91c1c; }
+        .level-CRITICAL  { background:#fecaca; color:#991b1b; }
+        .level-ALERT     { background:#fed7aa; color:#c2410c; }
+        .level-EMERGENCY { background:#e9d5ff; color:#7e22ce; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
@@ -72,7 +72,7 @@ if (isset($_GET['action'])) {
     <div v-if="entries.length" class="bg-white border-b border-gray-100 px-6 py-2 flex gap-4 text-xs text-gray-500">
         <span>{{ filtered.length }} / {{ entries.length }} entries</span>
         <span v-for="(count, level) in levelCounts" :key="level"
-            class="px-2 py-0.5 rounded font-medium" :class="'level-' + level">
+            class="px-2 py-0.5 rounded font-medium" :style="levelStyle(level)">
             {{ level }}: {{ count }}
         </span>
     </div>
@@ -85,7 +85,7 @@ if (isset($_GET['action'])) {
     <!-- Table -->
     <div v-else class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
-            <thead class="bg-white border-b border-gray-200 sticky top-0">
+            <thead class="bg-white border-b border-gray-200 sticky top-0 z-10">
                 <tr>
                     <th class="text-left px-4 py-2 font-medium text-gray-500 w-40">Datetime</th>
                     <th class="text-left px-4 py-2 font-medium text-gray-500 w-24">Level</th>
@@ -100,17 +100,17 @@ if (isset($_GET['action'])) {
                         @click="toggle(i)">
                         <td class="px-4 py-2 font-mono text-xs text-gray-500 whitespace-nowrap">{{ entry.datetime }}</td>
                         <td class="px-4 py-2">
-                            <span class="px-2 py-0.5 rounded text-xs font-semibold" :class="'level-' + entry.level">
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold" :style="levelStyle(entry.level)">
                                 {{ entry.level }}
                             </span>
                         </td>
                         <td class="px-4 py-2 font-mono text-xs text-gray-400 whitespace-nowrap">{{ entry.location }}</td>
                         <td class="px-4 py-2">{{ entry.message }}</td>
                         <td class="px-4 py-2 text-gray-300 text-xs">
-                            <span v-if="entry.context && Object.keys(entry.context).length">{{ expanded.has(i) ? '▲' : '▼' }}</span>
+                            <span v-if="hasContext(entry)">{{ expanded.has(i) ? '▲' : '▼' }}</span>
                         </td>
                     </tr>
-                    <tr v-if="expanded.has(i) && entry.context && Object.keys(entry.context).length"
+                    <tr v-if="expanded.has(i) && hasContext(entry)"
                         class="bg-gray-50 border-b border-gray-100">
                         <td colspan="5" class="px-4 py-2">
                             <pre class="text-xs font-mono text-gray-600 whitespace-pre-wrap">{{ JSON.stringify(entry.context, null, 2) }}</pre>
@@ -125,6 +125,17 @@ if (isset($_GET['action'])) {
 <script>
 const { createApp, ref, computed, reactive, watch } = Vue;
 
+const LEVEL_STYLES = {
+    DEBUG:     'background:#f3f4f6;color:#4b5563',
+    INFO:      'background:#dbeafe;color:#1d4ed8',
+    NOTICE:    'background:#cffafe;color:#0e7490',
+    WARNING:   'background:#fef9c3;color:#a16207',
+    ERROR:     'background:#fee2e2;color:#b91c1c',
+    CRITICAL:  'background:#fecaca;color:#991b1b',
+    ALERT:     'background:#fed7aa;color:#c2410c',
+    EMERGENCY: 'background:#e9d5ff;color:#7e22ce',
+};
+
 createApp({
     setup() {
         const files       = ref([]);
@@ -136,7 +147,7 @@ createApp({
         const loading     = ref(false);
         const expanded    = reactive(new Set());
 
-        const levels = ['DEBUG','INFO','NOTICE','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'];
+        const levels = Object.keys(LEVEL_STYLES);
         const fontSize = ref(parseInt(localStorage.getItem('fplv_fontsize') || '14'));
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
@@ -147,6 +158,9 @@ createApp({
             }
             return counts;
         });
+
+        const levelStyle = (level) => LEVEL_STYLES[level] ?? '';
+        const hasContext = (entry) => entry.context && Object.keys(entry.context).length > 0;
 
         async function fetchJson(url) {
             const r = await fetch(url);
@@ -203,7 +217,7 @@ createApp({
 
         return { files, entries, filtered, selectedFile, filterLevel, filterText,
                  loading, expanded, levels, levelCounts,
-                 loadEntries, applyFilters, toggle, formatSize, fontSize };
+                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize };
     }
 }).mount('#app');
 </script>

@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0] — 2026-05-04
+
+### Fixed
+- `index.php`: replaced `@apply` directives with inline CSS (CDN Tailwind does not process `@apply`)
+- `index.php`: added `z-10` to sticky `thead` so header stays above scrolled content
+
+### Added
+- `index.php`: `levelStyle()` and `hasContext()` helpers (consistent with `dist/`)
+
+### Changed
+- Version bumped to 1.0.0 — stable release
+
 ## [0.9.1] — 2026-05-03
 
 ### Added
