@@ -25,11 +25,13 @@ namespace Mariusz\LogViewer {
  * Supported formats:
  *   fast-php-logger: [2026-05-03 14:25:00] [WARNING] [app/index.php:42] Message {"key":"value"}
  *   legacy multiline: 2026-04-30 08:43:43 --- DEBUG: { ... }
+ *   php-errors: [04-May-2026 09:09:37 Europe/Warsaw] PHP Fatal error: message in file on line N
  */
 class LogParser
 {
     private const PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
     private const PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
+    private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>[^\s]+) on line (?P<line>\d+))?\s*$/i';
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array<mixed>}> */
     public function parseFile(string $path): array
@@ -60,6 +62,27 @@ class LogParser
                     'context'  => isset($m['context']) && $m['context'] !== ''
                         ? (json_decode($m['context'], true) ?? [])
                         : [],
+                ];
+                $i++;
+                continue;
+            }
+
+            // PHP error log format: [04-May-2026 09:09:37 Europe/Warsaw] PHP Fatal error: ...
+            if (preg_match(self::PATTERN_PHP_ERR, $line, $m)) {
+                $levelMap = [
+                    'fatal error' => 'ERROR', 'parse error' => 'ERROR',
+                    'warning' => 'WARNING', 'notice' => 'NOTICE',
+                    'deprecated' => 'NOTICE', 'strict standards' => 'NOTICE',
+                    'catchable fatal error' => 'ERROR', 'recoverable fatal error' => 'ERROR',
+                ];
+                $level    = $levelMap[strtolower($m['level'])] ?? 'ERROR';
+                $location = isset($m['file'], $m['line']) && $m['file'] !== '' ? $m['file'] . ':' . $m['line'] : '';
+                $entries[] = [
+                    'datetime' => $m['datetime'],
+                    'level'    => $level,
+                    'location' => $location,
+                    'message'  => $m['message'],
+                    'context'  => [],
                 ];
                 $i++;
                 continue;
@@ -323,6 +346,10 @@ function respondError(string $message, int $code): void
             </select>
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
                 class="text-sm border border-gray-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button @click="toggleSort" :title="sortOrder === 'desc' ? 'Newest first' : 'Oldest first'"
+                class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition whitespace-nowrap">
+                {{ sortOrder === 'desc' ? '↓ Newest' : '↑ Oldest' }}
+            </button>
             <button @click="loadEntries" title="Refresh"
                 class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition">↺</button>
             <div class="flex items-center gap-1 border border-gray-300 rounded overflow-hidden">
@@ -412,7 +439,8 @@ createApp({
         const filterLevel = ref('');
         const filterText  = ref('');
         const loading     = ref(false);
-        const expanded    = reactive(new Set());
+        const expanded    = ref(new Set());
+        const sortOrder   = ref('desc'); // desc = newest first
 
         const levels = Object.keys(LEVEL_STYLES);
         const fontSize = ref(parseInt(localStorage.getItem('fplv_fontsize') || '14'));
@@ -446,7 +474,7 @@ createApp({
         async function loadEntries() {
             if (!selectedFile.value) return;
             loading.value = true;
-            expanded.clear();
+            expanded.value = new Set();
             try {
                 entries.value = await fetchJson('?action=entries&file=' + encodeURIComponent(selectedFile.value));
                 applyFilters();
@@ -467,11 +495,21 @@ createApp({
                     e.location.toLowerCase().includes(q)
                 );
             }
+            if (sortOrder.value === 'asc') {
+                result = [...result].reverse();
+            }
             filtered.value = result;
         }
 
         function toggle(i) {
-            expanded.has(i) ? expanded.delete(i) : expanded.add(i);
+            const s = new Set(expanded.value);
+            s.has(i) ? s.delete(i) : s.add(i);
+            expanded.value = s;
+        }
+
+        function toggleSort() {
+            sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
+            applyFilters();
         }
 
         function formatSize(bytes) {
@@ -484,7 +522,8 @@ createApp({
 
         return { files, entries, filtered, selectedFile, filterLevel, filterText,
                  loading, expanded, levels, levelCounts,
-                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize };
+                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize,
+                 sortOrder, toggleSort };
     }
 }).mount('#app');
 </script>

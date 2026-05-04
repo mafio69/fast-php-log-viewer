@@ -10,11 +10,13 @@ namespace Mariusz\LogViewer;
  * Supported formats:
  *   fast-php-logger: [2026-05-03 14:25:00] [WARNING] [app/index.php:42] Message {"key":"value"}
  *   legacy multiline: 2026-04-30 08:43:43 --- DEBUG: { ... }
+ *   php-errors: [04-May-2026 09:09:37 Europe/Warsaw] PHP Fatal error: message in file on line N
  */
 class LogParser
 {
     private const PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
     private const PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
+    private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>[^\s]+) on line (?P<line>\d+))?\s*$/i';
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array<mixed>}> */
     public function parseFile(string $path): array
@@ -45,6 +47,27 @@ class LogParser
                     'context'  => isset($m['context']) && $m['context'] !== ''
                         ? (json_decode($m['context'], true) ?? [])
                         : [],
+                ];
+                $i++;
+                continue;
+            }
+
+            // PHP error log format: [04-May-2026 09:09:37 Europe/Warsaw] PHP Fatal error: ...
+            if (preg_match(self::PATTERN_PHP_ERR, $line, $m)) {
+                $levelMap = [
+                    'fatal error' => 'ERROR', 'parse error' => 'ERROR',
+                    'warning' => 'WARNING', 'notice' => 'NOTICE',
+                    'deprecated' => 'NOTICE', 'strict standards' => 'NOTICE',
+                    'catchable fatal error' => 'ERROR', 'recoverable fatal error' => 'ERROR',
+                ];
+                $level    = $levelMap[strtolower($m['level'])] ?? 'ERROR';
+                $location = isset($m['file'], $m['line']) && $m['file'] !== '' ? $m['file'] . ':' . $m['line'] : '';
+                $entries[] = [
+                    'datetime' => $m['datetime'],
+                    'level'    => $level,
+                    'location' => $location,
+                    'message'  => $m['message'],
+                    'context'  => [],
                 ];
                 $i++;
                 continue;

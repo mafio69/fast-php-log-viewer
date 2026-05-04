@@ -56,6 +56,10 @@ if (isset($_GET['action'])) {
             </select>
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
                 class="text-sm border border-gray-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button @click="toggleSort" :title="sortOrder === 'desc' ? 'Newest first' : 'Oldest first'"
+                class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition whitespace-nowrap">
+                {{ sortOrder === 'desc' ? '↓ Newest' : '↑ Oldest' }}
+            </button>
             <button @click="loadEntries" title="Refresh"
                 class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition">↺</button>
             <div class="flex items-center gap-1 border border-gray-300 rounded overflow-hidden">
@@ -145,7 +149,8 @@ createApp({
         const filterLevel = ref('');
         const filterText  = ref('');
         const loading     = ref(false);
-        const expanded    = reactive(new Set());
+        const expanded    = ref(new Set());
+        const sortOrder   = ref('desc'); // desc = newest first
 
         const levels = Object.keys(LEVEL_STYLES);
         const fontSize = ref(parseInt(localStorage.getItem('fplv_fontsize') || '14'));
@@ -179,7 +184,7 @@ createApp({
         async function loadEntries() {
             if (!selectedFile.value) return;
             loading.value = true;
-            expanded.clear();
+            expanded.value = new Set();
             try {
                 entries.value = await fetchJson('?action=entries&file=' + encodeURIComponent(selectedFile.value));
                 applyFilters();
@@ -200,11 +205,21 @@ createApp({
                     e.location.toLowerCase().includes(q)
                 );
             }
+            if (sortOrder.value === 'asc') {
+                result = [...result].reverse();
+            }
             filtered.value = result;
         }
 
         function toggle(i) {
-            expanded.has(i) ? expanded.delete(i) : expanded.add(i);
+            const s = new Set(expanded.value);
+            s.has(i) ? s.delete(i) : s.add(i);
+            expanded.value = s;
+        }
+
+        function toggleSort() {
+            sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
+            applyFilters();
         }
 
         function formatSize(bytes) {
@@ -217,7 +232,8 @@ createApp({
 
         return { files, entries, filtered, selectedFile, filterLevel, filterText,
                  loading, expanded, levels, levelCounts,
-                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize };
+                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize,
+                 sortOrder, toggleSort };
     }
 }).mount('#app');
 </script>
