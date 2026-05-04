@@ -46,7 +46,7 @@ if (isset($_GET['action'])) {
                 class="text-sm border border-gray-300 rounded px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">— select log file —</option>
                 <option v-for="f in files" :key="f.file" :value="f.file">
-                    {{ f.date }} ({{ formatSize(f.size) }})
+                    {{ f.file.split('/').pop() }} — {{ f.date }} ({{ formatSize(f.size) }})
                 </option>
             </select>
             <select v-model="filterLevel" @change="applyFilters"

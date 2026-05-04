@@ -23,6 +23,9 @@ class LogFinder
             glob($dir . '/*/*/*.log') ?: [],
             glob($dir . '/*/*.log')   ?: [],
             glob($dir . '/*.log')     ?: [],
+            glob($dir . '/*/*/*.php') ?: [],
+            glob($dir . '/*/*.php')   ?: [],
+            glob($dir . '/*.php')     ?: [],
         ));
 
         $result = [];
@@ -46,8 +49,8 @@ class LogFinder
 
     private function extractDate(string $path): string
     {
-        $name = basename($path, '.log');
-        // strip optional prefix/suffix, keep Y-m-d part
+        $ext  = pathinfo($path, PATHINFO_EXTENSION);
+        $name = basename($path, '.' . $ext);
         if (preg_match('/(\d{4}-\d{2}-\d{2})/', $name, $m)) {
             return $m[1];
         }
