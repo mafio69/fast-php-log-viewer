@@ -15,7 +15,15 @@ if (!defined('LOG_DIR')) {
     define('LOG_DIR', getenv('LOG_DIR') ?: dirname(__DIR__) . '/logs');
 }
 
-require_once __DIR__ . '/../vendor/autoload.php';
+// When installed as a Composer dependency the autoloader is already loaded
+// by the entry point (viewer/index.php). The original relative path
+// __DIR__ . '/../vendor/autoload.php' resolves to the package's own vendor/
+// which doesn't exist — only require if the file actually exists.
+$_autoload = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($_autoload)) {
+    require_once $_autoload;
+}
+unset($_autoload);
 
 use Mariusz\LogViewer\LogFinder;
 use Mariusz\LogViewer\LogParser;
