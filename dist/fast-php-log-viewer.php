@@ -23,33 +23,66 @@ namespace Mariusz\LogViewer;
 
 class LogParser
 {
-    private const PATTERN = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
+    private const PATTERN_FPL    = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
+    private const PATTERN_LEGACY = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
 
     public function parseFile(string $path): array
     {
         if (!is_readable($path)) return [];
+        $lines = file($path, FILE_IGNORE_NEW_LINES);
+        if ($lines === false) return [];
+
         $entries = [];
-        $handle  = fopen($path, 'r');
-        if ($handle === false) return [];
-        while (($line = fgets($handle)) !== false) {
-            $entry = $this->parseLine(rtrim($line));
-            if ($entry !== null) $entries[] = $entry;
+        $i = 0; $count = count($lines);
+
+        while ($i < $count) {
+            $line = $lines[$i];
+
+            if (preg_match(self::PATTERN_FPL, $line, $m)) {
+                $entries[] = [
+                    'datetime' => $m['datetime'],
+                    'level'    => strtoupper($m['level']),
+                    'location' => $m['location'],
+                    'message'  => $m['message'],
+                    'context'  => isset($m['context']) && $m['context'] !== '' ? (json_decode($m['context'], true) ?? []) : [],
+                ];
+                $i++; continue;
+            }
+
+            if (preg_match(self::PATTERN_LEGACY, $line, $m)) {
+                $rest = $m['rest'];
+                $j = $i + 1;
+                while ($j < $count && !preg_match(self::PATTERN_FPL, $lines[$j]) && !preg_match(self::PATTERN_LEGACY, $lines[$j])) {
+                    $rest .= "\n" . $lines[$j]; $j++;
+                }
+                $context = []; $message = trim($rest); $location = '';
+                $decoded = json_decode(trim($rest), true);
+                if (is_array($decoded)) {
+                    $context = $decoded;
+                    if (isset($decoded['info']) && preg_match('/::([^:]+)::(\d+)$/', $decoded['info'], $im)) {
+                        $location = $im[1] . ':' . $im[2];
+                    }
+                    $message = $decoded['info'] ?? $m['level'];
+                }
+                $entries[] = ['datetime' => $m['datetime'], 'level' => strtoupper($m['level']), 'location' => $location, 'message' => $message, 'context' => $context];
+                $i = $j; continue;
+            }
+
+            $i++;
         }
-        fclose($handle);
+
         return array_reverse($entries);
     }
 
     public function parseLine(string $line): ?array
     {
-        if (!preg_match(self::PATTERN, $line, $m)) return null;
+        if (!preg_match(self::PATTERN_FPL, $line, $m)) return null;
         return [
             'datetime' => $m['datetime'],
             'level'    => strtoupper($m['level']),
             'location' => $m['location'],
             'message'  => $m['message'],
-            'context'  => isset($m['context']) && $m['context'] !== ''
-                ? (json_decode($m['context'], true) ?? [])
-                : [],
+            'context'  => isset($m['context']) && $m['context'] !== '' ? (json_decode($m['context'], true) ?? []) : [],
         ];
     }
 }

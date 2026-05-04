@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1] — 2026-05-04
+
+### Added
+- `LogParser`: support for legacy multiline log format (`YYYY-MM-DD HH:MM:SS --- LEVEL: { ... }`)
+  — extracts location from `info` field, collects multiline JSON body
+
 ## [1.0.0] — 2026-05-04
 
 ### Fixed
