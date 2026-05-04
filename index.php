@@ -49,11 +49,6 @@ if (isset($_GET['action'])) {
                     {{ f.file.split('/').pop() }} — {{ f.date }} ({{ formatSize(f.size) }})
                 </option>
             </select>
-            <select v-model="filterLevel" @change="applyFilters"
-                class="text-sm border border-gray-300 rounded px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All levels</option>
-                <option v-for="l in levels" :key="l" :value="l">{{ l }}</option>
-            </select>
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
                 class="text-sm border border-gray-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
             <button @click="toggleSort" :title="sortOrder === 'desc' ? 'Newest first' : 'Oldest first'"
@@ -73,12 +68,15 @@ if (isset($_GET['action'])) {
     </header>
 
     <!-- Stats bar -->
-    <div v-if="entries.length" class="bg-white border-b border-gray-100 px-6 py-2 flex gap-4 text-xs text-gray-500">
-        <span>{{ filtered.length }} / {{ entries.length }} entries</span>
-        <span v-for="(count, level) in levelCounts" :key="level"
-            class="px-2 py-0.5 rounded font-medium" :style="levelStyle(level)">
-            {{ level }}: {{ count }}
-        </span>
+    <div v-if="selectedFile" class="bg-white border-b border-gray-100 px-6 py-2 flex items-center gap-2 text-xs text-gray-500">
+        <span class="shrink-0 mr-1">{{ filtered.length }} / {{ entries.length }}</span>
+        <button v-for="level in levels" :key="level"
+            @click="toggleLevel(level)"
+            class="px-2 py-0.5 rounded font-medium cursor-pointer select-none transition-all"
+            :style="excludedLevels.has(level) ? levelStyleFaded(level) : levelStyle(level)"
+            :title="(excludedLevels.has(level) ? 'Show ' : 'Hide ') + level">
+            {{ level }}<span v-if="levelCounts[level]"> {{ levelCounts[level] }}</span>
+        </button>
     </div>
 
     <!-- Loading / empty states -->
@@ -100,21 +98,28 @@ if (isset($_GET['action'])) {
             </thead>
             <tbody>
                 <template v-for="(entry, i) in filtered" :key="i">
-                    <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                        @click="toggle(i)">
-                        <td class="px-4 py-2 font-mono text-xs text-gray-500 whitespace-nowrap">{{ entry.datetime }}</td>
-                        <td class="px-4 py-2">
+                    <tr class="border-b border-gray-100 hover:brightness-95 cursor-pointer"
+                        :style="rowStyle(entry.level)"
+                        @click="toggle(i)"
+                        :title="entryTooltip(entry)">
+                        <td class="px-4 py-1.5 font-mono text-xs text-gray-500 whitespace-nowrap">{{ entry.datetime }}</td>
+                        <td class="px-4 py-1.5">
                             <span class="px-2 py-0.5 rounded text-xs font-semibold" :style="levelStyle(entry.level)">
                                 {{ entry.level }}
                             </span>
                         </td>
-                        <td class="px-4 py-2 font-mono text-xs text-gray-400 whitespace-nowrap">{{ entry.location }}</td>
-                        <td class="px-4 py-2">{{ entry.message }}</td>
-                        <td class="px-4 py-2 text-gray-300 text-xs">
-                            <span v-if="hasContext(entry)">{{ expanded.has(i) ? '▲' : '▼' }}</span>
+                        <td class="px-4 py-1.5 font-mono text-xs whitespace-nowrap" :style="levelStyle(entry.level)">
+                            <div>{{ entry.location }}</div>
+                            <div class="opacity-50">{{ entrySize(entry) }}</div>
+                        </td>
+                        <td class="px-4 py-1.5 truncate max-w-0 w-full">
+                            <span class="block truncate">{{ entry.message }}</span>
+                        </td>
+                        <td class="px-4 py-1.5 text-gray-300 text-xs whitespace-nowrap">
+                            <span v-if="hasContext(entry)">{{ expanded[i] ? '▲' : '▼' }}</span>
                         </td>
                     </tr>
-                    <tr v-if="expanded.has(i) && hasContext(entry)"
+                    <tr v-if="expanded[i] && hasContext(entry)"
                         class="bg-gray-50 border-b border-gray-100">
                         <td colspan="5" class="px-4 py-2">
                             <pre class="text-xs font-mono text-gray-600 whitespace-pre-wrap">{{ JSON.stringify(entry.context, null, 2) }}</pre>
@@ -130,14 +135,34 @@ if (isset($_GET['action'])) {
 const { createApp, ref, computed, reactive, watch } = Vue;
 
 const LEVEL_STYLES = {
-    DEBUG:     'background:#f3f4f6;color:#4b5563',
-    INFO:      'background:#dbeafe;color:#1d4ed8',
+    DEBUG:     'background:#dbeafe;color:#1d4ed8',
+    INFO:      'background:#f3f4f6;color:#4b5563',
     NOTICE:    'background:#cffafe;color:#0e7490',
     WARNING:   'background:#fef9c3;color:#a16207',
     ERROR:     'background:#fee2e2;color:#b91c1c',
     CRITICAL:  'background:#fecaca;color:#991b1b',
     ALERT:     'background:#fed7aa;color:#c2410c',
     EMERGENCY: 'background:#e9d5ff;color:#7e22ce',
+};
+const LEVEL_STYLES_FADED = {
+    DEBUG:     'background:#eff6ff;color:#93c5fd',
+    INFO:      'background:#f9fafb;color:#9ca3af',
+    NOTICE:    'background:#ecfeff;color:#67e8f9',
+    WARNING:   'background:#fefce8;color:#fde047',
+    ERROR:     'background:#fff1f2;color:#fca5a5',
+    CRITICAL:  'background:#fff5f5;color:#fca5a5',
+    ALERT:     'background:#fff7ed;color:#fdba74',
+    EMERGENCY: 'background:#faf5ff;color:#d8b4fe',
+};
+const ROW_STYLES = {
+    DEBUG:     'background:#eff6ff',
+    INFO:      '',
+    NOTICE:    'background:#f0fdfe',
+    WARNING:   'background:#fefce8',
+    ERROR:     'background:#fff1f2',
+    CRITICAL:  'background:#fff5f5',
+    ALERT:     'background:#fff7ed',
+    EMERGENCY: 'background:#faf5ff',
 };
 
 createApp({
@@ -149,7 +174,8 @@ createApp({
         const filterLevel = ref('');
         const filterText  = ref('');
         const loading     = ref(false);
-        const expanded    = ref(new Set());
+        const expanded    = reactive({});
+        const excludedLevels = ref(new Set());
         const sortOrder   = ref('desc'); // desc = newest first
 
         const levels = Object.keys(LEVEL_STYLES);
@@ -165,7 +191,21 @@ createApp({
         });
 
         const levelStyle = (level) => LEVEL_STYLES[level] ?? '';
+        const levelStyleFaded = (level) => LEVEL_STYLES_FADED[level] ?? '';
+        const rowStyle = (level) => ROW_STYLES[level] ?? '';
         const hasContext = (entry) => entry.context && Object.keys(entry.context).length > 0;
+
+        function entryTooltip(entry) {
+            const text = entry.message + (hasContext(entry) ? ' ' + JSON.stringify(entry.context) : '');
+            const words = text.trim().split(/\s+/).length;
+            const kb = (new TextEncoder().encode(text).length / 1024).toFixed(2);
+            return `${words} słów · ${kb} KB`;
+        }
+
+        function entrySize(entry) {
+            const bytes = new TextEncoder().encode(entry.message + JSON.stringify(entry.context ?? {})).length;
+            return bytes < 1024 ? bytes + ' B' : (bytes / 1024).toFixed(1) + ' KB';
+        }
 
         async function fetchJson(url) {
             const r = await fetch(url);
@@ -184,7 +224,7 @@ createApp({
         async function loadEntries() {
             if (!selectedFile.value) return;
             loading.value = true;
-            expanded.value = new Set();
+            Object.keys(expanded).forEach(k => delete expanded[k]);
             try {
                 entries.value = await fetchJson('?action=entries&file=' + encodeURIComponent(selectedFile.value));
                 applyFilters();
@@ -195,8 +235,8 @@ createApp({
 
         function applyFilters() {
             let result = entries.value;
-            if (filterLevel.value) {
-                result = result.filter(e => e.level === filterLevel.value);
+            if (excludedLevels.value.size) {
+                result = result.filter(e => !excludedLevels.value.has(e.level));
             }
             if (filterText.value.trim()) {
                 const q = filterText.value.toLowerCase();
@@ -211,10 +251,15 @@ createApp({
             filtered.value = result;
         }
 
+        function toggleLevel(level) {
+            const s = new Set(excludedLevels.value);
+            s.has(level) ? s.delete(level) : s.add(level);
+            excludedLevels.value = s;
+            applyFilters();
+        }
+
         function toggle(i) {
-            const s = new Set(expanded.value);
-            s.has(i) ? s.delete(i) : s.add(i);
-            expanded.value = s;
+            expanded[i] ? delete expanded[i] : expanded[i] = true;
         }
 
         function toggleSort() {
@@ -230,10 +275,10 @@ createApp({
 
         loadFiles();
 
-        return { files, entries, filtered, selectedFile, filterLevel, filterText,
+        return { files, entries, filtered, selectedFile, filterText,
                  loading, expanded, levels, levelCounts,
-                 loadEntries, applyFilters, toggle, formatSize, levelStyle, hasContext, fontSize,
-                 sortOrder, toggleSort };
+                 loadEntries, applyFilters, toggle, formatSize, levelStyle, levelStyleFaded, rowStyle, hasContext, entryTooltip, entrySize, fontSize,
+                 sortOrder, toggleSort, excludedLevels, toggleLevel };
     }
 }).mount('#app');
 </script>

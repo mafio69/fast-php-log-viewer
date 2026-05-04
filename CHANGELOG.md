@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.4] — 2026-05-04
+
+### Added
+- `LogParser`: support for PHP error log format (`[date] PHP Fatal error: ...`)
+- UI: level filter replaced with always-visible colored toggle buttons (click to exclude)
+- UI: sort order toggle (newest/oldest)
+- UI: single-line rows with truncated message; hover tooltip shows word count and KB
+- UI: entry size (B/KB) shown below location
+- UI: row background color matches log level; location column colored by level
+- UI: fix expand/collapse reactivity for all rows (last row fix)
+
 ## [1.0.1] — 2026-05-04
 
 ### Added

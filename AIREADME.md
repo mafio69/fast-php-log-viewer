@@ -66,3 +66,16 @@ Uses `realpath()` with fallback for Windows/WSL UNC paths, normalizes `\` → `/
 - No JS frameworks beyond Vue 3 CDN, no build tooling
 - `dist/` file is hand-maintained (not generated), keep in sync with `src/` changes
 - Version in `composer.json` — bump manually, tag with `git tag vX.Y.Z` on release
+
+## Dev workflow (docker)
+
+`docker-fast-php-logger` mounts `../PhpstormProjects/fast-php-log-viewer/src` and `index.php`
+directly into the container's vendor directory — no rebuild needed after editing src files.
+
+```yaml
+# docker-compose.yml volumes:
+- ../PhpstormProjects/fast-php-log-viewer/src:/var/www/html/vendor/mafio69/fast-php-log-viewer/src
+- ../PhpstormProjects/fast-php-log-viewer/index.php:/var/www/html/vendor/mafio69/fast-php-log-viewer/index.php
+```
+
+After editing `src/` or `index.php` just refresh the browser — no restart needed.
