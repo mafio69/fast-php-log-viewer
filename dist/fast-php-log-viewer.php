@@ -17,6 +17,10 @@ if (!defined('LOG_DIR')) {
     define('LOG_DIR', getenv('LOG_DIR') ?: __DIR__ . '/logs');
 }
 
+if (!defined('EDITOR_URL')) {
+    define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
+}
+
 namespace Mariusz\LogViewer {
 
 /**
@@ -313,188 +317,239 @@ function respondError(string $message, int $code): void
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
         [v-cloak] { display: none; }
-        .level-DEBUG     { background:#f3f4f6; color:#4b5563; }
-        .level-INFO      { background:#dbeafe; color:#1d4ed8; }
-        .level-NOTICE    { background:#cffafe; color:#0e7490; }
-        .level-WARNING   { background:#fef9c3; color:#a16207; }
-        .level-ERROR     { background:#fee2e2; color:#b91c1c; }
-        .level-CRITICAL  { background:#fecaca; color:#991b1b; }
-        .level-ALERT     { background:#fed7aa; color:#c2410c; }
-        .level-EMERGENCY { background:#e9d5ff; color:#7e22ce; }
+        body { background:#111; color:#e5e7eb; }
+        ::-webkit-scrollbar { width:6px; height:6px; }
+        ::-webkit-scrollbar-track { background:#1a1a1a; }
+        ::-webkit-scrollbar-thumb { background:#444; border-radius:3px; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
+<body class="h-screen overflow-hidden" style="background:#111;color:#e5e7eb;">
 
-<div id="app" v-cloak :style="{ fontSize: fontSize + 'px' }">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <span class="text-xl font-bold tracking-tight">⚡ fast-php-log-viewer</span>
+<div id="app" v-cloak class="flex h-screen" :style="{ fontSize: fontSize + 'px' }">
+
+    <!-- Sidebar -->
+    <aside style="width:200px;min-width:200px;background:#1a1a1a;border-right:1px solid #2a2a2a;" class="flex flex-col">
+        <div class="px-3 py-3" style="border-bottom:1px solid #2a2a2a;">
+            <div class="font-bold text-sm" style="color:#e5e7eb;">⚡ log-viewer</div>
         </div>
-        <div class="flex items-center gap-3">
-            <select v-model="selectedFile" @change="loadEntries"
-                class="text-sm border border-gray-300 rounded px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">— select log file —</option>
-                <option v-for="f in files" :key="f.file" :value="f.file">
-                    {{ f.file.split('/').pop() }} — {{ f.date }} ({{ formatSize(f.size) }})
-                </option>
-            </select>
-            <input v-model="filterText" @input="applyFilters" placeholder="Search…"
-                class="text-sm border border-gray-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button @click="toggleSort" :title="sortOrder === 'desc' ? 'Newest first' : 'Oldest first'"
-                class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition whitespace-nowrap">
-                {{ sortOrder === 'desc' ? '↓ Newest' : '↑ Oldest' }}
-            </button>
-            <button @click="loadEntries" title="Refresh"
-                class="text-sm px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 transition">↺</button>
-            <div class="flex items-center gap-1 border border-gray-300 rounded overflow-hidden">
-                <button @click="fontSize = Math.max(10, fontSize - 1)" title="Smaller"
-                    class="px-2 py-1.5 text-xs bg-white hover:bg-gray-100 transition">A−</button>
-                <span class="px-2 text-xs text-gray-500 select-none">{{ fontSize }}px</span>
-                <button @click="fontSize = Math.min(24, fontSize + 1)" title="Larger"
-                    class="px-2 py-1.5 text-xs bg-white hover:bg-gray-100 transition">A+</button>
+
+        <!-- File list -->
+        <div class="flex-1 overflow-y-auto">
+            <div v-for="f in files" :key="f.file"
+                @click="selectFile(f.file)"
+                class="px-3 py-2 cursor-pointer"
+                style="border-bottom:1px solid #222;"
+                :style="selectedFile === f.file
+                    ? 'background:#1e3a5f;border-left:3px solid #3b82f6;color:#93c5fd;'
+                    : 'color:#9ca3af;border-left:3px solid transparent;'">
+                <div class="font-medium truncate">{{ f.file.split('/').pop() }}</div>
+                <div style="color:#6b7280;font-size:0.85em;">{{ f.date }} · {{ formatSize(f.size) }}</div>
             </div>
         </div>
-    </header>
 
-    <!-- Stats bar -->
-    <div v-if="selectedFile" class="bg-white border-b border-gray-100 px-6 py-2 flex items-center gap-2 text-xs text-gray-500">
-        <span class="shrink-0 mr-1">{{ filtered.length }} / {{ entries.length }}</span>
-        <button v-for="level in levels" :key="level"
-            @click="toggleLevel(level)"
-            class="px-2 py-0.5 rounded font-medium cursor-pointer select-none transition-all"
-            :style="excludedLevels.has(level) ? levelStyleFaded(level) : levelStyle(level)"
-            :title="(excludedLevels.has(level) ? 'Show ' : 'Hide ') + level">
-            {{ level }}<span v-if="levelCounts[level]"> {{ levelCounts[level] }}</span>
-        </button>
-    </div>
+        <!-- Filters -->
+        <div style="border-top:1px solid #2a2a2a;" class="px-3 py-3 flex flex-col gap-3">
 
-    <!-- Loading / empty states -->
-    <div v-if="loading" class="flex justify-center items-center py-24 text-gray-400">Loading…</div>
-    <div v-else-if="!selectedFile" class="flex justify-center items-center py-24 text-gray-400">Select a log file to view entries.</div>
-    <div v-else-if="!filtered.length" class="flex justify-center items-center py-24 text-gray-400">No entries match the current filters.</div>
+            <!-- Date range -->
+            <div>
+                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">ZAKRES DAT</div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                        <span style="width:20px;">Od</span>
+                        <input type="date" v-model="dateFrom" @change="applyFilters"
+                            class="flex-1 rounded px-1 py-0.5 text-xs"
+                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                    </div>
+                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                        <span style="width:20px;">Do</span>
+                        <input type="date" v-model="dateTo" @change="applyFilters"
+                            class="flex-1 rounded px-1 py-0.5 text-xs"
+                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                    </div>
+                </div>
+                <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium"
+                    style="background:#1d4ed8;color:#fff;">Zastosuj</button>
+            </div>
 
-    <!-- Table -->
-    <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm border-collapse">
-            <thead class="bg-white border-b border-gray-200 sticky top-0 z-10">
-                <tr>
-                    <th class="text-left px-4 py-2 font-medium text-gray-500 w-40">Datetime</th>
-                    <th class="text-left px-4 py-2 font-medium text-gray-500 w-24">Level</th>
-                    <th class="text-left px-4 py-2 font-medium text-gray-500 w-48">Location</th>
-                    <th class="text-left px-4 py-2 font-medium text-gray-500">Message</th>
-                    <th class="text-left px-4 py-2 font-medium text-gray-500 w-8"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <template v-for="(entry, i) in filtered" :key="i">
-                    <tr class="border-b border-gray-100 hover:brightness-95 cursor-pointer"
-                        :style="rowStyle(entry.level)"
-                        @click="toggle(i)"
-                        :title="entryTooltip(entry)">
-                        <td class="px-4 py-1.5 font-mono text-xs text-gray-500 whitespace-nowrap">{{ entry.datetime }}</td>
-                        <td class="px-4 py-1.5">
-                            <span class="px-2 py-0.5 rounded text-xs font-semibold" :style="levelStyle(entry.level)">
-                                {{ entry.level }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-1.5 font-mono text-xs whitespace-nowrap" :style="levelStyle(entry.level)">
-                            <div>{{ entry.location }}</div>
-                            <div class="opacity-50">{{ entrySize(entry) }}</div>
-                        </td>
-                        <td class="px-4 py-1.5 truncate max-w-0 w-full">
-                            <span class="block truncate">{{ entry.message }}</span>
-                        </td>
-                        <td class="px-4 py-1.5 text-gray-300 text-xs whitespace-nowrap">
-                            <span v-if="hasContext(entry)">{{ expanded[i] ? '▲' : '▼' }}</span>
-                        </td>
+            <!-- Levels -->
+            <div>
+                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">POZIOMY</div>
+                <div class="flex flex-col gap-0.5">
+                    <label v-for="level in levels" :key="level" class="flex items-center gap-2 text-xs cursor-pointer" style="color:#9ca3af;">
+                        <span class="w-2 h-2 rounded-full inline-block" :style="'background:' + levelDot(level)"></span>
+                        <input type="checkbox" :checked="!excludedLevels.includes(level)" @change="toggleLevel(level)" class="hidden">
+                        <span @click="toggleLevel(level)"
+                            :style="excludedLevels.includes(level) ? 'color:#4b5563;' : 'color:#e5e7eb;'">
+                            {{ level }}
+                        </span>
+                        <span class="ml-auto" style="color:#6b7280;">{{ levelCounts[level] || '' }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Time range -->
+            <div>
+                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">GODZINY</div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                        <span style="width:20px;">Od</span>
+                        <input type="time" v-model="timeFrom" @change="applyFilters"
+                            class="flex-1 rounded px-1 py-0.5 text-xs"
+                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                    </div>
+                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                        <span style="width:20px;">Do</span>
+                        <input type="time" v-model="timeTo" @change="applyFilters"
+                            class="flex-1 rounded px-1 py-0.5 text-xs"
+                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sort -->
+            <div>
+                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">SORTOWANIE</div>
+                <button @click="toggleSort"
+                    class="w-full rounded px-2 py-1 text-xs text-left"
+                    style="background:#222;border:1px solid #333;color:#9ca3af;">
+                    {{ sortOrder === 'desc' ? '↓ Newest first' : '↑ Oldest first' }}
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="text-xs" style="color:#6b7280;">
+                {{ filtered.length }} entries<br>
+                <span v-if="selectedFile">{{ selectedFile.split('/').pop() }}</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Toolbar -->
+        <div class="flex items-center gap-2 px-4 py-2" style="background:#1a1a1a;border-bottom:1px solid #2a2a2a;">
+            <input v-model="filterText" @input="applyFilters" placeholder="Search…"
+                class="rounded px-3 py-1 text-sm flex-1 max-w-xs"
+                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+            <button @click="loadEntries" title="Refresh"
+                class="px-3 py-1 rounded text-sm"
+                style="background:#222;border:1px solid #333;color:#9ca3af;">↺</button>
+            <div class="flex items-center gap-1 rounded overflow-hidden" style="border:1px solid #333;">
+                <button @click="fontSize = Math.max(10, fontSize - 1)"
+                    class="px-2 py-1 text-xs" style="background:#222;color:#9ca3af;">A−</button>
+                <span class="px-2 text-xs" style="color:#6b7280;">{{ fontSize }}px</span>
+                <button @click="fontSize = Math.min(24, fontSize + 1)"
+                    class="px-2 py-1 text-xs" style="background:#222;color:#9ca3af;">A+</button>
+            </div>
+        </div>
+
+        <!-- States -->
+        <div v-if="loading" class="flex-1 flex items-center justify-center" style="color:#6b7280;">Loading…</div>
+        <div v-else-if="!selectedFile" class="flex-1 flex items-center justify-center" style="color:#6b7280;">Select a log file.</div>
+        <div v-else-if="!filtered.length" class="flex-1 flex items-center justify-center" style="color:#6b7280;">No entries match filters.</div>
+
+        <!-- Table -->
+        <div v-else class="flex-1 overflow-auto">
+            <table class="w-full text-sm border-collapse">
+                <thead style="background:#1a1a1a;border-bottom:1px solid #2a2a2a;" class="sticky top-0 z-10">
+                    <tr>
+                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;width:155px;">Datetime</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;width:90px;">Level</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;width:200px;">Location</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;">Message</th>
                     </tr>
-                    <tr v-if="expanded[i] && hasContext(entry)"
-                        class="bg-gray-50 border-b border-gray-100">
-                        <td colspan="5" class="px-4 py-2">
-                            <pre class="text-xs font-mono text-gray-600 whitespace-pre-wrap">{{ JSON.stringify(entry.context, null, 2) }}</pre>
-                        </td>
-                    </tr>
-                </template>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <template v-for="(entry, i) in filtered" :key="i">
+                        <tr @click="toggle(i)" class="cursor-pointer"
+                            :style="'border-bottom:1px solid #1f1f1f;' + rowBg(entry.level)">
+                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap" style="color:#6b7280;">{{ entry.datetime }}</td>
+                            <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ entry.level }}</td>
+                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap" style="color:#6b7280;">
+                                <a v-if="editorUrl && entry.location"
+                                   :href="openInEditor(entry.location)"
+                                   @click.stop
+                                   class="hover:underline" :style="'color:' + levelColor(entry.level)">{{ entry.location }}</a>
+                                <span v-else>{{ entry.location }}</span>
+                            </td>
+                            <td class="px-3 py-1.5 truncate max-w-0 w-full" style="color:#d1d5db;">
+                                <span class="block truncate">{{ entry.message }}</span>
+                                <span v-if="hasContext(entry)" class="text-xs" style="color:#4b5563;">{{ expanded[i] ? '▲' : '▼' }}</span>
+                            </td>
+                        </tr>
+                        <tr v-if="expanded[i] && hasContext(entry)" style="background:#161616;border-bottom:1px solid #1f1f1f;">
+                            <td colspan="4" class="px-3 py-2">
+                                <pre class="text-xs font-mono whitespace-pre-wrap" style="color:#9ca3af;">{{ JSON.stringify(entry.context, null, 2) }}</pre>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
 const { createApp, ref, computed, reactive, watch } = Vue;
+const EDITOR_URL = <?= json_encode(EDITOR_URL) ?>;
 
-const LEVEL_STYLES = {
-    DEBUG:     'background:#dbeafe;color:#1d4ed8',
-    INFO:      'background:#f3f4f6;color:#4b5563',
-    NOTICE:    'background:#cffafe;color:#0e7490',
-    WARNING:   'background:#fef9c3;color:#a16207',
-    ERROR:     'background:#fee2e2;color:#b91c1c',
-    CRITICAL:  'background:#fecaca;color:#991b1b',
-    ALERT:     'background:#fed7aa;color:#c2410c',
-    EMERGENCY: 'background:#e9d5ff;color:#7e22ce',
+const LEVEL_COLORS = {
+    DEBUG:'#60a5fa', INFO:'#34d399', NOTICE:'#22d3ee',
+    WARNING:'#fbbf24', ERROR:'#f87171', CRITICAL:'#ef4444',
+    ALERT:'#fb923c', EMERGENCY:'#c084fc',
 };
-const LEVEL_STYLES_FADED = {
-    DEBUG:     'background:#eff6ff;color:#93c5fd',
-    INFO:      'background:#f9fafb;color:#9ca3af',
-    NOTICE:    'background:#ecfeff;color:#67e8f9',
-    WARNING:   'background:#fefce8;color:#fde047',
-    ERROR:     'background:#fff1f2;color:#fca5a5',
-    CRITICAL:  'background:#fff5f5;color:#fca5a5',
-    ALERT:     'background:#fff7ed;color:#fdba74',
-    EMERGENCY: 'background:#faf5ff;color:#d8b4fe',
+const LEVEL_DOTS = {
+    DEBUG:'#3b82f6', INFO:'#10b981', NOTICE:'#06b6d4',
+    WARNING:'#f59e0b', ERROR:'#ef4444', CRITICAL:'#dc2626',
+    ALERT:'#f97316', EMERGENCY:'#a855f7',
 };
-const ROW_STYLES = {
-    DEBUG:     'background:#eff6ff',
-    INFO:      '',
-    NOTICE:    'background:#f0fdfe',
-    WARNING:   'background:#fefce8',
-    ERROR:     'background:#fff1f2',
-    CRITICAL:  'background:#fff5f5',
-    ALERT:     'background:#fff7ed',
-    EMERGENCY: 'background:#faf5ff',
+const ROW_BG = {
+    ERROR:'background:#1f1010;', CRITICAL:'background:#1f0a0a;',
+    ALERT:'background:#1f1208;', EMERGENCY:'background:#160d1f;',
+    WARNING:'background:#1a1600;',
 };
 
 createApp({
     setup() {
-        const files       = ref([]);
-        const entries     = ref([]);
-        const filtered    = ref([]);
+        const files        = ref([]);
+        const entries      = ref([]);
+        const filtered     = ref([]);
         const selectedFile = ref('');
-        const filterLevel = ref('');
-        const filterText  = ref('');
-        const loading     = ref(false);
-        const expanded    = reactive({});
-        const excludedLevels = ref(new Set());
-        const sortOrder   = ref('desc'); // desc = newest first
+        const filterText   = ref('');
+        const loading      = ref(false);
+        const expanded     = reactive({});
+        const excludedLevels = ref([]);
+        const sortOrder    = ref('desc');
+        const dateFrom     = ref('');
+        const dateTo       = ref('');
+        const timeFrom     = ref('');
+        const timeTo       = ref('');
+        const editorUrl    = ref(EDITOR_URL);
+        const fontSize     = ref(parseInt(localStorage.getItem('fplv_fontsize') || '13'));
+        const levels       = Object.keys(LEVEL_COLORS);
 
-        const levels = Object.keys(LEVEL_STYLES);
-        const fontSize = ref(parseInt(localStorage.getItem('fplv_fontsize') || '14'));
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
         const levelCounts = computed(() => {
-            const counts = {};
-            for (const e of entries.value) {
-                counts[e.level] = (counts[e.level] ?? 0) + 1;
-            }
-            return counts;
+            const c = {};
+            for (const e of entries.value) c[e.level] = (c[e.level] ?? 0) + 1;
+            return c;
         });
 
-        const levelStyle = (level) => LEVEL_STYLES[level] ?? '';
-        const levelStyleFaded = (level) => LEVEL_STYLES_FADED[level] ?? '';
-        const rowStyle = (level) => ROW_STYLES[level] ?? '';
-        const hasContext = (entry) => entry.context && Object.keys(entry.context).length > 0;
+        const levelColor  = l => LEVEL_COLORS[l] ?? '#9ca3af';
+        const levelDot    = l => LEVEL_DOTS[l]   ?? '#6b7280';
+        const rowBg       = l => ROW_BG[l]        ?? '';
+        const hasContext  = e => e.context && Object.keys(e.context).length > 0;
 
-        function entryTooltip(entry) {
-            const text = entry.message + (hasContext(entry) ? ' ' + JSON.stringify(entry.context) : '');
-            const words = text.trim().split(/\s+/).length;
-            const kb = (new TextEncoder().encode(text).length / 1024).toFixed(2);
-            return `${words} słów · ${kb} KB`;
+        function openInEditor(location) {
+            const [file, line] = location.split(':');
+            return editorUrl.value.replace('{file}', encodeURIComponent(file)).replace('{line}', line ?? '1');
         }
 
-        function entrySize(entry) {
-            const bytes = new TextEncoder().encode(entry.message + JSON.stringify(entry.context ?? {})).length;
-            return bytes < 1024 ? bytes + ' B' : (bytes / 1024).toFixed(1) + ' KB';
+        function formatSize(b) {
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+            return (b/1048576).toFixed(1) + ' MB';
         }
 
         async function fetchJson(url) {
@@ -511,6 +566,11 @@ createApp({
             }
         }
 
+        async function selectFile(path) {
+            selectedFile.value = path;
+            await loadEntries();
+        }
+
         async function loadEntries() {
             if (!selectedFile.value) return;
             loading.value = true;
@@ -524,51 +584,57 @@ createApp({
         }
 
         function applyFilters() {
-            let result = entries.value;
-            if (excludedLevels.value.size) {
-                result = result.filter(e => !excludedLevels.value.has(e.level));
-            }
+            let r = entries.value;
+            if (excludedLevels.value.length)
+                r = r.filter(e => !excludedLevels.value.includes(e.level));
             if (filterText.value.trim()) {
                 const q = filterText.value.toLowerCase();
-                result = result.filter(e =>
-                    e.message.toLowerCase().includes(q) ||
-                    e.location.toLowerCase().includes(q)
-                );
+                r = r.filter(e => e.message.toLowerCase().includes(q) || e.location.toLowerCase().includes(q));
             }
-            if (sortOrder.value === 'asc') {
-                result = [...result].reverse();
+            if (dateFrom.value || dateTo.value) {
+                r = r.filter(e => {
+                    const d = e.datetime.slice(0, 10);
+                    if (dateFrom.value && d < dateFrom.value) return false;
+                    if (dateTo.value   && d > dateTo.value)   return false;
+                    return true;
+                });
             }
-            filtered.value = result;
+            if (timeFrom.value || timeTo.value) {
+                r = r.filter(e => {
+                    const t = e.datetime.slice(11, 16);
+                    if (timeFrom.value && t < timeFrom.value) return false;
+                    if (timeTo.value   && t > timeTo.value)   return false;
+                    return true;
+                });
+            }
+            if (sortOrder.value === 'asc') r = [...r].reverse();
+            filtered.value = r;
         }
 
         function toggleLevel(level) {
-            const s = new Set(excludedLevels.value);
-            s.has(level) ? s.delete(level) : s.add(level);
-            excludedLevels.value = s;
+            const arr = excludedLevels.value;
+            const idx = arr.indexOf(level);
+            if (idx >= 0) arr.splice(idx, 1);
+            else arr.push(level);
             applyFilters();
         }
 
-        function toggle(i) {
-            expanded[i] ? delete expanded[i] : expanded[i] = true;
-        }
+        function toggle(i) { expanded[i] ? delete expanded[i] : (expanded[i] = true); }
 
         function toggleSort() {
             sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
             applyFilters();
         }
 
-        function formatSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / 1048576).toFixed(1) + ' MB';
-        }
-
         loadFiles();
 
-        return { files, entries, filtered, selectedFile, filterText,
-                 loading, expanded, levels, levelCounts,
-                 loadEntries, applyFilters, toggle, formatSize, levelStyle, levelStyleFaded, rowStyle, hasContext, entryTooltip, entrySize, fontSize,
-                 sortOrder, toggleSort, excludedLevels, toggleLevel };
+        return {
+            files, entries, filtered, selectedFile, filterText, loading, expanded,
+            levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
+            excludedLevels, editorUrl,
+            selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
+            formatSize, levelColor, levelDot, rowBg, hasContext, openInEditor,
+        };
     }
 }).mount('#app');
 </script>
