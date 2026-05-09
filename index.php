@@ -9,6 +9,9 @@ if (isset($_GET['action'])) {
     require_once __DIR__ . '/src/api.php';
     exit;
 }
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,8 +19,8 @@ if (isset($_GET['action'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>fast-php-log-viewer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <style>
         [v-cloak] { display: none; }
         body { background:#111; color:#e5e7eb; }
