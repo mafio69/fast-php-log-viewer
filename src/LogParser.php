@@ -62,14 +62,28 @@ class LogParser
                 ];
                 $level    = $levelMap[strtolower($m['level'])] ?? 'ERROR';
                 $location = isset($m['file'], $m['line']) && $m['file'] !== '' ? $m['file'] . ':' . $m['line'] : '';
+
+                // Collect stack trace continuation lines
+                $j = $i + 1;
+                $stackTrace = [];
+                while ($j < $count && !preg_match('/^\[/', $lines[$j])) {
+                    $stackTrace[] = $lines[$j];
+                    $j++;
+                }
+
+                $context = [];
+                if ($stackTrace) {
+                    $context = ['stack_trace' => implode("\n", $stackTrace)];
+                }
+
                 $entries[] = [
                     'datetime' => $m['datetime'],
                     'level'    => $level,
                     'location' => $location,
                     'message'  => $m['message'],
-                    'context'  => [],
+                    'context'  => $context,
                 ];
-                $i++;
+                $i = $j;
                 continue;
             }
 

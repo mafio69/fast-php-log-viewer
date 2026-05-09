@@ -157,6 +157,27 @@ header('Expires: 0');
                 <button @click="fontSize = Math.min(24, fontSize + 1)"
                     class="px-2 py-1 text-xs" style="background:#222;color:#9ca3af;">A+</button>
             </div>
+            <!-- Bookmarks dropdown -->
+            <div class="relative" style="margin-left:auto;">
+                <button @click="showBookmarks = !showBookmarks"
+                    class="px-3 py-1 rounded text-sm flex items-center gap-1"
+                    style="background:#222;border:1px solid #333;color:#fbbf24;">
+                    ★ <span style="color:#9ca3af;">{{ bookmarks.length }}</span>
+                </button>
+                <div v-if="showBookmarks" class="absolute right-0 top-full mt-1 rounded shadow-lg z-20 overflow-hidden"
+                    style="background:#1a1a1a;border:1px solid #333;width:380px;max-height:320px;overflow-y:auto;">
+                    <div v-if="!bookmarks.length" class="px-3 py-2 text-xs" style="color:#6b7280;">Brak zakładek</div>
+                    <div v-for="(bm, bi) in bookmarks" :key="bi"
+                        class="px-3 py-2 cursor-pointer flex items-center gap-2"
+                        style="border-bottom:1px solid #222;"
+                        @click="goToBookmark(bm)">
+                        <span class="text-xs font-bold flex-shrink-0" :style="'color:' + levelColor(bm.level)">{{ bm.level }}</span>
+                        <span class="text-xs truncate flex-1" style="color:#d1d5db;">{{ bm.message }}</span>
+                        <span class="text-xs flex-shrink-0" style="color:#6b7280;">{{ bm.file.split('/').pop() }}</span>
+                        <button @click.stop="removeBookmark(bi)" class="text-xs" style="color:#ef4444;" title="Usuń">✕</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- States -->
@@ -189,13 +210,24 @@ header('Expires: 0');
                                 <span v-else>{{ entry.location }}</span>
                             </td>
                             <td class="px-3 py-1.5 truncate max-w-0 w-full" style="color:#d1d5db;">
-                                <span class="block truncate">{{ entry.message }}</span>
-                                <span v-if="hasContext(entry)" class="text-xs" style="color:#4b5563;">{{ expanded[i] ? '▲' : '▼' }}</span>
+                                <span class="block truncate">
+                                    <span v-if="isBookmarked(entry)" style="color:#fbbf24;" title="Zakładka">★ </span>{{ entry.message }}
+                                </span>
+                                <span class="text-xs" style="color:#4b5563;">{{ expanded[i] ? '▲' : '▼' }}</span>
                             </td>
                         </tr>
-                        <tr v-if="expanded[i] && hasContext(entry)" style="background:#161616;border-bottom:1px solid #1f1f1f;">
+                        <tr v-if="expanded[i]" style="background:#161616;border-bottom:1px solid #1f1f1f;">
                             <td colspan="4" class="px-3 py-2">
-                                <pre class="text-xs font-mono whitespace-pre-wrap" style="color:#9ca3af;">{{ JSON.stringify(entry.context, null, 2) }}</pre>
+                                <div class="flex items-start gap-2">
+                                    <div class="flex-1">
+                                        <div class="text-sm mb-1" style="color:#d1d5db;white-space:pre-wrap;word-break:break-word;">{{ entry.message }}</div>
+                                        <div v-if="entry.location" class="text-xs mb-1" style="color:#6b7280;">📍 {{ entry.location }}</div>
+                                        <pre v-if="hasContext(entry)" class="text-xs font-mono whitespace-pre-wrap" style="color:#9ca3af;">{{ JSON.stringify(entry.context, null, 2) }}</pre>
+                                    </div>
+                                    <button @click.stop="toggleBookmark(entry)"
+                                        class="text-lg flex-shrink-0" :title="isBookmarked(entry) ? 'Usuń zakładkę' : 'Dodaj zakładkę'"
+                                        :style="isBookmarked(entry) ? 'color:#fbbf24;' : 'color:#4b5563;'">★</button>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -206,7 +238,7 @@ header('Expires: 0');
 </div>
 
 <script>
-const { createApp, ref, computed, reactive, watch } = Vue;
+const { createApp, ref, computed, reactive, watch, nextTick } = Vue;
 const EDITOR_URL = <?= json_encode(EDITOR_URL) ?>;
 
 const LEVEL_COLORS = {
@@ -244,6 +276,9 @@ createApp({
         const timeTo       = ref('');
         const editorUrl    = ref(EDITOR_URL);
         const fontSize     = ref(parseInt(localStorage.getItem('fplv_fontsize') || '13'));
+        const bookmarks    = ref(JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'));
+        const showBookmarks = ref(false);
+        const MAX_BOOKMARKS = 10;
         const levels       = Object.keys(LEVEL_COLORS);
 
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
@@ -356,6 +391,82 @@ createApp({
             applyFilters();
         }
 
+        function bookmarkKey(entry) {
+            return entry.datetime + '|' + entry.message.slice(0, 80);
+        }
+
+        function isBookmarked(entry) {
+            const key = bookmarkKey(entry);
+            return bookmarks.value.some(b => b.key === key);
+        }
+
+        function toggleBookmark(entry) {
+            const key = bookmarkKey(entry);
+            const idx = bookmarks.value.findIndex(b => b.key === key);
+            if (idx >= 0) {
+                bookmarks.value.splice(idx, 1);
+            } else {
+                if (bookmarks.value.length >= MAX_BOOKMARKS) {
+                    bookmarks.value.shift();
+                }
+                bookmarks.value.push({
+                    key,
+                    file: selectedFile.value,
+                    datetime: entry.datetime,
+                    level: entry.level,
+                    message: entry.message.slice(0, 120),
+                    location: entry.location,
+                });
+            }
+            localStorage.setItem('fplv_bookmarks', JSON.stringify(bookmarks.value));
+        }
+
+        function removeBookmark(idx) {
+            bookmarks.value.splice(idx, 1);
+            localStorage.setItem('fplv_bookmarks', JSON.stringify(bookmarks.value));
+        }
+
+        async function goToBookmark(bm) {
+            showBookmarks.value = false;
+            try {
+                const res = await fetch('?action=files' + (selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : ''));
+                const allFiles = await res.json();
+                if (!allFiles.some(f => f.file === bm.file)) {
+                    alert('Plik już nie istnieje: ' + bm.file.split('/').pop());
+                    removeBookmark(bookmarks.value.findIndex(b => b.key === bm.key));
+                    return;
+                }
+            } catch(e) {}
+            await selectFile(bm.file);
+            // Find and expand the matching entry
+            const idx = filtered.value.findIndex(e => bookmarkKey(e) === bm.key);
+            if (idx >= 0) {
+                expanded[idx] = true;
+                await nextTick();
+                const rows = document.querySelectorAll('tbody tr');
+                // Each entry has 1-2 rows (main + expanded), find the right one
+                let rowIdx = 0;
+                for (let j = 0; j < idx; j++) {
+                    rowIdx++;
+                    if (expanded[j]) rowIdx++;
+                }
+                if (rows[rowIdx]) rows[rowIdx].scrollIntoView({ block: 'center' });
+            }
+        }
+
+        async function validateBookmarks() {
+            try {
+                const res = await fetch('?action=files' + (selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : ''));
+                const allFiles = await res.json();
+                const validPaths = new Set(allFiles.map(f => f.file));
+                const valid = bookmarks.value.filter(b => validPaths.has(b.file));
+                if (valid.length !== bookmarks.value.length) {
+                    bookmarks.value = valid;
+                    localStorage.setItem('fplv_bookmarks', JSON.stringify(valid));
+                }
+            } catch(e) {}
+        }
+
         async function init() {
             try {
                 directories.value = await fetchJson('?action=directories');
@@ -364,6 +475,7 @@ createApp({
                 }
             } catch(e) { /* fallback: no dirs endpoint = single dir mode */ }
             await loadFiles();
+            validateBookmarks();
         }
         init();
 
@@ -371,8 +483,10 @@ createApp({
             files, entries, filtered, selectedFile, filterText, loading, expanded,
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
             excludedLevels, editorUrl, directories, selectedDir,
+            bookmarks, showBookmarks,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
             changeDir, formatSize, levelColor, levelDot, rowBg, hasContext, openInEditor,
+            toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
         };
     }
 }).mount('#app');
