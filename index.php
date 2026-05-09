@@ -39,6 +39,16 @@ header('Expires: 0');
             <div class="font-bold text-sm" style="color:#e5e7eb;">⚡ log-viewer</div>
         </div>
 
+        <!-- Directory selector -->
+        <div v-if="directories.length > 1" class="px-3 py-2" style="border-bottom:1px solid #2a2a2a;">
+            <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">KATALOG</div>
+            <select v-model="selectedDir" @change="changeDir"
+                class="w-full rounded px-2 py-1 text-xs"
+                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                <option v-for="d in directories" :key="d.key" :value="d.key">{{ d.key }}</option>
+            </select>
+        </div>
+
         <!-- File list -->
         <div class="flex-1 overflow-y-auto">
             <div v-for="f in files" :key="f.file"
@@ -221,6 +231,8 @@ createApp({
         const entries      = ref([]);
         const filtered     = ref([]);
         const selectedFile = ref('');
+        const selectedDir  = ref('');
+        const directories  = ref([]);
         const filterText   = ref('');
         const loading      = ref(false);
         const expanded     = reactive({});
@@ -265,11 +277,23 @@ createApp({
         }
 
         async function loadFiles() {
-            files.value = await fetchJson('?action=files');
+            const dirParam = selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : '';
+            files.value = await fetchJson('?action=files' + dirParam);
             if (files.value.length) {
                 selectedFile.value = files.value[0].file;
                 await loadEntries();
+            } else {
+                selectedFile.value = '';
+                entries.value = [];
+                filtered.value = [];
             }
+        }
+
+        async function changeDir() {
+            selectedFile.value = '';
+            entries.value = [];
+            filtered.value = [];
+            await loadFiles();
         }
 
         async function selectFile(path) {
@@ -332,14 +356,23 @@ createApp({
             applyFilters();
         }
 
-        loadFiles();
+        async function init() {
+            try {
+                directories.value = await fetchJson('?action=directories');
+                if (directories.value.length) {
+                    selectedDir.value = directories.value[0].key;
+                }
+            } catch(e) { /* fallback: no dirs endpoint = single dir mode */ }
+            await loadFiles();
+        }
+        init();
 
         return {
             files, entries, filtered, selectedFile, filterText, loading, expanded,
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
-            excludedLevels, editorUrl,
+            excludedLevels, editorUrl, directories, selectedDir,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
-            formatSize, levelColor, levelDot, rowBg, hasContext, openInEditor,
+            changeDir, formatSize, levelColor, levelDot, rowBg, hasContext, openInEditor,
         };
     }
 }).mount('#app');

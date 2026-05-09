@@ -5,20 +5,21 @@ declare(strict_types=1);
 /**
  * fast-php-log-viewer API endpoint.
  *
- * GET ?action=files              → list of log files
+ * GET ?action=directories        → list of configured log directories
+ * GET ?action=files[&dir=key]    → list of log files
  * GET ?action=entries&file=path  → parsed entries from a file
  *
- * Configure LOG_DIR before including or set it as a constant.
+ * Configure LOG_DIR (single) or LOG_DIRS (multiple) before including.
  */
 
 if (!defined('LOG_DIR')) {
     define('LOG_DIR', getenv('LOG_DIR') ?: dirname(__DIR__) . '/logs');
 }
 
-// When installed as a Composer dependency the autoloader is already loaded
-// by the entry point (viewer/index.php). The original relative path
-// __DIR__ . '/../vendor/autoload.php' resolves to the package's own vendor/
-// which doesn't exist — only require if the file actually exists.
+if (!defined('LOG_DIRS')) {
+    define('LOG_DIRS', []);
+}
+
 $_autoload = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($_autoload)) {
     require_once $_autoload;
@@ -35,17 +36,45 @@ $action = $_GET['action'] ?? '';
 
 try {
     match ($action) {
-        'files'   => respondFiles(),
-        'entries' => respondEntries(),
-        default   => respondError('Unknown action', 400),
+        'directories' => respondDirectories(),
+        'files'       => respondFiles(),
+        'entries'     => respondEntries(),
+        default       => respondError('Unknown action', 400),
     };
 } catch (\Throwable $e) {
     respondError($e->getMessage(), 500);
 }
 
+function getLogDirs(): array
+{
+    $dirs = LOG_DIRS;
+    if (empty($dirs)) {
+        $dirs = ['default' => LOG_DIR];
+    }
+    return $dirs;
+}
+
+function resolveLogDir(): string
+{
+    $dirs = getLogDirs();
+    $key  = $_GET['dir'] ?? array_key_first($dirs);
+    return $dirs[$key] ?? reset($dirs);
+}
+
+function respondDirectories(): void
+{
+    $dirs = getLogDirs();
+    $result = [];
+    foreach ($dirs as $key => $path) {
+        $result[] = ['key' => $key, 'path' => $path];
+    }
+    echo json_encode($result);
+}
+
 function respondFiles(): void
 {
-    $finder = new LogFinder(LOG_DIR);
+    $logDir = resolveLogDir();
+    $finder = new LogFinder($logDir);
     $files  = $finder->findAll();
 
     echo json_encode(array_map(fn($f) => [
@@ -64,15 +93,22 @@ function respondEntries(): void
         return;
     }
 
-    // Security: file must be inside LOG_DIR
-    $real    = realpath($file);
-    $logReal = realpath(LOG_DIR);
+    // Security: file must be inside one of the configured log dirs
+    $dirs = getLogDirs();
+    $real = realpath($file);
+    $real = $real !== false ? str_replace('\\', '/', $real) : str_replace('\\', '/', $file);
 
-    // Normalize separators for Windows/WSL path compatibility
-    $real    = $real    !== false ? str_replace('\\', '/', $real)    : str_replace('\\', '/', $file);
-    $logReal = $logReal !== false ? str_replace('\\', '/', $logReal) : str_replace('\\', '/', LOG_DIR);
+    $allowed = false;
+    foreach ($dirs as $dir) {
+        $logReal = realpath($dir);
+        $logReal = $logReal !== false ? str_replace('\\', '/', $logReal) : str_replace('\\', '/', $dir);
+        if (str_starts_with($real, rtrim($logReal, '/') . '/')) {
+            $allowed = true;
+            break;
+        }
+    }
 
-    if (!str_starts_with($real, rtrim($logReal, '/') . '/')) {
+    if (!$allowed) {
         respondError('Access denied', 403);
         return;
     }
