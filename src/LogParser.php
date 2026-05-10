@@ -14,11 +14,11 @@ namespace Mariusz\LogViewer;
  */
 class LogParser
 {
-    private const PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
-    private const PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
-    private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>[^\s]+) on line (?P<line>\d+))?\s*$/i';
+    private const string PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
+    private const string PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
+    private const string PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
 
-    /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array<mixed>}> */
+    /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
     public function parseFile(string $path): array
     {
         if (!is_readable($path)) {
@@ -39,15 +39,7 @@ class LogParser
 
             // fast-php-logger single-line format
             if (preg_match(self::PATTERN_FPL, $line, $m)) {
-                $entries[] = [
-                    'datetime' => $m['datetime'],
-                    'level'    => strtoupper($m['level']),
-                    'location' => $m['location'],
-                    'message'  => $m['message'],
-                    'context'  => isset($m['context']) && $m['context'] !== ''
-                        ? (json_decode($m['context'], true) ?? [])
-                        : [],
-                ];
+                $entries[] = self::buildFplEntry($m);
                 $i++;
                 continue;
             }
@@ -101,7 +93,7 @@ class LogParser
                 $message  = trim($rest);
                 $location = '';
 
-                $decoded = json_decode(trim($rest), true);
+                $decoded = json_decode(trim($rest), true, 512, JSON_THROW_ON_ERROR);
                 if (is_array($decoded)) {
                     $context = $decoded;
                     // extract location from info field: LEVEL::Class::method::file::line
@@ -135,13 +127,19 @@ class LogParser
             return null;
         }
 
+        return self::buildFplEntry($m);
+    }
+
+    /** @return array{datetime: string, level: string, location: string, message: string, context: array<mixed>} */
+    private static function buildFplEntry(array $m): array
+    {
         return [
             'datetime' => $m['datetime'],
             'level'    => strtoupper($m['level']),
             'location' => $m['location'],
             'message'  => $m['message'],
             'context'  => isset($m['context']) && $m['context'] !== ''
-                ? (json_decode($m['context'], true) ?? [])
+                ? (json_decode($m['context'], true, 512, JSON_THROW_ON_ERROR) ?? [])
                 : [],
         ];
     }

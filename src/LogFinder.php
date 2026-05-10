@@ -7,9 +7,9 @@ namespace Mariusz\LogViewer;
 /**
  * Finds log files produced by fast-php-logger (default structure: logDir/Y/m/Y-m-d.log).
  */
-class LogFinder
+readonly class LogFinder
 {
-    public function __construct(private readonly string $logDir) {}
+    public function __construct(private string $logDir) {}
 
     /**
      * Returns all log files sorted newest first.
@@ -37,7 +37,7 @@ class LogFinder
             ];
         }
 
-        usort($result, fn($a, $b) => strcmp($b['date'], $a['date']));
+        usort($result, static fn($a, $b) => strcmp($b['date'], $a['date']));
 
         return $result;
     }

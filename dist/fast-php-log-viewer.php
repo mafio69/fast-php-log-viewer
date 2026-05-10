@@ -37,7 +37,7 @@ class LogParser
 {
     private const PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
     private const PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
-    private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>[^\s]+) on line (?P<line>\d+))?\s*$/i';
+    private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array<mixed>}> */
     public function parseFile(string $path): array
@@ -60,15 +60,7 @@ class LogParser
 
             // fast-php-logger single-line format
             if (preg_match(self::PATTERN_FPL, $line, $m)) {
-                $entries[] = [
-                    'datetime' => $m['datetime'],
-                    'level'    => strtoupper($m['level']),
-                    'location' => $m['location'],
-                    'message'  => $m['message'],
-                    'context'  => isset($m['context']) && $m['context'] !== ''
-                        ? (json_decode($m['context'], true) ?? [])
-                        : [],
-                ];
+                $entries[] = self::buildFplEntry($m);
                 $i++;
                 continue;
             }
@@ -142,6 +134,12 @@ class LogParser
             return null;
         }
 
+        return self::buildFplEntry($m);
+    }
+
+    /** @return array{datetime: string, level: string, location: string, message: string, context: array<mixed>} */
+    private static function buildFplEntry(array $m): array
+    {
         return [
             'datetime' => $m['datetime'],
             'level'    => strtoupper($m['level']),
@@ -281,10 +279,13 @@ namespace {
         echo json_encode($entries);
     }
 
+    /**
+     * @throws JsonException
+     */
     function respondError(string $message, int $code): void
     {
         http_response_code($code);
-        echo json_encode(['error' => $message]);
+        echo json_encode(['error' => $message], JSON_THROW_ON_ERROR);
     }
 } // end namespace
 
@@ -318,7 +319,7 @@ namespace { ?>
         <!-- File list -->
         <div class="flex-1 overflow-y-auto">
             <div v-for="f in files" :key="f.file"
-                @click="selectFile(f.file)"
+                @click="selectFile(f.file).then(r => )"
                 class="px-3 py-2 cursor-pointer"
                 style="border-bottom:1px solid #222;"
                 :style="selectedFile === f.file
@@ -338,15 +339,19 @@ namespace { ?>
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
                         <span style="width:20px;">Od</span>
-                        <input type="date" v-model="dateFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        <label>
+                            <input type="date" v-model="dateFrom" @change="applyFilters"
+                                class="flex-1 rounded px-1 py-0.5 text-xs"
+                                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        </label>
                     </div>
                     <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
                         <span style="width:20px;">Do</span>
-                        <input type="date" v-model="dateTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        <label>
+                            <input type="date" v-model="dateTo" @change="applyFilters"
+                                class="flex-1 rounded px-1 py-0.5 text-xs"
+                                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        </label>
                     </div>
                 </div>
                 <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium"
@@ -375,15 +380,19 @@ namespace { ?>
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
                         <span style="width:20px;">Od</span>
-                        <input type="time" v-model="timeFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        <label>
+                            <input type="time" v-model="timeFrom" @change="applyFilters"
+                                class="flex-1 rounded px-1 py-0.5 text-xs"
+                                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        </label>
                     </div>
                     <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
                         <span style="width:20px;">Do</span>
-                        <input type="time" v-model="timeTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        <label>
+                            <input type="time" v-model="timeTo" @change="applyFilters"
+                                class="flex-1 rounded px-1 py-0.5 text-xs"
+                                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                        </label>
                     </div>
                 </div>
             </div>
@@ -410,9 +419,11 @@ namespace { ?>
     <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Toolbar -->
         <div class="flex items-center gap-2 px-4 py-2" style="background:#1a1a1a;border-bottom:1px solid #2a2a2a;">
-            <input v-model="filterText" @input="applyFilters" placeholder="Search…"
-                class="rounded px-3 py-1 text-sm flex-1 max-w-xs"
-                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+            <label>
+                <input v-model="filterText" @input="applyFilters" placeholder="Search…"
+                    class="rounded px-3 py-1 text-sm flex-1 max-w-xs"
+                    style="background:#222;border:1px solid #333;color:#e5e7eb;">
+            </label>
             <button @click="loadEntries" title="Refresh"
                 class="px-3 py-1 rounded text-sm"
                 style="background:#222;border:1px solid #333;color:#9ca3af;">↺</button>
@@ -473,7 +484,7 @@ namespace { ?>
 
 <script>
 const { createApp, ref, computed, reactive, watch } = Vue;
-const EDITOR_URL = <?= json_encode(EDITOR_URL) ?>;
+const EDITOR_URL = <?= json_encode(EDITOR_URL, JSON_THROW_ON_ERROR) ?>;
 
 const LEVEL_COLORS = {
     DEBUG:'#60a5fa', INFO:'#34d399', NOTICE:'#22d3ee',
@@ -577,16 +588,16 @@ createApp({
                 r = r.filter(e => {
                     const d = e.datetime.slice(0, 10);
                     if (dateFrom.value && d < dateFrom.value) return false;
-                    if (dateTo.value   && d > dateTo.value)   return false;
-                    return true;
+                    return !(dateTo.value && d > dateTo.value);
+
                 });
             }
             if (timeFrom.value || timeTo.value) {
                 r = r.filter(e => {
                     const t = e.datetime.slice(11, 16);
                     if (timeFrom.value && t < timeFrom.value) return false;
-                    if (timeTo.value   && t > timeTo.value)   return false;
-                    return true;
+                    return !(timeTo.value && t > timeTo.value);
+
                 });
             }
             if (sortOrder.value === 'asc') r = [...r].reverse();
