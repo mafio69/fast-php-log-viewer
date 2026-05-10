@@ -41,7 +41,7 @@ try {
         'entries'     => respondEntries(),
         default       => respondError('Unknown action', 400),
     };
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     respondError($e->getMessage(), 500);
 }
 
@@ -61,6 +61,7 @@ function resolveLogDir(): string
     return $dirs[$key] ?? reset($dirs);
 }
 
+/** @throws JsonException */
 function respondDirectories(): void
 {
     $dirs = getLogDirs();
@@ -68,22 +69,24 @@ function respondDirectories(): void
     foreach ($dirs as $key => $path) {
         $result[] = ['key' => $key, 'path' => $path];
     }
-    echo json_encode($result);
+    echo json_encode($result, JSON_THROW_ON_ERROR);
 }
 
+/** @throws JsonException */
 function respondFiles(): void
 {
     $logDir = resolveLogDir();
     $finder = new LogFinder($logDir);
     $files  = $finder->findAll();
 
-    echo json_encode(array_map(fn($f) => [
+    echo json_encode(array_map(static fn($f) => [
         'file' => $f['path'],
         'date' => $f['date'],
         'size' => $f['size'],
-    ], $files));
+    ], $files), JSON_THROW_ON_ERROR);
 }
 
+/** @throws JsonException */
 function respondEntries(): void
 {
     $file = $_GET['file'] ?? '';
@@ -118,10 +121,10 @@ function respondEntries(): void
 
     $level = $_GET['level'] ?? '';
     if ($level !== '') {
-        $entries = array_values(array_filter($entries, fn($e) => $e['level'] === strtoupper($level)));
+        $entries = array_values(array_filter($entries, static fn($e) => $e['level'] === strtoupper($level)));
     }
 
-    echo json_encode($entries);
+    echo json_encode($entries, JSON_THROW_ON_ERROR);
 }
 
 function respondError(string $message, int $code): void
