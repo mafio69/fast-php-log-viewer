@@ -9,8 +9,13 @@ composer update --no-interaction
 chmod -R 755 /var/www/html/vendor
 ```
 
-## Usuwanie plików przez Docker (gdy brak uprawnień lokalnie)
+## Usuwanie plików przez Docker (gdy brak uprawnień lokalnie)  
 
 ```sh
 docker compose exec php rm /var/www/html/<ścieżka_do_pliku>
+```
+## UPDATE IN docker-fast-php-logger  
+  
+```shell
+/var/www/html/vendor/mafio69/fast-php-log-viewer/composer update
 ```

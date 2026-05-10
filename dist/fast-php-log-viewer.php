@@ -13,12 +13,14 @@
 
 declare(strict_types=1);
 
-if (!defined('LOG_DIR')) {
-    define('LOG_DIR', getenv('LOG_DIR') ?: __DIR__ . '/logs');
-}
+namespace {
+    if (!defined('LOG_DIR')) {
+        define('LOG_DIR', getenv('LOG_DIR') ?: __DIR__ . '/logs');
+    }
 
-if (!defined('EDITOR_URL')) {
-    define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
+    if (!defined('EDITOR_URL')) {
+        define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
+    }
 }
 
 namespace Mariusz\LogViewer {
@@ -211,105 +213,82 @@ class LogFinder
 
 namespace {
 
-use Mariusz\LogViewer\LogFinder;
-use Mariusz\LogViewer\LogParser;
+    use Mariusz\LogViewer\LogFinder;
+    use Mariusz\LogViewer\LogParser;
 
-if (isset($_GET['action'])) {
-/**
- * fast-php-log-viewer API endpoint.
- *
- * GET ?action=files              → list of log files
- * GET ?action=entries&file=path  → parsed entries from a file
- *
- * Configure LOG_DIR before including or set it as a constant.
- */
+    if (isset($_GET['action'])) {
+        header('Content-Type: application/json');
+        header('X-Content-Type-Options: nosniff');
 
-if (!defined('LOG_DIR')) {
-    define('LOG_DIR', getenv('LOG_DIR') ?: dirname(__DIR__) . '/logs');
-}
+        $action = $_GET['action'];
 
-// When installed as a Composer dependency the autoloader is already loaded
-// by the entry point (viewer/index.php). The original relative path
-// __DIR__ . '/../vendor/autoload.php' resolves to the package's own vendor/
-// which doesn't exist — only require if the file actually exists.
-$_autoload = __DIR__ . '/../vendor/autoload.php';
-if (file_exists($_autoload)) {
-    require_once $_autoload;
-}
-unset($_autoload);
+        try {
+            match ($action) {
+                'files'   => respondFiles(),
+                'entries' => respondEntries(),
+                default   => respondError('Unknown action', 400),
+            };
+        } catch (Throwable $e) {
+            respondError($e->getMessage(), 500);
+        }
 
-header('Content-Type: application/json');
-header('X-Content-Type-Options: nosniff');
-
-$action = $_GET['action'] ?? '';
-
-try {
-    match ($action) {
-        'files'   => respondFiles(),
-        'entries' => respondEntries(),
-        default   => respondError('Unknown action', 400),
-    };
-} catch (\Throwable $e) {
-    respondError($e->getMessage(), 500);
-}
-
-function respondFiles(): void
-{
-    $finder = new LogFinder(LOG_DIR);
-    $files  = $finder->findAll();
-
-    echo json_encode(array_map(fn($f) => [
-        'file' => $f['path'],
-        'date' => $f['date'],
-        'size' => $f['size'],
-    ], $files));
-}
-
-function respondEntries(): void
-{
-    $file = $_GET['file'] ?? '';
-
-    if ($file === '') {
-        respondError('Missing file parameter', 400);
-        return;
+        exit;
     }
 
-    // Security: file must be inside LOG_DIR
-    $real    = realpath($file);
-    $logReal = realpath(LOG_DIR);
+    header('Pragma: no-cache');
+    header('Expires: 0');
 
-    // Normalize separators for Windows/WSL path compatibility
-    $real    = $real    !== false ? str_replace('\\', '/', $real)    : str_replace('\\', '/', $file);
-    $logReal = $logReal !== false ? str_replace('\\', '/', $logReal) : str_replace('\\', '/', LOG_DIR);
+    function respondFiles(): void
+    {
+        $finder = new LogFinder(LOG_DIR);
+        $files  = $finder->findAll();
 
-    if (!str_starts_with($real, rtrim($logReal, '/') . '/')) {
-        respondError('Access denied', 403);
-        return;
+        echo json_encode(array_map(fn($f) => [
+            'file' => $f['path'],
+            'date' => $f['date'],
+            'size' => $f['size'],
+        ], $files));
     }
 
-    $parser  = new LogParser();
-    $entries = $parser->parseFile($real);
+    function respondEntries(): void
+    {
+        $file = $_GET['file'] ?? '';
 
-    $level = $_GET['level'] ?? '';
-    if ($level !== '') {
-        $entries = array_values(array_filter($entries, fn($e) => $e['level'] === strtoupper($level)));
+        if ($file === '') {
+            respondError('Missing file parameter', 400);
+            return;
+        }
+
+        $real    = realpath($file);
+        $logReal = realpath(LOG_DIR);
+
+        $real    = $real    !== false ? str_replace('\\', '/', $real)    : str_replace('\\', '/', $file);
+        $logReal = $logReal !== false ? str_replace('\\', '/', $logReal) : str_replace('\\', '/', LOG_DIR);
+
+        if (!str_starts_with($real, rtrim($logReal, '/') . '/')) {
+            respondError('Access denied', 403);
+            return;
+        }
+
+        $parser  = new LogParser();
+        $entries = $parser->parseFile($real);
+
+        $level = $_GET['level'] ?? '';
+        if ($level !== '') {
+            $entries = array_values(array_filter($entries, fn($e) => $e['level'] === strtoupper($level)));
+        }
+
+        echo json_encode($entries);
     }
 
-    echo json_encode($entries);
-}
+    function respondError(string $message, int $code): void
+    {
+        http_response_code($code);
+        echo json_encode(['error' => $message]);
+    }
+} // end namespace
 
-function respondError(string $message, int $code): void
-{
-    http_response_code($code);
-    echo json_encode(['error' => $message]);
-}
-    exit;
-}
-
-?>
-header('Pragma: no-cache');
-header('Expires: 0');
-?>
+namespace { ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -643,3 +622,4 @@ createApp({
 </script>
 </body>
 </html>
+<?php } // end namespace
