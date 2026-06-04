@@ -21,30 +21,92 @@ header('Expires: 0');
     <title>fast-php-log-viewer</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <style>
         [v-cloak] { display: none; }
-        body { background:#111; color:#e5e7eb; }
+        body { background:#000; color:#00ff00; font-family: 'Courier New', monospace; }
         ::-webkit-scrollbar { width:6px; height:6px; }
-        ::-webkit-scrollbar-track { background:#1a1a1a; }
-        ::-webkit-scrollbar-thumb { background:#444; border-radius:3px; }
+        ::-webkit-scrollbar-track { background:#001100; }
+        ::-webkit-scrollbar-thumb { background:#003300; border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:#004400; }
+        .crt-glow { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00; }
+        .crt-border { border: 1px solid #00ff00; }
+        .crt-bg { background: #001100; }
+        .crt-text { color: #00ff00; }
+        .crt-dim { color: #006600; }
+        .crt-input { background: #000; border: 1px solid #00ff00; color: #00ff00; }
+        .crt-input:focus { outline: none; box-shadow: 0 0 5px #00ff00; }
+        .crt-button { background: #001100; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; }
+        .crt-button:hover { background: #002200; box-shadow: 0 0 5px #00ff00; }
+
+        /* DataTables CRT theme */
+        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing,
+        .dataTables_wrapper .dataTables_paginate {
+            color: #00ff00 !important;
+            font-family: 'Courier New', monospace !important;
+        }
+        .dataTables_wrapper .dataTables_length select, .dataTables_wrapper .dataTables_filter input {
+            background: #000 !important;
+            border: 1px solid #00ff00 !important;
+            color: #00ff00 !important;
+            font-family: 'Courier New', monospace !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            color: #00ff00 !important;
+            border: 1px solid #00ff00 !important;
+            background: #000 !important;
+            font-family: 'Courier New', monospace !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #002200 !important;
+            color: #00ff00 !important;
+            border: 1px solid #00ff00 !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            color: #006600 !important;
+            border: 1px solid #003300 !important;
+        }
+        table.dataTable thead th, table.dataTable thead td {
+            border-bottom: 1px solid #00ff00 !important;
+            color: #00ff00 !important;
+            font-family: 'Courier New', monospace !important;
+            background: #001100 !important;
+        }
+        table.dataTable tbody tr {
+            background: #000 !important;
+        }
+        table.dataTable tbody tr:hover {
+            background: #001100 !important;
+        }
+        table.dataTable td {
+            color: #00ff00 !important;
+            font-family: 'Courier New', monospace !important;
+        }
+        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing {
+            margin: 12px !important;
+        }
     </style>
 </head>
-<body class="h-screen overflow-hidden" style="background:#111;color:#e5e7eb;">
+<body class="h-screen overflow-hidden crt-text crt-bg">
 
 <div id="app" v-cloak class="flex h-screen" :style="{ fontSize: fontSize + 'px' }">
 
     <!-- Sidebar -->
-    <aside style="width:200px;min-width:200px;background:#1a1a1a;border-right:1px solid #2a2a2a;" class="flex flex-col">
-        <div class="px-3 py-3" style="border-bottom:1px solid #2a2a2a;">
-            <div class="font-bold text-sm" style="color:#e5e7eb;">⚡ log-viewer</div>
+    <aside style="width:200px;min-width:200px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
+        <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
+            <div class="font-bold text-sm crt-glow">⚡ LOG-VIEWER</div>
         </div>
 
         <!-- Directory selector -->
-        <div v-if="directories.length > 1" class="px-3 py-2" style="border-bottom:1px solid #2a2a2a;">
-            <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">KATALOG</div>
+        <div v-if="directories.length > 1" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
+            <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
             <select v-model="selectedDir" @change="changeDir"
-                class="w-full rounded px-2 py-1 text-xs"
-                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                class="w-full rounded px-2 py-1 text-xs crt-input">
                 <option v-for="d in directories" :key="d.key" :value="d.key">{{ d.key }}</option>
             </select>
         </div>
@@ -54,179 +116,229 @@ header('Expires: 0');
             <div v-for="f in files" :key="f.file"
                 @click="selectFile(f.file)"
                 class="px-3 py-2 cursor-pointer"
-                style="border-bottom:1px solid #222;"
+                style="border-bottom:1px solid #002200;"
                 :style="selectedFile === f.file
-                    ? 'background:#1e3a5f;border-left:3px solid #3b82f6;color:#93c5fd;'
-                    : 'color:#9ca3af;border-left:3px solid transparent;'">
+                    ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;'
+                    : 'color:#006600;border-left:3px solid transparent;'">
                 <div class="font-medium truncate">{{ f.file.split('/').pop() }}</div>
-                <div style="color:#6b7280;font-size:0.85em;">{{ f.date }} · {{ formatSize(f.size) }}</div>
+                <div class="crt-dim" style="font-size:0.85em;">{{ f.date }} · {{ formatSize(f.size) }}</div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div style="border-top:1px solid #2a2a2a;" class="px-3 py-3 flex flex-col gap-3">
+        <div style="border-top:1px solid #00ff00;" class="px-3 py-3 flex flex-col gap-3">
 
             <!-- Date range -->
             <div>
-                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">ZAKRES DAT</div>
+                <div class="text-xs font-semibold mb-1 crt-dim">ZAKRES DAT</div>
                 <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                    <div class="flex items-center gap-1 text-xs crt-dim">
                         <span style="width:20px;">Od</span>
                         <input type="date" v-model="dateFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
                     </div>
-                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                    <div class="flex items-center gap-1 text-xs crt-dim">
                         <span style="width:20px;">Do</span>
                         <input type="date" v-model="dateTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
                     </div>
                 </div>
-                <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium"
-                    style="background:#1d4ed8;color:#fff;">Zastosuj</button>
+                <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium crt-button">Zastosuj</button>
             </div>
 
             <!-- Levels -->
             <div>
-                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">POZIOMY</div>
+                <div class="text-xs font-semibold mb-1 crt-dim">POZIOMY</div>
                 <div class="flex flex-col gap-0.5">
-                    <label v-for="level in levels" :key="level" class="flex items-center gap-2 text-xs cursor-pointer" style="color:#9ca3af;">
+                    <label v-for="level in levels" :key="level" class="flex items-center gap-2 text-xs cursor-pointer crt-dim">
                         <span class="w-2 h-2 rounded-full inline-block" :style="'background:' + levelDot(level)"></span>
                         <input type="checkbox" :checked="!excludedLevels.includes(level)" @change="toggleLevel(level)" class="hidden">
                         <span @click="toggleLevel(level)"
-                            :style="excludedLevels.includes(level) ? 'color:#4b5563;' : 'color:#e5e7eb;'">
+                            :style="excludedLevels.includes(level) ? 'color:#003300;' : 'color:#00ff00;'">
                             {{ level }}
                         </span>
-                        <span class="ml-auto" style="color:#6b7280;">{{ levelCounts[level] || '' }}</span>
+                        <span class="ml-auto crt-dim">{{ levelCounts[level] || '' }}</span>
                     </label>
                 </div>
             </div>
 
             <!-- Time range -->
             <div>
-                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">GODZINY</div>
+                <div class="text-xs font-semibold mb-1 crt-dim">GODZINY</div>
                 <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                    <div class="flex items-center gap-1 text-xs crt-dim">
                         <span style="width:20px;">Od</span>
                         <input type="time" v-model="timeFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
                     </div>
-                    <div class="flex items-center gap-1 text-xs" style="color:#9ca3af;">
+                    <div class="flex items-center gap-1 text-xs crt-dim">
                         <span style="width:20px;">Do</span>
                         <input type="time" v-model="timeTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs"
-                            style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
                     </div>
                 </div>
             </div>
 
             <!-- Sort -->
             <div>
-                <div class="text-xs font-semibold mb-1" style="color:#6b7280;letter-spacing:.05em;">SORTOWANIE</div>
+                <div class="text-xs font-semibold mb-1 crt-dim">SORTOWANIE</div>
                 <button @click="toggleSort"
-                    class="w-full rounded px-2 py-1 text-xs text-left"
-                    style="background:#222;border:1px solid #333;color:#9ca3af;">
+                    class="w-full rounded px-2 py-1 text-xs text-left crt-button">
                     {{ sortOrder === 'desc' ? '↓ Newest first' : '↑ Oldest first' }}
                 </button>
             </div>
 
             <!-- Stats -->
-            <div class="text-xs" style="color:#6b7280;">
+            <div class="text-xs crt-dim">
                 {{ filtered.length }} entries<br>
                 <span v-if="selectedFile">{{ selectedFile.split('/').pop() }}</span>
             </div>
+
+        <!-- SSH Connection Button -->
+        <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
+            <button @click="showSSHModal = true" class="w-full rounded py-1 text-xs crt-button">
+                🔗 SSH Connections
+            </button>
+        </div>
         </div>
     </aside>
+
+    <!-- SSH Modal -->
+    <div v-if="showSSHModal" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.8);">
+        <div class="rounded shadow-lg p-4" style="background:#000;border:1px solid #00ff00;width:500px;max-height:80vh;overflow-y:auto;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold crt-glow">SSH Connections</h3>
+                <button @click="showSSHModal = false" class="text-xs crt-button">✕</button>
+            </div>
+
+            <!-- Add SSH Connection Form -->
+            <div class="mb-4 p-3" style="background:#001100;border:1px solid #00ff00;">
+                <h4 class="text-xs font-bold mb-2 crt-text">Add New SSH Connection</h4>
+                <div class="flex flex-col gap-2">
+                    <input v-model="sshForm.name" placeholder="Connection Name" class="crt-input px-2 py-1 text-xs rounded">
+                    <input v-model="sshForm.host" placeholder="SSH Host" class="crt-input px-2 py-1 text-xs rounded">
+                    <input v-model="sshForm.user" placeholder="SSH User" class="crt-input px-2 py-1 text-xs rounded">
+                    <input v-model="sshForm.port" placeholder="SSH Port (default: 22)" class="crt-input px-2 py-1 text-xs rounded">
+                    <select v-model="sshForm.authMethod" class="crt-input px-2 py-1 text-xs rounded">
+                        <option value="password">Password Authentication</option>
+                        <option value="key">SSH Key Authentication</option>
+                    </select>
+                    <input v-if="sshForm.authMethod === 'password'" v-model="sshForm.password" type="password" placeholder="SSH Password" class="crt-input px-2 py-1 text-xs rounded">
+                    <input v-if="sshForm.authMethod === 'key'" v-model="sshForm.keyPath" placeholder="SSH Key Path (default: ~/.ssh/id_rsa)" class="crt-input px-2 py-1 text-xs rounded">
+                    <input v-if="sshForm.authMethod === 'key'" v-model="sshForm.keyPassphrase" type="password" placeholder="Key Passphrase (optional)" class="crt-input px-2 py-1 text-xs rounded">
+                    <input v-model="sshForm.remotePath" placeholder="Remote Log Path (e.g., /var/log)" class="crt-input px-2 py-1 text-xs rounded">
+                    <div class="flex gap-2">
+                        <button @click="testSSHConnection" class="flex-1 crt-button py-1 text-xs rounded">Test Connection</button>
+                        <button @click="addSSHConnection" class="flex-1 crt-button py-1 text-xs rounded">Save Connection</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved SSH Connections -->
+            <div>
+                <h4 class="text-xs font-bold mb-2 crt-text">Saved Connections</h4>
+                <div v-if="sshConnections.length === 0" class="text-xs crt-dim">No SSH connections saved</div>
+                <div v-for="(conn, idx) in sshConnections" :key="idx" class="mb-2 p-2" style="background:#001100;border:1px solid #002200;">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-xs font-bold crt-text">{{ conn.name }}</div>
+                            <div class="text-xs crt-dim">{{ conn.user }}@{{ conn.host }}:{{ conn.port || 22 }}</div>
+                            <div class="text-xs crt-dim">Path: {{ conn.remotePath }}</div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button @click="connectSSH(idx)" class="crt-button px-2 py-1 text-xs rounded">Connect</button>
+                            <button @click="deleteSSHConnection(idx)" class="crt-button px-2 py-1 text-xs rounded" style="border-color:#ff0000;color:#ff0000;">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main -->
     <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Toolbar -->
-        <div class="flex items-center gap-2 px-4 py-2" style="background:#1a1a1a;border-bottom:1px solid #2a2a2a;">
+        <div class="flex items-center gap-2 px-4 py-2" style="background:#000;border-bottom:1px solid #00ff00;">
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
-                class="rounded px-3 py-1 text-sm flex-1 max-w-xs"
-                style="background:#222;border:1px solid #333;color:#e5e7eb;">
+                class="rounded px-3 py-1 text-sm flex-1 max-w-xs crt-input">
             <button @click="loadEntries" title="Refresh"
-                class="px-3 py-1 rounded text-sm"
-                style="background:#222;border:1px solid #333;color:#9ca3af;">↺</button>
-            <div class="flex items-center gap-1 rounded overflow-hidden" style="border:1px solid #333;">
+                class="px-3 py-1 rounded text-sm crt-button">↺</button>
+            <div class="flex items-center gap-1 rounded overflow-hidden crt-border">
                 <button @click="fontSize = Math.max(10, fontSize - 1)"
-                    class="px-2 py-1 text-xs" style="background:#222;color:#9ca3af;">A−</button>
-                <span class="px-2 text-xs" style="color:#6b7280;">{{ fontSize }}px</span>
+                    class="px-2 py-1 text-xs crt-button">A−</button>
+                <span class="px-2 text-xs crt-dim">{{ fontSize }}px</span>
                 <button @click="fontSize = Math.min(24, fontSize + 1)"
-                    class="px-2 py-1 text-xs" style="background:#222;color:#9ca3af;">A+</button>
+                    class="px-2 py-1 text-xs crt-button">A+</button>
             </div>
             <!-- Bookmarks dropdown -->
             <div class="relative" style="margin-left:auto;">
                 <button @click="showBookmarks = !showBookmarks"
-                    class="px-3 py-1 rounded text-sm flex items-center gap-1"
-                    style="background:#222;border:1px solid #333;color:#fbbf24;">
-                    ★ <span style="color:#9ca3af;">{{ bookmarks.length }}</span>
+                    class="px-3 py-1 rounded text-sm flex items-center gap-1 crt-button" style="border-color:#ffff00;color:#ffff00;">
+                    ★ <span class="crt-dim">{{ bookmarks.length }}</span>
                 </button>
                 <div v-if="showBookmarks" class="absolute right-0 top-full mt-1 rounded shadow-lg z-20 overflow-hidden"
-                    style="background:#1a1a1a;border:1px solid #333;width:380px;max-height:320px;overflow-y:auto;">
-                    <div v-if="!bookmarks.length" class="px-3 py-2 text-xs" style="color:#6b7280;">Brak zakładek</div>
+                    style="background:#000;border:1px solid #00ff00;width:380px;max-height:320px;overflow-y:auto;">
+                    <div v-if="!bookmarks.length" class="px-3 py-2 text-xs crt-dim">Brak zakładek</div>
                     <div v-for="(bm, bi) in bookmarks" :key="bi"
                         class="px-3 py-2 cursor-pointer flex items-center gap-2"
-                        style="border-bottom:1px solid #222;"
+                        style="border-bottom:1px solid #002200;"
                         @click="goToBookmark(bm)">
                         <span class="text-xs font-bold flex-shrink-0" :style="'color:' + levelColor(bm.level)">{{ bm.level }}</span>
-                        <span class="text-xs truncate flex-1" style="color:#d1d5db;">{{ bm.message }}</span>
-                        <span class="text-xs flex-shrink-0" style="color:#6b7280;">{{ bm.file.split('/').pop() }}</span>
-                        <button @click.stop="removeBookmark(bi)" class="text-xs" style="color:#ef4444;" title="Usuń">✕</button>
+                        <span class="text-xs truncate flex-1 crt-text">{{ bm.message }}</span>
+                        <span class="text-xs flex-shrink-0 crt-dim">{{ bm.file.split('/').pop() }}</span>
+                        <button @click.stop="removeBookmark(bi)" class="text-xs crt-button" style="border-color:#ff0000;color:#ff0000;" title="Usuń">✕</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- States -->
-        <div v-if="loading" class="flex-1 flex items-center justify-center" style="color:#6b7280;">Loading…</div>
-        <div v-else-if="!selectedFile" class="flex-1 flex items-center justify-center" style="color:#6b7280;">Select a log file.</div>
-        <div v-else-if="!filtered.length" class="flex-1 flex items-center justify-center" style="color:#6b7280;">No entries match filters.</div>
+        <div v-if="loading" class="flex-1 flex items-center justify-center crt-dim">Loading…</div>
+        <div v-else-if="!selectedFile" class="flex-1 flex items-center justify-center crt-dim">Select a log file.</div>
+        <div v-else-if="!filtered.length" class="flex-1 flex items-center justify-center crt-dim">No entries match filters.</div>
 
         <!-- Table -->
         <div v-else class="flex-1 overflow-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead style="background:#1a1a1a;border-bottom:1px solid #2a2a2a;" class="sticky top-0 z-10">
+            <table id="logsTable" class="w-full text-sm border-collapse display">
+                <thead style="background:#001100;border-bottom:1px solid #00ff00;" class="sticky top-0 z-10">
                     <tr>
-                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;width:155px;">Datetime</th>
-                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;width:90px;">Level</th>
-                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;width:200px;">Location</th>
-                        <th class="text-left px-3 py-2 font-medium text-xs" style="color:#6b7280;">Message</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:155px;">Datetime</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:90px;">Level</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:200px;">Location</th>
+                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim">Message</th>
                     </tr>
                 </thead>
                 <tbody>
                     <template v-for="(entry, i) in filtered" :key="i">
                         <tr @click="toggle(i)" class="cursor-pointer"
-                            :style="'border-bottom:1px solid #1f1f1f;' + rowBg(entry.level)">
-                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap" style="color:#6b7280;">{{ entry.datetime }}</td>
+                            :style="'border-bottom:1px solid #002200;' + rowBg(entry.level)">
+                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">{{ entry.datetime }}</td>
                             <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ entry.level }}</td>
-                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap" style="color:#6b7280;">
+                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">
                                 <a v-if="editorUrl && entry.location"
                                    :href="openInEditor(entry.location)"
                                    @click.stop
                                    class="hover:underline" :style="'color:' + levelColor(entry.level)">{{ entry.location }}</a>
                                 <span v-else>{{ entry.location }}</span>
                             </td>
-                            <td class="px-3 py-1.5 truncate max-w-0 w-full" style="color:#d1d5db;">
+                            <td class="px-3 py-1.5 truncate max-w-0 w-full crt-text">
                                 <span class="block truncate">
-                                    <span v-if="isBookmarked(entry)" style="color:#fbbf24;" title="Zakładka">★ </span>{{ entry.message }}
+                                    <span v-if="isBookmarked(entry)" style="color:#ffff00;" title="Zakładka">★ </span>{{ entry.message }}
                                 </span>
-                                <span class="text-xs" style="color:#4b5563;">{{ expanded[i] ? '▲' : '▼' }}</span>
+                                <span class="text-xs crt-dim">{{ expanded[i] ? '▲' : '▼' }}</span>
                             </td>
                         </tr>
-                        <tr v-if="expanded[i]" style="background:#161616;border-bottom:1px solid #1f1f1f;">
+                        <tr v-if="expanded[i]" style="background:#001100;border-bottom:1px solid #002200;">
                             <td colspan="4" class="px-3 py-2">
                                 <div class="flex items-start gap-2">
                                     <div class="flex-1">
-                                        <div class="text-sm mb-1" style="color:#d1d5db;white-space:pre-wrap;word-break:break-word;">{{ entry.message }}</div>
-                                        <div v-if="entry.location" class="text-xs mb-1" style="color:#6b7280;">📍 {{ entry.location }}</div>
-                                        <pre v-if="hasContext(entry)" class="text-xs font-mono whitespace-pre-wrap" style="color:#9ca3af;">{{ JSON.stringify(entry.context, null, 2) }}</pre>
+                                        <div class="text-sm mb-1 crt-text" style="white-space:pre-wrap;word-break:break-word;">{{ entry.message }}</div>
+                                        <div v-if="entry.location" class="text-xs mb-1 crt-dim">📍 {{ entry.location }}</div>
+                                        <pre v-if="hasContext(entry)" class="text-xs font-mono whitespace-pre-wrap crt-dim">{{ JSON.stringify(entry.context, null, 2) }}</pre>
                                     </div>
                                     <button @click.stop="toggleBookmark(entry)"
-                                        class="text-lg flex-shrink-0" :title="isBookmarked(entry) ? 'Usuń zakładkę' : 'Dodaj zakładkę'"
-                                        :style="isBookmarked(entry) ? 'color:#fbbf24;' : 'color:#4b5563;'">★</button>
+                                        class="text-lg flex-shrink-0 crt-button" :title="isBookmarked(entry) ? 'Usuń zakładkę' : 'Dodaj zakładkę'"
+                                        :style="isBookmarked(entry) ? 'border-color:#ffff00;color:#ffff00;' : 'border-color:#006600;color:#006600;'">★</button>
                                 </div>
                             </td>
                         </tr>
@@ -242,19 +354,19 @@ const { createApp, ref, computed, reactive, watch, nextTick } = Vue;
 const EDITOR_URL = <?= json_encode(EDITOR_URL) ?>;
 
 const LEVEL_COLORS = {
-    DEBUG:'#60a5fa', INFO:'#34d399', NOTICE:'#22d3ee',
-    WARNING:'#fbbf24', ERROR:'#f87171', CRITICAL:'#ef4444',
-    ALERT:'#fb923c', EMERGENCY:'#c084fc',
+    DEBUG:'#00ff00', INFO:'#00ff00', NOTICE:'#00ff00',
+    WARNING:'#ffff00', ERROR:'#ff6600', CRITICAL:'#ff0000',
+    ALERT:'#ff9900', EMERGENCY:'#ff0066',
 };
 const LEVEL_DOTS = {
-    DEBUG:'#3b82f6', INFO:'#10b981', NOTICE:'#06b6d4',
-    WARNING:'#f59e0b', ERROR:'#ef4444', CRITICAL:'#dc2626',
-    ALERT:'#f97316', EMERGENCY:'#a855f7',
+    DEBUG:'#00cc00', INFO:'#00cc00', NOTICE:'#00cc00',
+    WARNING:'#cccc00', ERROR:'#cc5200', CRITICAL:'#cc0000',
+    ALERT:'#cc7a00', EMERGENCY:'#cc0052',
 };
 const ROW_BG = {
-    ERROR:'background:#1f1010;', CRITICAL:'background:#1f0a0a;',
-    ALERT:'background:#1f1208;', EMERGENCY:'background:#160d1f;',
-    WARNING:'background:#1a1600;',
+    ERROR:'background:#0a0500;', CRITICAL:'background:#0a0200;',
+    ALERT:'background:#0a0400;', EMERGENCY:'background:#0a0010;',
+    WARNING:'background:#0a0a00;',
 };
 
 createApp({
@@ -280,6 +392,15 @@ createApp({
         const showBookmarks = ref(false);
         const MAX_BOOKMARKS = 10;
         const levels       = Object.keys(LEVEL_COLORS);
+        let dataTable = null;
+
+        // SSH State
+        const showSSHModal = ref(false);
+        const sshConnections = ref(JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'));
+        const sshForm = reactive({
+            name: '', host: '', user: '', port: '22',
+            authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log'
+        });
 
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
@@ -374,6 +495,38 @@ createApp({
             }
             if (sortOrder.value === 'asc') r = [...r].reverse();
             filtered.value = r;
+            initDataTable();
+        }
+
+        function initDataTable() {
+            nextTick(() => {
+                const table = document.getElementById('logsTable');
+                if (!table) return;
+
+                if (dataTable) {
+                    dataTable.destroy();
+                }
+
+                dataTable = $('#logsTable').DataTable({
+                    pageLength: 25,
+                    lengthMenu: [10, 25, 50, 100],
+                    order: [[0, 'desc']],
+                    language: {
+                        search: "Szukaj:",
+                        lengthMenu: "Pokaż _MENU_ wpisów",
+                        info: "Pokazano _START_ do _END_ z _TOTAL_ wpisów",
+                        paginate: {
+                            first: "Pierwsza",
+                            last: "Ostatnia",
+                            next: "Następna",
+                            previous: "Poprzednia"
+                        }
+                    },
+                    columnDefs: [
+                        { orderable: true, targets: [0, 1, 2, 3] }
+                    ]
+                });
+            });
         }
 
         function toggleLevel(level) {
@@ -479,14 +632,116 @@ createApp({
         }
         init();
 
+        // SSH Functions
+        async function testSSHConnection() {
+            try {
+                const payload = {
+                    ssh_host: sshForm.host,
+                    ssh_user: sshForm.user,
+                    ssh_port: parseInt(sshForm.port) || 22,
+                    ssh_auth_method: sshForm.authMethod,
+                    ssh_password: sshForm.authMethod === 'password' ? sshForm.password : undefined,
+                    ssh_key_path: sshForm.authMethod === 'key' ? sshForm.keyPath : undefined,
+                    ssh_key_passphrase: sshForm.authMethod === 'key' ? sshForm.keyPassphrase : undefined,
+                };
+
+                const res = await fetch('?action=ssh-test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    alert('SSH connection successful!');
+                } else {
+                    alert('SSH connection failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch(e) {
+                alert('SSH connection failed: ' + e.message);
+            }
+        }
+
+        function addSSHConnection() {
+            if (!sshForm.name || !sshForm.host || !sshForm.user) {
+                alert('Please fill in name, host, and user');
+                return;
+            }
+
+            const conn = {
+                name: sshForm.name,
+                host: sshForm.host,
+                user: sshForm.user,
+                port: sshForm.port || 22,
+                authMethod: sshForm.authMethod,
+                remotePath: sshForm.remotePath || '/var/log',
+                // Note: We don't save passwords for security
+            };
+
+            sshConnections.value.push(conn);
+            localStorage.setItem('fplv_ssh_connections', JSON.stringify(sshConnections.value));
+
+            // Reset form
+            Object.assign(sshForm, {
+                name: '', host: '', user: '', port: '22',
+                authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log'
+            });
+
+            alert('SSH connection saved! Note: Password is not saved for security.');
+        }
+
+        function deleteSSHConnection(idx) {
+            if (confirm('Delete this SSH connection?')) {
+                sshConnections.value.splice(idx, 1);
+                localStorage.setItem('fplv_ssh_connections', JSON.stringify(sshConnections.value));
+            }
+        }
+
+        async function connectSSH(idx) {
+            const conn = sshConnections.value[idx];
+            const password = prompt(`Enter SSH password for ${conn.name} (or leave empty for key auth):`);
+
+            if (password === null) return; // Cancelled
+
+            try {
+                const payload = {
+                    ssh_host: conn.host,
+                    ssh_user: conn.user,
+                    ssh_port: conn.port,
+                    ssh_auth_method: password ? 'password' : 'key',
+                    ssh_password: password || undefined,
+                    ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
+                    path: conn.remotePath,
+                };
+
+                const res = await fetch('?action=ssh-list-files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    alert(`Found ${data.files.length} log files on ${conn.name}`);
+                    // TODO: Add files to file list
+                } else {
+                    alert('Failed to list files: ' + (data.error || 'Unknown error'));
+                }
+            } catch(e) {
+                alert('SSH connection failed: ' + e.message);
+            }
+        }
+
         return {
             files, entries, filtered, selectedFile, filterText, loading, expanded,
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
             excludedLevels, editorUrl, directories, selectedDir,
             bookmarks, showBookmarks,
+            showSSHModal, sshConnections, sshForm,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
             changeDir, formatSize, levelColor, levelDot, rowBg, hasContext, openInEditor,
             toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
+            testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH,
         };
     }
 }).mount('#app');

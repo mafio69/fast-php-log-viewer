@@ -17,15 +17,17 @@ docker rm ${APP_NAME} > /dev/null 2>&1
 echo "==> Building Docker image..."
 docker build -t ${IMAGE_NAME} .
 
-# Uruchom nowy kontene
+# Uruchom nowy kontener
 echo "==> Starting new container..."
 docker run -d \
   --name ${APP_NAME} \
   -p ${HOST_PORT}:80 \
   -v "$(pwd)/logs:/var/www/html/logs" \
+  -v "$(pwd)/data:/var/www/html/data" \
   -e LOG_DIR="/var/www/html/logs" \
   --rm \
-  ${IMAGE_NAME}
+  ${IMAGE_NAME} \
+  sh -c "php-fpm -D && nginx -g 'daemon off;'"
 
 # Sprawdź, czy kontener został uruchomiony poprawnie
 if [ $(docker ps -q -f name=^/${APP_NAME}$) ]; then
