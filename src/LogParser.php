@@ -25,11 +25,18 @@ class LogParser
             return [];
         }
 
-        $lines = file($path, FILE_IGNORE_NEW_LINES);
-        if ($lines === false) {
+        $content = file_get_contents($path);
+        if ($content === false) {
             return [];
         }
 
+        return $this->parseString($content);
+    }
+
+    /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
+    public function parseString(string $content): array
+    {
+        $lines = explode("\n", $content);
         $entries = [];
         $i = 0;
         $count = count($lines);

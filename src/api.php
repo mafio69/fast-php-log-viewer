@@ -28,6 +28,10 @@ unset($_autoload);
 
 use Mariusz\LogViewer\LogFinder;
 use Mariusz\LogViewer\LogParser;
+use Mariusz\LogViewer\LogConfig;
+use Mariusz\LogViewer\LogScanner;
+use Mariusz\LogViewer\SSH;
+use Mariusz\LogViewer\RemoteLogFinder;
 
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
@@ -39,6 +43,15 @@ try {
         'directories' => respondDirectories(),
         'files'       => respondFiles(),
         'entries'     => respondEntries(),
+        'config-dirs' => respondConfigDirectories(),
+        'config-add-dir' => respondAddDirectory(),
+        'config-update-dir' => respondUpdateDirectory(),
+        'config-delete-dir' => respondDeleteDirectory(),
+        'config-init-defaults' => respondInitDefaults(),
+        'scan-directories' => respondScanDirectories(),
+        'ssh-test-connection' => respondTestSSHConnection(),
+        'ssh-list-files' => respondSSHListFiles(),
+        'ssh-read-file' => respondSSHReadFile(),
         default       => respondError('Unknown action', 400),
     };
 } catch (Throwable $e) {
@@ -125,6 +138,170 @@ function respondEntries(): void
     }
 
     echo json_encode($entries, JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondConfigDirectories(): void
+{
+    $config = new LogConfig();
+    $dirs = $config->getDirectories();
+    echo json_encode($dirs, JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondAddDirectory(): void
+{
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        respondError('Invalid JSON input', 400);
+        return;
+    }
+
+    $config = new LogConfig();
+    $id = $config->addDirectory($input);
+    echo json_encode(['success' => true, 'id' => $id], JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondUpdateDirectory(): void
+{
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id === 0) {
+        respondError('Missing ID parameter', 400);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        respondError('Invalid JSON input', 400);
+        return;
+    }
+
+    $config = new LogConfig();
+    $success = $config->updateDirectory($id, $input);
+    echo json_encode(['success' => $success], JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondDeleteDirectory(): void
+{
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id === 0) {
+        respondError('Missing ID parameter', 400);
+        return;
+    }
+
+    $config = new LogConfig();
+    $success = $config->deleteDirectory($id);
+    echo json_encode(['success' => $success], JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondInitDefaults(): void
+{
+    $config = new LogConfig();
+    $config->addDefaultDirectories();
+    echo json_encode(['success' => true], JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondScanDirectories(): void
+{
+    $scanner = new LogScanner();
+    $found = $scanner->scanCommonDirectories();
+    echo json_encode($found, JSON_THROW_ON_ERROR);
+}
+
+/** @throws JsonException */
+function respondTestSSHConnection(): void
+{
+    if (!SSH::isAvailable()) {
+        respondError('SSH2 extension is not available', 500);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        respondError('Invalid JSON input', 400);
+        return;
+    }
+
+    try {
+        $ssh = new SSH($input);
+        $ssh->connect();
+        $ssh->disconnect();
+        echo json_encode(['success' => true, 'message' => 'SSH connection successful'], JSON_THROW_ON_ERROR);
+    } catch (\Exception $e) {
+        respondError('SSH connection failed: ' . $e->getMessage(), 500);
+    }
+}
+
+/** @throws JsonException */
+function respondSSHListFiles(): void
+{
+    if (!SSH::isAvailable()) {
+        respondError('SSH2 extension is not available', 500);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        respondError('Invalid JSON input', 400);
+        return;
+    }
+
+    $path = $input['path'] ?? '/var/log';
+    if (empty($path)) {
+        respondError('Path is required', 400);
+        return;
+    }
+
+    try {
+        $ssh = new SSH($input);
+        $ssh->connect();
+        $finder = new RemoteLogFinder($ssh);
+        $files = $finder->findAll($path);
+        $ssh->disconnect();
+        echo json_encode(['success' => true, 'files' => $files], JSON_THROW_ON_ERROR);
+    } catch (\Exception $e) {
+        respondError('SSH file listing failed: ' . $e->getMessage(), 500);
+    }
+}
+
+/** @throws JsonException */
+function respondSSHReadFile(): void
+{
+    if (!SSH::isAvailable()) {
+        respondError('SSH2 extension is not available', 500);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        respondError('Invalid JSON input', 400);
+        return;
+    }
+
+    $path = $input['path'] ?? '';
+    if (empty($path)) {
+        respondError('Path is required', 400);
+        return;
+    }
+
+    try {
+        $ssh = new SSH($input);
+        $ssh->connect();
+        $content = $ssh->readFile($path);
+        $ssh->disconnect();
+
+        // Parse the content
+        $parser = new LogParser();
+        $entries = $parser->parseString($content);
+
+        echo json_encode(['success' => true, 'entries' => $entries], JSON_THROW_ON_ERROR);
+    } catch (\Exception $e) {
+        respondError('SSH file reading failed: ' . $e->getMessage(), 500);
+    }
 }
 
 function respondError(string $message, int $code): void

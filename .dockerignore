@@ -1,0 +1,15 @@
+.git
+.gitignore
+.kiro
+.idea
+vendor
+node_modules
+tests
+README.md
+CHANGELOG.md
+NOTES.md
+AIREADME.md
+docker-compose.yml
+.env.example
+.env.local
+phpunit.xml
