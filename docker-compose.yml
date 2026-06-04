@@ -13,8 +13,8 @@ services:
       - ./logs:/var/www/html/logs
       - ./docker/php.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./docker/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
-      - ../PhpstormProjects/fast-php-log-viewer/src:/var/www/html/vendor/mafio69/fast-php-log-viewer/src
-      - ../PhpstormProjects/fast-php-log-viewer/index.php:/var/www/html/vendor/mafio69/fast-php-log-viewer/index.php
+      - ../PhpstormProjects/fast-php-log-viewer/src:/var/www/html/vendor/mafio69/log-viewer/src
+      - ../PhpstormProjects/fast-php-log-viewer/index.php:/var/www/html/vendor/mafio69/log-viewer/index.php
     environment:
       APP_ENV: development
       LOG_DIR: /var/www/html/logs

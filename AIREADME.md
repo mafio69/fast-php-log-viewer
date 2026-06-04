@@ -6,7 +6,7 @@ A standalone log viewer for [fast-php-logger](https://github.com/mafio69/fast-ph
 Part of the **fast-php-*** developer tools suite.
 
 Two distribution modes:
-- **Composer package** (`mafio69/fast-php-log-viewer`) — for projects already using Composer
+- **Composer package** (`mafio69/log-viewer`) — for projects already using Composer
 - **Single-file drop-in** (`dist/fast-php-log-viewer.php`) — copy one file, open in browser, done
 
 ## Tech stack
@@ -56,7 +56,7 @@ Uses `realpath()` with fallback for Windows/WSL UNC paths, normalizes `\` → `/
 | Repo | Role |
 |---|---|
 | `mafio69/fast-php-logger` | PSR-3 logger, writes the log files this viewer reads |
-| `mafio69/fast-php-log-viewer` | This project |
+| `mafio69/log-viewer` | This project |
 | `mafio69/docker-fast-logger` | Docker dev environment, uses both packages |
 
 ## Conventions
@@ -74,8 +74,8 @@ directly into the container's vendor directory — no rebuild needed after editi
 
 ```yaml
 # docker-compose.yml volumes:
-- ../PhpstormProjects/fast-php-log-viewer/src:/var/www/html/vendor/mafio69/fast-php-log-viewer/src
-- ../PhpstormProjects/fast-php-log-viewer/index.php:/var/www/html/vendor/mafio69/fast-php-log-viewer/index.php
+- ../PhpstormProjects/fast-php-log-viewer/src:/var/www/html/vendor/mafio69/log-viewer/src
+- ../PhpstormProjects/fast-php-log-viewer/index.php:/var/www/html/vendor/mafio69/log-viewer/index.php
 ```
 
 After editing `src/` or `index.php` just refresh the browser — no restart needed.
