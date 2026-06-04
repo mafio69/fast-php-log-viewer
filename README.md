@@ -50,7 +50,7 @@ Best for: new projects, Docker environments, when you already use Composer.
 **Step 1.**
 
 ```sh
-composer require mafio69/fast-php-log-viewer
+composer require mafio69/log-viewer
 ```
 
 **Step 2.** Create a single entry point file (e.g. `log-viewer.php` in your webroot):
@@ -61,11 +61,11 @@ define('LOG_DIR', __DIR__ . '/logs');   // ← adjust path to your logs
 require_once __DIR__ . '/vendor/autoload.php';
 
 if (isset($_GET['action'])) {
-    require_once __DIR__ . '/vendor/mafio69/fast-php-log-viewer/src/api.php';
+    require_once __DIR__ . '/vendor/mafio69/log-viewer/src/api.php';
     exit;
 }
 
-require_once __DIR__ . '/vendor/mafio69/fast-php-log-viewer/index.php';
+require_once __DIR__ . '/vendor/mafio69/log-viewer/index.php';
 ```
 
 **Step 3.** Open `http://yourproject.local/log-viewer.php` — done.
