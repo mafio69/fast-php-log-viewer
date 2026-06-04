@@ -1,5 +1,5 @@
 {
-    "name": "mafio69/fast-php-log-viewer",
+    "name": "mafio69/log-viewer",
     "description": "Standalone log viewer for fast-php-logger. Drop-in single file or Composer package.",
     "version": "1.0.4",
     "type": "library",
