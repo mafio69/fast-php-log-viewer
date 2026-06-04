@@ -17,5 +17,5 @@ docker compose exec php rm /var/www/html/<ścieżka_do_pliku>
 ## UPDATE IN docker-fast-php-logger  
   
 ```shell
-/var/www/html/vendor/mafio69/fast-php-log-viewer/composer update
+/var/www/html/vendor/mafio69/log-viewer/composer update
 ```
