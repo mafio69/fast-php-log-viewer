@@ -13,6 +13,7 @@ namespace Mariusz\LogViewer\Service;
  *   legacy multiline: 2026-04-30 08:43:43 --- DEBUG: { ... }
  *   php-errors: [04-May-2026 09:09:37 Europe/Warsaw] PHP Fatal error: message in file on line N
  *   nginx error: 2026/06/05 07:00:00 [error] 1234#0: *12345 message
+ *   apk log: Running `apk ...` at 2026-05-07 16:44:06 or (N/M) Installing package (version)
  */
 class LogParser
 {
@@ -21,6 +22,12 @@ class LogParser
     private const string PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
     private const string PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
     private const string PATTERN_NGINX_ERR = '/^(?P<datetime>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>error|warn|notice|info|crit|alert|emerg)\] (?P<pid>\d+)#\d+: \*(?P<tid>\d+) (?P<message>.+)$/i';
+    private const string PATTERN_APK_LOG = '/^Running `apk (?P<message>.+)` at (?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})$/';
+    private const string PATTERN_APK_INSTALL = '/^\((?P<num>\d+)\/(?P<total>\d+)\) (?P<action>Installing|Purging) (?P<message>.+)$/';
+    private const string PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
+    private const string PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
+    private const string PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
+    private const string PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
     public function parseFile(string $path): array
@@ -155,6 +162,72 @@ class LogParser
                     'context'  => $context,
                 ];
                 $i = $j;
+                continue;
+            }
+
+            // Alpine APK log format: Running `apk ...` at 2026-05-07 16:44:06
+            if (preg_match(self::PATTERN_APK_LOG, $line, $m)) {
+                $entries[] = [
+                    'datetime' => $m['datetime'],
+                    'level' => 'INFO',
+                    'location' => '',
+                    'message' => 'Running apk: ' . $m['message'],
+                    'context' => []
+                ];
+                $i++;
+                continue;
+            }
+
+            // Alpine APK install/purge: (N/M) Installing package (version)
+            if (preg_match(self::PATTERN_APK_INSTALL, $line, $m)) {
+                $level = $m['action'] === 'Installing' ? 'INFO' : 'INFO';
+                $entries[] = [
+                    'datetime' => '', // No timestamp in this line
+                    'level' => $level,
+                    'location' => '',
+                    'message' => "({$m['num']}/{$m['total']}) {$m['action']} {$m['message']}",
+                    'context' => []
+                ];
+                $i++;
+                continue;
+            }
+
+            // Alpine APK warnings
+            if (preg_match(self::PATTERN_APK_WARNING, $line, $m)) {
+                $entries[] = [
+                    'datetime' => '',
+                    'level' => 'WARNING',
+                    'location' => '',
+                    'message' => $m['message'],
+                    'context' => []
+                ];
+                $i++;
+                continue;
+            }
+
+            // Alpine APK OK messages
+            if (preg_match(self::PATTERN_APK_OK, $line, $m)) {
+                $entries[] = [
+                    'datetime' => '',
+                    'level' => 'INFO',
+                    'location' => '',
+                    'message' => $m['message'],
+                    'context' => []
+                ];
+                $i++;
+                continue;
+            }
+
+            // Alpine APK Executing messages
+            if (preg_match(self::PATTERN_APK_EXEC, $line, $m)) {
+                $entries[] = [
+                    'datetime' => '',
+                    'level' => 'INFO',
+                    'location' => '',
+                    'message' => $m['message'],
+                    'context' => []
+                ];
+                $i++;
                 continue;
             }
 
