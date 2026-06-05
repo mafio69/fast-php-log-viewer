@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Config;
 
+use Exception;
 use PDO;
 use PDOException;
 
