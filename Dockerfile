@@ -10,7 +10,7 @@ RUN mkdir -p /var/www/html/data && chown -R www-data:www-data /var/www/html/data
 RUN echo 'server { \
     listen 80; \
     server_name localhost; \
-    root /var/www/html; \
+    root /var/www/html/public; \
     index index.php index.html; \
     location / { \
         try_files $uri $uri/ /index.php?$query_string; \

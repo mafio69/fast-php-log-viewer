@@ -3,3 +3,4 @@
 /.idea/
 /.env
 /composer.phar
+/data/php_errors.log
