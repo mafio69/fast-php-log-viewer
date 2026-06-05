@@ -15,7 +15,7 @@ class LogConfig
     private PDO $db;
     private string $dbPath;
 
-    public function __construct(string $dbPath = null)
+    public function __construct(?string $dbPath = null)
     {
         $this->dbPath = $dbPath ?? dirname(__DIR__, 2) . '/data/logviewer.db';
         $this->ensureDbDirectory();
