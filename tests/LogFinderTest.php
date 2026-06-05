@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests;
 
-use Mariusz\LogViewer\LogFinder;
+use Mariusz\LogViewer\Service\LogFinder;
 use PHPUnit\Framework\TestCase;
 
 class LogFinderTest extends TestCase
@@ -52,6 +52,19 @@ class LogFinderTest extends TestCase
     public function testNormalizePathConvertsBackslashes(): void
     {
         $this->assertSame('C:/logs/2026/05', LogFinder::normalizePath('C:\\logs\\2026\\05'));
+    }
+
+    public function testNormalizePathRemovesDoubleSlashes(): void
+    {
+        $this->assertSame('/var/log/nginx/error.log', LogFinder::normalizePath('/var/log//nginx/error.log'));
+        $this->assertSame('/var/log/apk.log', LogFinder::normalizePath('/var/log//apk.log'));
+        $this->assertSame('/var/log/app.log', LogFinder::normalizePath('/var/log///app.log'));
+    }
+
+    public function testNormalizePathRemovesTrailingSlash(): void
+    {
+        $this->assertSame('/var/log', LogFinder::normalizePath('/var/log/'));
+        $this->assertSame('/var/log', LogFinder::normalizePath('/var/log//'));
     }
 
     public function testFileHasSizeAndPath(): void
