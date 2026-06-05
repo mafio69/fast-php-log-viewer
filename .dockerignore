@@ -2,7 +2,6 @@
 .gitignore
 .kiro
 .idea
-vendor
 node_modules
 tests
 README.md

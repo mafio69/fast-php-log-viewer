@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer;
+namespace Mariusz\LogViewer\Config;
 
 use PDO;
 use PDOException;
@@ -17,7 +17,7 @@ class LogConfig
 
     public function __construct(string $dbPath = null)
     {
-        $this->dbPath = $dbPath ?? __DIR__ . '/../data/logviewer.db';
+        $this->dbPath = $dbPath ?? dirname(__DIR__, 2) . '/data/logviewer.db';
         $this->ensureDbDirectory();
         $this->connect();
         $this->initSchema();
@@ -76,9 +76,17 @@ class LogConfig
 
     /**
      * Add a log directory configuration
+     * @throws Exception if directory already exists
      */
     public function addDirectory(array $config): int
     {
+        // Check if directory already exists
+        $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
+        $stmt->execute([':path' => $config['path']]);
+        if ($stmt->fetch()) {
+            throw new Exception('Directory already exists: ' . $config['path']);
+        }
+
         $stmt = $this->db->prepare("
             INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path)
             VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path)
@@ -104,6 +112,20 @@ class LogConfig
     {
         $stmt = $this->db->query("SELECT * FROM log_directories WHERE is_active = 1 ORDER BY name");
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Remove duplicate directories (keep first occurrence)
+     */
+    public function removeDuplicates(): int
+    {
+        $this->db->exec("
+            DELETE FROM log_directories
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM log_directories GROUP BY path
+            )
+        ");
+        return $this->db->exec("DELETE FROM log_directories WHERE path IN (SELECT path FROM log_directories GROUP BY path HAVING COUNT(*) > 1) AND id NOT IN (SELECT MIN(id) FROM log_directories GROUP BY path)");
     }
 
     /**

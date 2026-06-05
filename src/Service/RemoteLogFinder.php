@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer;
+namespace Mariusz\LogViewer\Service;
 
 /**
  * Finds log files on remote servers via SSH.

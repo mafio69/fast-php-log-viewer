@@ -1,0 +1,56 @@
+[05-Jun-2026 00:31:33 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:33 UTC] PHP Warning:  http_response_code(): Cannot set response code - headers already sent (output started at /var/www/html/src/Config/LogConfig.php:30) in /var/www/html/src/Controller/LogController.php on line 345
+[05-Jun-2026 00:31:37 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:37 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:37 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:37 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:37 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:38 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:38 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:38 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:38 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:38 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:39 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:39 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:39 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:39 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:39 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:39 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:39 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:39 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:39 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:39 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:31:41 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:31:41 UTC] PHP Warning:  http_response_code(): Cannot set response code - headers already sent (output started at /var/www/html/src/Config/LogConfig.php:30) in /var/www/html/src/Controller/LogController.php on line 345
+[05-Jun-2026 00:32:04 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:32:04 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:32:04 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:32:04 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:32:04 UTC] LogConfig error: Failed to connect to SQLite: SQLSTATE[HY000] [14] unable to open database file
+[05-Jun-2026 00:32:09 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:32:09 UTC] PHP Warning:  http_response_code(): Cannot set response code - headers already sent (output started at /var/www/html/src/Config/LogConfig.php:30) in /var/www/html/src/Controller/LogController.php on line 345
+[05-Jun-2026 00:32:10 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:32:10 UTC] PHP Warning:  http_response_code(): Cannot set response code - headers already sent (output started at /var/www/html/src/Config/LogConfig.php:30) in /var/www/html/src/Controller/LogController.php on line 345
+[05-Jun-2026 00:32:27 UTC] PHP Warning:  mkdir(): Permission denied in /var/www/html/src/Config/LogConfig.php on line 30
+[05-Jun-2026 00:32:27 UTC] PHP Warning:  http_response_code(): Cannot set response code - headers already sent (output started at /var/www/html/src/Config/LogConfig.php:30) in /var/www/html/src/Controller/LogController.php on line 345
+[05-Jun-2026 00:34:22 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 00:34:26 UTC] PHP Warning:  Undefined array key "name" in /var/www/html/src/Config/LogConfig.php on line 88
+[05-Jun-2026 00:35:51 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 00:36:07 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:36:14 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:22 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:22 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:29 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:29 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:31 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:31 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:34 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:37:34 UTC] PHP Warning:  Undefined array key "key" in /var/www/html/src/Controller/LogController.php on line 80
+[05-Jun-2026 00:40:17 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 00:46:01 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 00:48:44 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 01:08:58 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 01:10:53 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 01:13:51 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 04:58:32 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[05-Jun-2026 05:22:29 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
