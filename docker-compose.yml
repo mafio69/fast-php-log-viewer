@@ -14,3 +14,4 @@ services:
     environment:
       APP_ENV: development
       LOG_DIR: /var/www/html/logs
+    command: sh -c "php-fpm -D && nginx -g 'daemon off;'"
