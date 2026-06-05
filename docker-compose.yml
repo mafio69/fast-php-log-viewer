@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8123:80"
+      - "9123:80"
     volumes:
       - ./logs:/var/www/html/logs
       - ./data:/var/www/html/data
