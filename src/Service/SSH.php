@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer;
+namespace Mariusz\LogViewer\Service;
 
 /**
  * SSH connection handler for remote log file access.
@@ -24,7 +24,7 @@ class SSH
     {
         $host = $this->config['ssh_host'] ?? '';
         $user = $this->config['ssh_user'] ?? '';
-        $port = $this->config['ssh_port'] ?? 22;
+        $port = (int)($this->config['ssh_port'] ?? 22);
 
         if (empty($host) || empty($user)) {
             throw new \InvalidArgumentException('SSH host and user are required');

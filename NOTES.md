@@ -22,3 +22,6 @@ docker compose exec php rm /var/www/html/<ścieżka_do_pliku>
 ❭ Ta aplikacja ma wywietlać logi jak np php error itp, w momencie uruchamiania powinna wywietlic zapamietane jak baza pusta szukac w /var/logs  chociaż z swojego docker lub z hosta. Zobacz na co ten kod jest przygotowany . Tez ta aplikacja łączyła się przez ssh i czytała logi z zdalnych maszyn ,  ssh na dwa
 sposoby mapowanie katalogu ~/.ssh lub hasła oba warianty logowania , używała też  datatable . Teraz się uruchamia i jest statyczna strona bez ssh wyszukiwania plików. Pliki do wywietlenia apka powinna pamietać oprócz domyslnych też , do tego ma słuzyć DuckDb ale w wersji jak sqllite . Estetyka teraz jest
 czarna z buałymi napisami. Była czarna z zielonymi napisami jak w dawnych monitorach CRT 
+
+Tak był komunikat żę znalazł jeden plik log ale go nie wywietlił nie wiem gdzie powinna być lista? Dodatkowo dodaj pole tekstowe do wpisania path do kat. logów chyba lepiej konkretnie do pliku log . I albo zrobimy upload dowolnego pliku ja jestem za path chyba że damy mozliwoć wyboru pliku jakie wyklikane
+jakis explorer do wyboru pliku ? Przeanalizuj zrób taski . Ale kolejnoć wywietlić jak najszybciej plik logów najprociej ta scieżka "\\wsl.localhost\Ubuntu-24.04\var\log\php\php_errors.log"

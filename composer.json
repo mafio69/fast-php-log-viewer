@@ -1,7 +1,7 @@
 {
     "name": "mafio69/log-viewer",
     "description": "Standalone log viewer for fast-php-logger. Drop-in single file or Composer package.",
-    "version": "1.0.4",
+    "version": "2.0.0",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -11,11 +11,17 @@
         }
     ],
     "require": {
-        "php": ">=8.1"
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-ssh2": "*",
+        "ext-pdo_sqlite": "*"
     },
     "autoload": {
         "psr-4": {
-            "Mariusz\\LogViewer\\": "src/"
+            "Mariusz\\LogViewer\\Controller\\": "src/Controller/",
+            "Mariusz\\LogViewer\\Service\\": "src/Service/",
+            "Mariusz\\LogViewer\\Repository\\": "src/Repository/",
+            "Mariusz\\LogViewer\\Config\\": "src/Config/"
         }
     },
     "autoload-dev": {

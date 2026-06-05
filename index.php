@@ -6,7 +6,7 @@ if (!defined('EDITOR_URL')) {
     define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
 }
 if (isset($_GET['action'])) {
-    require_once __DIR__ . '/src/api.php';
+    require_once __DIR__ . '/src/Controller/LogController.php';
     exit;
 }
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -97,36 +97,22 @@ header('Expires: 0');
 <div id="app" v-cloak class="flex h-screen" :style="{ fontSize: fontSize + 'px' }">
 
     <!-- Sidebar -->
-    <aside style="width:200px;min-width:200px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
+    <aside style="width:280px;min-width:280px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
         <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
             <div class="font-bold text-sm crt-glow">⚡ LOG-VIEWER</div>
         </div>
 
-        <!-- Directory selector -->
-        <div v-if="directories.length > 1" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
-            <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
-            <select v-model="selectedDir" @change="changeDir"
-                class="w-full rounded px-2 py-1 text-xs crt-input">
-                <option v-for="d in directories" :key="d.key" :value="d.key">{{ d.key }}</option>
-            </select>
-        </div>
-
-        <!-- File list -->
-        <div class="flex-1 overflow-y-auto">
-            <div v-for="f in files" :key="f.file"
-                @click="selectFile(f.file)"
-                class="px-3 py-2 cursor-pointer"
-                style="border-bottom:1px solid #002200;"
-                :style="selectedFile === f.file
-                    ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;'
-                    : 'color:#006600;border-left:3px solid transparent;'">
-                <div class="font-medium truncate">{{ f.file.split('/').pop() }}</div>
-                <div class="crt-dim" style="font-size:0.85em;">{{ f.date }} · {{ formatSize(f.size) }}</div>
-            </div>
-        </div>
-
         <!-- Filters -->
-        <div style="border-top:1px solid #00ff00;" class="px-3 py-3 flex flex-col gap-3">
+        <div style="border-top:1px solid #00ff00;" class="px-3 py-2 flex flex-col gap-2">
+
+            <!-- Sort -->
+            <div>
+                <div class="text-xs font-semibold mb-1 crt-dim">SORTOWANIE</div>
+                <button @click="toggleSort"
+                    class="w-full rounded px-2 py-1 text-xs text-left crt-button">
+                    {{ sortOrder === 'desc' ? '↓ Najnowsze' : '↑ Najstarsze' }}
+                </button>
+            </div>
 
             <!-- Date range -->
             <div>
@@ -162,44 +148,65 @@ header('Expires: 0');
                 </div>
             </div>
 
-            <!-- Time range -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">GODZINY</div>
-                <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-1 text-xs crt-dim">
-                        <span style="width:20px;">Od</span>
-                        <input type="time" v-model="timeFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
-                    </div>
-                    <div class="flex items-center gap-1 text-xs crt-dim">
-                        <span style="width:20px;">Do</span>
-                        <input type="time" v-model="timeTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sort -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">SORTOWANIE</div>
-                <button @click="toggleSort"
-                    class="w-full rounded px-2 py-1 text-xs text-left crt-button">
-                    {{ sortOrder === 'desc' ? '↓ Newest first' : '↑ Oldest first' }}
-                </button>
-            </div>
-
             <!-- Stats -->
             <div class="text-xs crt-dim">
                 {{ filtered.length }} entries<br>
                 <span v-if="selectedFile">{{ selectedFile.split('/').pop() }}</span>
             </div>
+        </div>
+
+        <!-- Directory selector -->
+        <div v-if="directories.length > 1" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
+            <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
+            <select v-model="selectedDir" @change="changeDir"
+                class="w-full rounded px-2 py-1 text-xs crt-input">
+                <option v-for="d in directories" :key="d.key" :value="d.key">{{ d.key }}</option>
+            </select>
+        </div>
+
+        <!-- File list -->
+        <div class="flex-1 overflow-y-auto" style="flex:3;">
+            <div v-for="f in files" :key="f.file"
+                @click="selectFile(f.file)"
+                class="px-3 py-2 cursor-pointer"
+                style="border-bottom:1px solid #002200;"
+                :style="selectedFile === f.file
+                    ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;'
+                    : 'color:#006600;border-left:3px solid transparent;'">
+                <div class="font-medium truncate">{{ f.file.split('/').pop() }}</div>
+                <div class="crt-dim text-xs">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
+                <div v-if="f.allow" class="crt-dim text-xs">allow: {{ f.allow }}</div>
+            </div>
+        </div>
+
+        <!-- Direct file path -->
+        <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
+            <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
+            <input type="text" v-model="directFilePath" placeholder="/var/log/php/php_errors.log"
+                class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
+            <button @click="loadDirectFile" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">
+                ⚡ ZAŁADUJ
+            </button>
+        </div>
+
+        <!-- Add allowed directory -->
+        <div class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
+            <div class="text-xs font-semibold mb-1 crt-dim">➕ DODAJ KATALOG DOZWOLONY</div>
+            <input type="text" v-model="allowedDirPath" placeholder="/var/log"
+                class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
+            <button @click="addAllowedDir" class="w-full rounded px-2 py-1 text-xs crt-button mb-2">
+                DODAJ
+            </button>
+            <button @click="cleanupDuplicates" class="w-full rounded px-2 py-1 text-xs crt-button crt-dim">
+                🧹 Czyść duplikaty
+            </button>
+        </div>
 
         <!-- SSH Connection Button -->
         <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
             <button @click="showSSHModal = true" class="w-full rounded py-1 text-xs crt-button">
                 🔗 SSH Connections
             </button>
-        </div>
         </div>
     </aside>
 
@@ -312,7 +319,7 @@ header('Expires: 0');
                     <template v-for="(entry, i) in filtered" :key="i">
                         <tr @click="toggle(i)" class="cursor-pointer"
                             :style="'border-bottom:1px solid #002200;' + rowBg(entry.level)">
-                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">{{ entry.datetime }}</td>
+                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">{{ formatDate(entry.datetime) }}</td>
                             <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ entry.level }}</td>
                             <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">
                                 <a v-if="editorUrl && entry.location"
@@ -377,6 +384,8 @@ createApp({
         const selectedFile = ref('');
         const selectedDir  = ref('');
         const directories  = ref([]);
+        const directFilePath = ref('');
+        const allowedDirPath = ref('/var/log');
         const filterText   = ref('');
         const loading      = ref(false);
         const expanded     = reactive({});
@@ -391,7 +400,6 @@ createApp({
         const bookmarks    = ref(JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'));
         const showBookmarks = ref(false);
         const MAX_BOOKMARKS = 10;
-        const levels       = Object.keys(LEVEL_COLORS);
         let dataTable = null;
 
         // SSH State
@@ -415,6 +423,9 @@ createApp({
         const rowBg       = l => ROW_BG[l]        ?? '';
         const hasContext  = e => e.context && Object.keys(e.context).length > 0;
 
+        // Move DEBUG and INFO to top
+        const levels = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'];
+
         function openInEditor(location) {
             const [file, line] = location.split(':');
             return editorUrl.value.replace('{file}', encodeURIComponent(file)).replace('{line}', line ?? '1');
@@ -424,6 +435,19 @@ createApp({
             if (b < 1024) return b + ' B';
             if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
             return (b/1048576).toFixed(1) + ' MB';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleString('pl-PL', { 
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+            } catch {
+                return dateStr;
+            }
         }
 
         async function fetchJson(url) {
@@ -442,6 +466,75 @@ createApp({
                 selectedFile.value = '';
                 entries.value = [];
                 filtered.value = [];
+            }
+        }
+
+        async function loadDirectFile() {
+            if (!directFilePath.value.trim()) {
+                alert('Wpisz ścieżkę do pliku');
+                return;
+            }
+            const path = directFilePath.value.trim();
+            selectedFile.value = path;
+
+            try {
+                loading.value = true;
+                const url = '?action=entries&file=' + encodeURIComponent(path);
+                console.log('Loading file from:', url);
+                entries.value = await fetchJson(url);
+                filtered.value = entries.value;
+                applyFilters();
+            } catch (e) {
+                alert('Błąd ładowania pliku: ' + e.message);
+                console.error('Load direct file error:', e);
+            } finally {
+                loading.value = false;
+            }
+        }
+
+        async function addAllowedDir() {
+            if (!allowedDirPath.value.trim()) {
+                alert('Wpisz ścieżkę katalogu');
+                return;
+            }
+            const dir = allowedDirPath.value.trim();
+
+            try {
+                loading.value = true;
+                const res = await fetch('?action=config-add-dir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: 'allowed_' + Date.now(), path: dir })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Katalog dodany: ' + dir);
+                    await loadDirectories(); // Reload directories
+                } else {
+                    alert('Błąd: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Błąd dodawania katalogu: ' + e.message);
+            } finally {
+                loading.value = false;
+            }
+        }
+
+        async function cleanupDuplicates() {
+            try {
+                loading.value = true;
+                const res = await fetch('?action=config-cleanup-duplicates', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Usunięto duplikaty: ' + data.removed);
+                    await loadDirectories();
+                } else {
+                    alert('Błąd: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Błąd czyszczenia: ' + e.message);
+            } finally {
+                loading.value = false;
             }
         }
 
@@ -479,6 +572,7 @@ createApp({
             }
             if (dateFrom.value || dateTo.value) {
                 r = r.filter(e => {
+                    if (!e.datetime) return true; // Skip date filter for entries without datetime
                     const d = e.datetime.slice(0, 10);
                     if (dateFrom.value && d < dateFrom.value) return false;
                     if (dateTo.value   && d > dateTo.value)   return false;
@@ -487,6 +581,7 @@ createApp({
             }
             if (timeFrom.value || timeTo.value) {
                 r = r.filter(e => {
+                    if (!e.datetime) return true; // Skip time filter for entries without datetime
                     const t = e.datetime.slice(11, 16);
                     if (timeFrom.value && t < timeFrom.value) return false;
                     if (timeTo.value   && t > timeTo.value)   return false;
@@ -630,6 +725,16 @@ createApp({
             await loadFiles();
             validateBookmarks();
         }
+
+        async function loadDirectories() {
+            try {
+                directories.value = await fetchJson('?action=directories');
+                if (directories.value.length) {
+                    selectedDir.value = directories.value[0].key;
+                }
+            } catch(e) { /* fallback */ }
+        }
+
         init();
 
         // SSH Functions
@@ -723,7 +828,16 @@ createApp({
                 const data = await res.json();
                 if (data.success) {
                     alert(`Found ${data.files.length} log files on ${conn.name}`);
-                    // TODO: Add files to file list
+                    // Add SSH files to file list
+                    data.files.forEach(file => {
+                        if (!files.value.some(f => f.file === file.path)) {
+                            files.value.push({
+                                file: file.path,
+                                date: new Date().toISOString().split('T')[0],
+                                size: file.size || 0
+                            });
+                        }
+                    });
                 } else {
                     alert('Failed to list files: ' + (data.error || 'Unknown error'));
                 }
@@ -735,13 +849,13 @@ createApp({
         return {
             files, entries, filtered, selectedFile, filterText, loading, expanded,
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
-            excludedLevels, editorUrl, directories, selectedDir,
+            excludedLevels, editorUrl, directories, selectedDir, directFilePath, allowedDirPath,
             bookmarks, showBookmarks,
             showSSHModal, sshConnections, sshForm,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
-            changeDir, formatSize, levelColor, levelDot, rowBg, hasContext, openInEditor,
+            changeDir, formatSize, formatDate, levelColor, levelDot, rowBg, hasContext, openInEditor,
             toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
-            testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH,
+            testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,
         };
     }
 }).mount('#app');
