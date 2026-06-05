@@ -6,7 +6,7 @@ if (!defined('EDITOR_URL')) {
     define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
 }
 if (isset($_GET['action'])) {
-    require_once __DIR__ . '/src/Controller/LogController.php';
+    require_once __DIR__ . '/../src/Controller/LogController.php';
     exit;
 }
 header('Cache-Control: no-cache, no-store, must-revalidate');
