@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Config;
 
+use Exception;
 use PDO;
 use PDOException;
 
@@ -15,7 +16,7 @@ class LogConfig
     private PDO $db;
     private string $dbPath;
 
-    public function __construct(string $dbPath = null)
+    public function __construct(?string $dbPath = null)
     {
         $this->dbPath = $dbPath ?? dirname(__DIR__, 2) . '/data/logviewer.db';
         $this->ensureDbDirectory();
