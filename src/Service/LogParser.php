@@ -13,6 +13,7 @@ namespace Mariusz\LogViewer\Service;
  *   legacy multiline: 2026-04-30 08:43:43 --- DEBUG: { ... }
  *   php-errors: [04-May-2026 09:09:37 Europe/Warsaw] PHP Fatal error: message in file on line N
  *   nginx error: 2026/06/05 07:00:00 [error] 1234#0: *12345 message
+ *   nginx access: 192.168.1.1 - - [05/Jun/2026:09:00:00 +0000] "GET / HTTP/1.1" 200 1234
  *   apk log: Running `apk ...` at 2026-05-07 16:44:06 or (N/M) Installing package (version)
  */
 class LogParser
@@ -22,6 +23,7 @@ class LogParser
     private const string PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
     private const string PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
     private const string PATTERN_NGINX_ERR = '/^(?P<datetime>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>error|warn|notice|info|crit|alert|emerg)\] (?P<pid>\d+)#\d+: \*(?P<tid>\d+) (?P<message>.+)$/i';
+    private const string PATTERN_NGINX_ACCESS = '/^(?P<ip>[\d\.]+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP\/[\d\.]+" (?P<status>\d+) (?P<size>\d+)/';
     private const string PATTERN_APK_LOG = '/^Running `apk (?P<message>.+)` at (?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})$/';
     private const string PATTERN_APK_INSTALL = '/^\((?P<num>\d+)\/(?P<total>\d+)\) (?P<action>Installing|Purging) (?P<message>.+)$/';
     private const string PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
@@ -69,6 +71,27 @@ class LogParser
                     'level' => $level,
                     'location' => '',
                     'message' => $m['message'],
+                    'context' => []
+                ];
+                $i++;
+                continue;
+            }
+
+            // nginx access log format: 192.168.1.1 - - [05/Jun/2026:09:00:00 +0000] "GET / HTTP/1.1" 200 1234
+            if (preg_match(self::PATTERN_NGINX_ACCESS, $line, $m)) {
+                // Convert datetime from 05/Jun/2026:09:00:00 +0000 to 2026-06-05 09:00:00
+                $datetime = preg_replace('/^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}).*/', '$3-$2-$1 $4', $m['datetime']);
+                $datetime = str_replace(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], $datetime);
+
+                $level = $m['status'] >= 400 ? 'ERROR' : ($m['status'] >= 300 ? 'WARNING' : 'INFO');
+                $message = sprintf('%s %s - %s %s', $m['method'], $m['path'], $m['status'], $m['size']);
+
+                $entries[] = [
+                    'datetime' => $datetime,
+                    'level' => $level,
+                    'location' => $m['ip'],
+                    'message' => $message,
                     'context' => []
                 ];
                 $i++;
