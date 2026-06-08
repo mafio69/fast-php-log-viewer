@@ -2,6 +2,7 @@ services:
   php:
     build:
       context: .
+      dockerfile: docker/Dockerfile
       args:
         GITHUB_TOKEN: ${GIT_ACCES_TOKEN}
     env_file:
@@ -11,7 +12,7 @@ services:
     volumes:
       - ./logs:/var/www/html/logs
       - ./data:/var/www/html/data
+      - ./docker-logs/nginx:/var/log/nginx
     environment:
       APP_ENV: development
       LOG_DIR: /var/www/html/logs
-    command: sh -c "php-fpm -D && nginx -g 'daemon off;'"
