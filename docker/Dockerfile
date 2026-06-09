@@ -11,6 +11,16 @@ COPY docker/start.sh /usr/local/bin/start.sh
 
 RUN chmod +x /usr/local/bin/start.sh
 
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install dependencies
+RUN composer install --ignore-platform-req=ext-pdo_sqlite --no-dev --optimize-autoloader
+
+# Copy application files
 COPY . /var/www/html
 
 CMD ["/usr/local/bin/start.sh"]

@@ -204,7 +204,7 @@ header('Expires: 0');
 
         <!-- SSH Connection Button -->
         <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
-            <button @click="showSSHModal = true" class="w-full rounded py-1 text-xs crt-button">
+            <button @click="showSSHModal = true; cancelEdit()" class="w-full rounded py-1 text-xs crt-button">
                 🔗 SSH Connections
             </button>
         </div>
@@ -215,12 +215,12 @@ header('Expires: 0');
         <div class="rounded shadow-lg p-4" style="background:#000;border:1px solid #00ff00;width:500px;max-height:80vh;overflow-y:auto;">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-sm font-bold crt-glow">SSH Connections</h3>
-                <button @click="showSSHModal = false" class="text-xs crt-button">✕</button>
+                <button @click="showSSHModal = false; cancelEdit()" class="text-xs crt-button">✕</button>
             </div>
 
             <!-- Add SSH Connection Form -->
             <div class="mb-4 p-3" style="background:#001100;border:1px solid #00ff00;">
-                <h4 class="text-xs font-bold mb-2 crt-text">Add New SSH Connection</h4>
+                <h4 class="text-xs font-bold mb-2 crt-text">{{ editingIndex >= 0 ? 'Edit SSH Connection' : 'Add New SSH Connection' }}</h4>
                 <div class="flex flex-col gap-2">
                     <input v-model="sshForm.name" placeholder="Connection Name" class="crt-input px-2 py-1 text-xs rounded">
                     <input v-model="sshForm.host" placeholder="SSH Host" class="crt-input px-2 py-1 text-xs rounded">
@@ -234,9 +234,14 @@ header('Expires: 0');
                     <input v-if="sshForm.authMethod === 'key'" v-model="sshForm.keyPath" placeholder="SSH Key Path (default: ~/.ssh/id_rsa)" class="crt-input px-2 py-1 text-xs rounded">
                     <input v-if="sshForm.authMethod === 'key'" v-model="sshForm.keyPassphrase" type="password" placeholder="Key Passphrase (optional)" class="crt-input px-2 py-1 text-xs rounded">
                     <input v-model="sshForm.remotePath" placeholder="Remote Log Path (e.g., /var/log)" class="crt-input px-2 py-1 text-xs rounded">
+                    <label class="flex items-center gap-2 text-xs crt-text">
+                        <input type="checkbox" v-model="sshForm.allFiles" class="crt-input">
+                        Show all files (no pattern filtering)
+                    </label>
                     <div class="flex gap-2">
                         <button @click="testSSHConnection" class="flex-1 crt-button py-1 text-xs rounded">Test Connection</button>
-                        <button @click="addSSHConnection" class="flex-1 crt-button py-1 text-xs rounded">Save Connection</button>
+                        <button v-if="editingIndex >= 0" @click="cancelEdit" class="flex-1 crt-button py-1 text-xs rounded" style="border-color:#ff0000;color:#ff0000;">Cancel</button>
+                        <button @click="addSSHConnection" class="flex-1 crt-button py-1 text-xs rounded">{{ editingIndex >= 0 ? 'Update Connection' : 'Save Connection' }}</button>
                     </div>
                 </div>
             </div>
@@ -254,10 +259,51 @@ header('Expires: 0');
                         </div>
                         <div class="flex gap-1">
                             <button @click="connectSSH(idx)" class="crt-button px-2 py-1 text-xs rounded">Connect</button>
+                            <button @click="addManualSSHFile(idx)" class="crt-button px-2 py-1 text-xs rounded" style="border-color:#00ffff;color:#00ffff;">Download File</button>
+                            <button @click="editSSHConnection(idx)" class="crt-button px-2 py-1 text-xs rounded" style="border-color:#ffff00;color:#ffff00;">Edit</button>
                             <button @click="deleteSSHConnection(idx)" class="crt-button px-2 py-1 text-xs rounded" style="border-color:#ff0000;color:#ff0000;">Delete</button>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SSH Password Modal -->
+    <div v-if="showPasswordModal" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.8);">
+        <div class="rounded shadow-lg p-4" style="background:#000;border:1px solid #00ff00;width:400px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold crt-glow">SSH Password</h3>
+                <button @click="cancelPasswordModal" class="text-xs crt-button">✕</button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs crt-text mb-2">Enter SSH password (or leave empty for key auth):</label>
+                <input v-model="passwordForConnection" type="password" placeholder="Password" class="crt-input px-2 py-1 text-xs rounded w-full" @keyup.enter="executeSSHConnection">
+            </div>
+            <div class="flex gap-2">
+                <button @click="cancelPasswordModal" class="flex-1 crt-button py-1 text-xs rounded" style="border-color:#ff0000;color:#ff0000;">Cancel</button>
+                <button @click="executeSSHConnection" class="flex-1 crt-button py-1 text-xs rounded">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual SSH File Modal -->
+    <div v-if="showManualFileModal" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.8);">
+        <div class="rounded shadow-lg p-4" style="background:#000;border:1px solid #00ffff;width:400px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold crt-glow" style="color:#00ffff;">Download SSH File</h3>
+                <button @click="cancelManualFileModal" class="text-xs crt-button">✕</button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs crt-text mb-2">SSH Password:</label>
+                <input v-model="passwordForConnection" type="password" placeholder="Enter password" class="crt-input px-2 py-1 text-xs rounded w-full mb-3">
+                <label class="block text-xs crt-text mb-2">Remote file path:</label>
+                <input v-model="manualFilePath" placeholder="/var/log/demo.log" class="crt-input px-2 py-1 text-xs rounded w-full" @keyup.enter="executeManualFileAdd">
+                <p class="text-xs crt-dim mt-2">File will be downloaded to temp/ and added to file list</p>
+            </div>
+            <div class="flex gap-2">
+                <button @click="cancelManualFileModal" class="flex-1 crt-button py-1 text-xs rounded" style="border-color:#ff0000;color:#ff0000;">Cancel</button>
+                <button @click="executeManualFileAdd" class="flex-1 crt-button py-1 text-xs rounded" style="border-color:#00ffff;color:#00ffff;">Download</button>
             </div>
         </div>
     </div>
@@ -404,10 +450,16 @@ createApp({
 
         // SSH State
         const showSSHModal = ref(false);
+        const showPasswordModal = ref(false);
+        const showManualFileModal = ref(false);
+        const passwordForConnection = ref('');
+        const manualFilePath = ref('');
+        const connectingConnectionIndex = ref(-1);
         const sshConnections = ref(JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'));
+        const editingIndex = ref(-1); // -1 means adding, >=0 means editing
         const sshForm = reactive({
             name: '', host: '', user: '', port: '22',
-            authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log'
+            authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log', allFiles: false
         });
 
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
@@ -777,16 +829,28 @@ createApp({
                 name: sshForm.name,
                 host: sshForm.host,
                 user: sshForm.user,
-                port: sshForm.port || 22,
+                port: parseInt(sshForm.port) || 22,
                 authMethod: sshForm.authMethod,
                 remotePath: sshForm.remotePath || '/var/log',
+                keyPath: sshForm.authMethod === 'key' ? sshForm.keyPath : undefined,
+                allFiles: sshForm.allFiles || false,
                 // Note: We don't save passwords for security
             };
 
-            sshConnections.value.push(conn);
+            if (editingIndex.value >= 0) {
+                // Update existing connection
+                sshConnections.value[editingIndex.value] = conn;
+                alert('SSH connection updated!');
+            } else {
+                // Add new connection
+                sshConnections.value.push(conn);
+                alert('SSH connection saved!');
+            }
+
             localStorage.setItem('fplv_ssh_connections', JSON.stringify(sshConnections.value));
 
             // Reset form
+            editingIndex.value = -1;
             Object.assign(sshForm, {
                 name: '', host: '', user: '', port: '22',
                 authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log'
@@ -802,21 +866,55 @@ createApp({
             }
         }
 
+        function editSSHConnection(idx) {
+            const conn = sshConnections.value[idx];
+            Object.assign(sshForm, {
+                name: conn.name,
+                host: conn.host,
+                user: conn.user,
+                port: String(conn.port || 22),
+                authMethod: conn.authMethod,
+                password: '', // Don't load saved password for security
+                keyPath: conn.keyPath || '',
+                keyPassphrase: '',
+                remotePath: conn.remotePath || '/var/log',
+                allFiles: conn.allFiles || false
+            });
+            editingIndex.value = idx;
+            showSSHModal.value = true;
+        }
+
+        function cancelEdit() {
+            editingIndex.value = -1;
+            Object.assign(sshForm, {
+                name: '', host: '', user: '', port: '22',
+                authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log', allFiles: false
+            });
+        }
+
         async function connectSSH(idx) {
             const conn = sshConnections.value[idx];
-            const password = prompt(`Enter SSH password for ${conn.name} (or leave empty for key auth):`);
+            connectingConnectionIndex.value = idx;
+            passwordForConnection.value = '';
+            showPasswordModal.value = true;
+        }
 
-            if (password === null) return; // Cancelled
+        async function executeSSHConnection() {
+            const idx = connectingConnectionIndex.value;
+            const conn = sshConnections.value[idx];
+            const password = passwordForConnection.value;
+            showPasswordModal.value = false;
 
             try {
                 const payload = {
                     ssh_host: conn.host,
                     ssh_user: conn.user,
-                    ssh_port: conn.port,
+                    ssh_port: parseInt(conn.port) || 22,
                     ssh_auth_method: password ? 'password' : 'key',
                     ssh_password: password || undefined,
                     ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
                     path: conn.remotePath,
+                    allFiles: conn.allFiles || false,
                 };
 
                 const res = await fetch('?action=ssh-list-files', {
@@ -843,7 +941,89 @@ createApp({
                 }
             } catch(e) {
                 alert('SSH connection failed: ' + e.message);
+            } finally {
+                connectingConnectionIndex.value = -1;
+                passwordForConnection.value = '';
             }
+        }
+
+        function cancelPasswordModal() {
+            showPasswordModal.value = false;
+            connectingConnectionIndex.value = -1;
+            passwordForConnection.value = '';
+        }
+
+        function addManualSSHFile(idx) {
+            connectingConnectionIndex.value = idx;
+            manualFilePath.value = '';
+            showManualFileModal.value = true;
+        }
+
+        async function executeManualFileAdd() {
+            const idx = connectingConnectionIndex.value;
+            const conn = sshConnections.value[idx];
+            const password = passwordForConnection.value;
+            let filePath = manualFilePath.value;
+
+            if (!filePath) {
+                alert('Please enter a file path');
+                return;
+            }
+
+            // Ensure path starts with /
+            if (!filePath.startsWith('/')) {
+                filePath = '/' + filePath;
+            }
+
+            showManualFileModal.value = false;
+
+            try {
+                const payload = {
+                    ssh_host: conn.host,
+                    ssh_user: conn.user,
+                    ssh_port: parseInt(conn.port) || 22,
+                    ssh_auth_method: password ? 'password' : 'key',
+                    ssh_password: password || undefined,
+                    ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
+                    remotePath: filePath,
+                    localName: filePath.split('/').pop()
+                };
+
+                // Download file first
+                const downloadRes = await fetch('?action=ssh-download-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const downloadData = await downloadRes.json();
+                if (!downloadData.success) {
+                    alert('Failed to download file: ' + (downloadData.error || 'Unknown error'));
+                    return;
+                }
+
+                // Add downloaded file to list
+                    if (!files.value.some(f => f.file === downloadData.localPath)) {
+                        files.value.push({
+                            file: downloadData.localPath,
+                            date: new Date().toISOString().split('T')[0],
+                            size: downloadData.size
+                        });
+                    }
+
+                alert(`File ${filePath} downloaded successfully!\nSaved as: ${downloadData.localPath}\nSize: ${downloadData.size} bytes`);
+            } catch(e) {
+                alert('SSH operation failed: ' + e.message);
+            } finally {
+                connectingConnectionIndex.value = -1;
+                manualFilePath.value = '';
+            }
+        }
+
+        function cancelManualFileModal() {
+            showManualFileModal.value = false;
+            connectingConnectionIndex.value = -1;
+            manualFilePath.value = '';
         }
 
         return {
@@ -851,11 +1031,11 @@ createApp({
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
             excludedLevels, editorUrl, directories, selectedDir, directFilePath, allowedDirPath,
             bookmarks, showBookmarks,
-            showSSHModal, sshConnections, sshForm,
+            showSSHModal, showPasswordModal, showManualFileModal, passwordForConnection, manualFilePath, sshConnections, sshForm,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
             changeDir, formatSize, formatDate, levelColor, levelDot, rowBg, hasContext, openInEditor,
             toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
-            testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,
+            testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection, cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal, addManualSSHFile, executeManualFileAdd, cancelManualFileModal, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,
         };
     }
 }).mount('#app');

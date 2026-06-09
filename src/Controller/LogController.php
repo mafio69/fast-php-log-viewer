@@ -60,6 +60,7 @@ try {
         'ssh-test-connection' => respondTestSSHConnection(),
         'ssh-list-files' => respondSSHListFiles(),
         'ssh-read-file' => respondSSHReadFile(),
+        'ssh-download-file' => respondSSHDownloadFile(),
         default       => respondError('Unknown action', 400),
     };
 } catch (Throwable $e) {
@@ -317,10 +318,12 @@ function respondSSHListFiles(): void
         $ssh = new SSH($input);
         $ssh->connect();
         $finder = new RemoteLogFinder($ssh);
-        $files = $finder->findAll($path);
+        $allFiles = $input['allFiles'] ?? false;
+        $files = $finder->findAll($path, $allFiles);
         $ssh->disconnect();
         echo json_encode(['success' => true, 'files' => $files], JSON_THROW_ON_ERROR);
     } catch (\Exception $e) {
+        error_log('SSH file listing failed: ' . $e->getMessage());
         respondError('SSH file listing failed: ' . $e->getMessage(), 500);
     }
 }
@@ -357,6 +360,7 @@ function respondSSHReadFile(): void
 
         echo json_encode(['success' => true, 'entries' => $entries], JSON_THROW_ON_ERROR);
     } catch (\Exception $e) {
+        error_log('SSH file reading failed: ' . $e->getMessage());
         respondError('SSH file reading failed: ' . $e->getMessage(), 500);
     }
 }
@@ -365,4 +369,55 @@ function respondError(string $message, int $code): void
 {
     http_response_code($code);
     echo json_encode(['error' => $message]);
+}
+
+/** @throws JsonException */
+function respondSSHDownloadFile(): void
+{
+    if (!SSH::isAvailable()) {
+        respondError('SSH2 extension is not available', 500);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        respondError('Invalid JSON input', 400);
+        return;
+    }
+
+    $remotePath = $input['remotePath'] ?? '';
+    $localName = $input['localName'] ?? basename($remotePath);
+
+    if (empty($remotePath)) {
+        respondError('Remote path is required', 400);
+        return;
+    }
+
+    try {
+        $ssh = new SSH($input);
+        $ssh->connect();
+        $content = $ssh->readFile($remotePath);
+        $ssh->disconnect();
+
+        if (empty($content)) {
+            respondError('Remote file is empty or could not be read', 400);
+            return;
+        }
+
+        // Save to temp directory with original name
+        $tempDir = __DIR__ . '/../../temp';
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0777, true);
+        }
+
+        $localPath = $tempDir . '/' . $localName;
+        if (file_put_contents($localPath, $content) === false) {
+            respondError('Failed to save file locally', 500);
+            return;
+        }
+
+        echo json_encode(['success' => true, 'localPath' => $localPath, 'size' => strlen($content)], JSON_THROW_ON_ERROR);
+    } catch (\Exception $e) {
+        respondError('SSH file download failed: ' . $e->getMessage(), 500);
+    }
 }

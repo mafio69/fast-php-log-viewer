@@ -15,6 +15,7 @@ namespace Mariusz\LogViewer\Service;
  *   nginx error: 2026/06/05 07:00:00 [error] 1234#0: *12345 message
  *   nginx access: 192.168.1.1 - - [05/Jun/2026:09:00:00 +0000] "GET / HTTP/1.1" 200 1234
  *   apk log: Running `apk ...` at 2026-05-07 16:44:06 or (N/M) Installing package (version)
+ *   syslog: Jun  9 20:24:01 hostname process[pid]: message
  */
 class LogParser
 {
@@ -30,6 +31,7 @@ class LogParser
     private const string PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
     private const string PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
     private const string PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
+    private const string PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
     public function parseFile(string $path): array
@@ -56,6 +58,41 @@ class LogParser
 
         while ($i < $count) {
             $line = $lines[$i];
+
+            // syslog format: Jun  9 20:24:01 hostname process[pid]: message
+            if (preg_match(self::PATTERN_SYSLOG, $line, $m)) {
+                $monthMap = [
+                    'Jan' => '01', 'Feb' => '02', 'Mar' => '03', 'Apr' => '04', 'May' => '05', 'Jun' => '06',
+                    'Jul' => '07', 'Aug' => '08', 'Sep' => '09', 'Oct' => '10', 'Nov' => '11', 'Dec' => '12'
+                ];
+                $month = $monthMap[$m['month']] ?? '01';
+                $day = str_pad($m['day'], 2, '0', STR_PAD_LEFT);
+                $datetime = date('Y') . '-' . $month . '-' . $day . ' ' . $m['time'];
+                $location = $m['hostname'] . ' ' . $m['process'] . (isset($m['pid']) ? '[' . $m['pid'] . ']' : '');
+
+                // Try to detect log level from message
+                $messageLower = strtolower($m['message']);
+                $level = 'INFO';
+                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
+                    $level = 'ERROR';
+                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
+                    $level = 'WARNING';
+                } elseif (str_contains($messageLower, 'debug')) {
+                    $level = 'DEBUG';
+                } elseif (str_contains($messageLower, 'critical') || str_contains($messageLower, 'fatal')) {
+                    $level = 'CRITICAL';
+                }
+
+                $entries[] = [
+                    'datetime' => $datetime,
+                    'level' => $level,
+                    'location' => $location,
+                    'message' => $m['message'],
+                    'context' => []
+                ];
+                $i++;
+                continue;
+            }
 
             // nginx error log format: 2026/06/05 07:00:00 [error] 1234#0: *12345 message
             if (preg_match(self::PATTERN_NGINX_ERR, $line, $m)) {
