@@ -404,20 +404,213 @@ function respondSSHDownloadFile(): void
             return;
         }
 
-        // Save to temp directory with original name
+        // Security: validate file size (max 10MB)
+        $maxSize = 10 * 1024 * 1024; // 10MB
+        if (strlen($content) > $maxSize) {
+            respondError('File too large (max 10MB)', 400);
+            return;
+        }
+
+        // Security: sanitize filename
+        $localName = sanitizeFilename($localName);
+        if (empty($localName)) {
+            $localName = 'downloaded_file.log';
+        }
+
+        // Security: validate file type (check for binary/executable content)
+        if (isBinaryContent($content)) {
+            respondError('Binary or executable files are not allowed', 400);
+            return;
+        }
+
+        // Security: validate file is text-based (log files)
+        if (!isValidTextFile($content)) {
+            respondError('File does not appear to be a valid text/log file', 400);
+            return;
+        }
+
+        // Security: check for suspicious patterns (PHP tags, shell commands, etc.)
+        if (containsSuspiciousContent($content)) {
+            respondError('File contains potentially dangerous content', 400);
+            return;
+        }
+
+        // Create temp directory if it doesn't exist
         $tempDir = __DIR__ . '/../../temp';
         if (!is_dir($tempDir)) {
             mkdir($tempDir, 0777, true);
         }
 
-        $localPath = $tempDir . '/' . $localName;
-        if (file_put_contents($localPath, $content) === false) {
-            respondError('Failed to save file locally', 500);
+        // Security: generate unique temp filename first
+        $tempName = uniqid('temp_', true) . '.tmp';
+        $tempPath = $tempDir . '/' . $tempName;
+
+        // Save to temp file first
+        if (file_put_contents($tempPath, $content) === false) {
+            respondError('Failed to save file to temp directory', 500);
             return;
         }
 
-        echo json_encode(['success' => true, 'localPath' => $localPath, 'size' => strlen($content)], JSON_THROW_ON_ERROR);
+        // Security: validate the temp file
+        $realTempPath = realpath($tempPath);
+        $realTempDir = realpath($tempDir);
+        if ($realTempPath === false || strpos($realTempPath, $realTempDir) !== 0) {
+            unlink($tempPath);
+            respondError('Invalid temp file path', 403);
+            return;
+        }
+
+        // Move to final destination with sanitized name
+        $finalPath = $tempDir . '/' . $localName;
+        if (!rename($tempPath, $finalPath)) {
+            // If rename fails, try copy and delete
+            if (!copy($tempPath, $finalPath)) {
+                unlink($tempPath);
+                respondError('Failed to move file to final destination', 500);
+                return;
+            }
+            unlink($tempPath);
+        }
+
+        // Security: validate final path
+        $realFinalPath = realpath($finalPath);
+        if ($realFinalPath === false || strpos($realFinalPath, $realTempDir) !== 0) {
+            unlink($finalPath);
+            respondError('Invalid final file path', 403);
+            return;
+        }
+
+        echo json_encode(['success' => true, 'localPath' => $finalPath, 'size' => strlen($content)], JSON_THROW_ON_ERROR);
     } catch (\Exception $e) {
         respondError('SSH file download failed: ' . $e->getMessage(), 500);
     }
+}
+
+/**
+ * Sanitize filename to prevent directory traversal and other attacks
+ */
+function sanitizeFilename(string $filename): string
+{
+    // Remove directory traversal attempts
+    $filename = basename($filename);
+
+    // Remove null bytes
+    $filename = str_replace("\0", '', $filename);
+
+    // Remove dangerous characters
+    $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+
+    // Limit length
+    $filename = substr($filename, 0, 255);
+
+    // Ensure it's not empty
+    return empty($filename) ? 'file.log' : $filename;
+}
+
+/**
+ * Check if content appears to be binary
+ */
+function isBinaryContent(string $content): bool
+{
+    // Check for null bytes (common in binary files)
+    if (strpos($content, "\0") !== false) {
+        return true;
+    }
+
+    // Check binary character ratio
+    $length = strlen($content);
+    if ($length === 0) {
+        return false;
+    }
+
+    $binaryCount = 0;
+    $sampleSize = min($length, 1000); // Check first 1000 bytes
+
+    for ($i = 0; $i < $sampleSize; $i++) {
+        $char = ord($content[$i]);
+        // Binary characters are typically outside printable ASCII range
+        if ($char < 9 || ($char > 13 && $char < 32) || $char > 126) {
+            $binaryCount++;
+        }
+    }
+
+    // If more than 30% binary characters, consider it binary
+    return ($binaryCount / $sampleSize) > 0.3;
+}
+
+/**
+ * Check if content is valid text/log file
+ */
+function isValidTextFile(string $content): bool
+{
+    // Check for common text file patterns
+    $textPatterns = [
+        '/\d{4}-\d{2}-\d{2}/', // Date format
+        '/\d{2}:\d{2}:\d{2}/', // Time format
+        '/\[(ERROR|WARNING|INFO|DEBUG|CRITICAL)\]/i', // Log levels
+        '/\w+:\d+/', // File:line format
+    ];
+
+    $matches = 0;
+    foreach ($textPatterns as $pattern) {
+        if (preg_match($pattern, $content)) {
+            $matches++;
+        }
+    }
+
+    // Require at least one text pattern or be mostly printable ASCII
+    if ($matches > 0) {
+        return true;
+    }
+
+    // Fallback: check if mostly printable ASCII
+    $printableCount = 0;
+    $sampleSize = min(strlen($content), 1000);
+    for ($i = 0; $i < $sampleSize; $i++) {
+        $char = ord($content[$i]);
+        if (($char >= 32 && $char <= 126) || $char === 10 || $char === 13 || $char === 9) {
+            $printableCount++;
+        }
+    }
+
+    return ($printableCount / $sampleSize) > 0.8;
+}
+
+/**
+ * Check for suspicious content (PHP tags, shell commands, etc.)
+ */
+function containsSuspiciousContent(string $content): bool
+{
+    $suspiciousPatterns = [
+        '/<\?php/i',           // PHP opening tag
+        '/<\?=/i',             // PHP short echo tag
+        '/<script/i',          // HTML script tag
+        '/#!/usr\/bin\//',     // Shebang
+        '/eval\(/i',           // PHP eval function
+        '/exec\(/i',           // PHP exec function
+        '/system\(/i',         // PHP system function
+        '/passthru\(/i',       // PHP passthru function
+        '/shell_exec\(/i',     // PHP shell_exec function
+        '/`.*`/',              // Backtick execution
+        '/\$_GET/i',           // PHP $_GET
+        '/\$_POST/i',          // PHP $_POST
+        '/\$_REQUEST/i',       // PHP $_REQUEST
+        '/\$_COOKIE/i',        // PHP $_COOKIE
+        '/file_get_contents\(/i', // PHP file_get_contents
+        '/file_put_contents\(/i', // PHP file_put_contents
+        '/fopen\(/i',          // PHP fopen
+        '/fwrite\(/i',         // PHP fwrite
+        '/include\(/i',        // PHP include
+        '/require\(/i',        // PHP require
+        '/curl_exec\(/i',      // PHP curl_exec
+        '/base64_decode\(/i',  // PHP base64_decode
+    ];
+
+    foreach ($suspiciousPatterns as $pattern) {
+        if (preg_match($pattern, $content)) {
+            return true;
+        }
+    }
+
+    return false;
 }
