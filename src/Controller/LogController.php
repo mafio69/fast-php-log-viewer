@@ -60,6 +60,9 @@ try {
         'ssh-test-connection' => respondTestSSHConnection(),
         'ssh-list-files' => respondSSHListFiles(),
         'ssh-read-file' => respondSSHReadFile(),
+        'read-file' => respondReadFile(),
+        'check-file' => respondCheckFile(),
+        'demo-entries' => respondDemoEntries(),
         default       => respondError('Unknown action', 400),
     };
 } catch (Throwable $e) {
@@ -359,6 +362,156 @@ function respondSSHReadFile(): void
     } catch (\Exception $e) {
         respondError('SSH file reading failed: ' . $e->getMessage(), 500);
     }
+}
+
+/**
+ * Read any local file directly (with existence check).
+ * Auto-adds the parent directory to allowed dirs.
+ */
+function respondReadFile(): void
+{
+    $file = $_GET['file'] ?? '';
+    if ($file === '') {
+        respondError('Missing file parameter', 400);
+        return;
+    }
+
+    // Normalize path (support Windows-style backslashes)
+    $file = str_replace('\\', '/', $file);
+
+    if (!file_exists($file)) {
+        respondError('File not found: ' . $file, 404);
+        return;
+    }
+
+    if (!is_readable($file)) {
+        respondError('File not readable: ' . $file, 403);
+        return;
+    }
+
+    // Auto-add directory to config so future requests work via normal entries endpoint
+    $dir = dirname($file);
+    try {
+        $config = new LogConfig();
+        $config->addDirectory([
+            'name' => 'direct_' . md5($dir),
+            'path' => $dir,
+            'type' => 'local',
+        ]);
+    } catch (\Exception $e) {
+        // Directory might already exist - that's fine
+    }
+
+    $parser = new LogParser();
+    $entries = $parser->parseFile($file);
+
+    echo json_encode($entries, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Check if a local file exists and is readable.
+ */
+function respondCheckFile(): void
+{
+    $file = $_GET['file'] ?? '';
+    if ($file === '') {
+        respondError('Missing file parameter', 400);
+        return;
+    }
+
+    $file = str_replace('\\', '/', $file);
+    $exists = file_exists($file);
+    $readable = $exists && is_readable($file);
+    $size = $readable ? (filesize($file) ?: 0) : 0;
+
+    echo json_encode([
+        'exists' => $exists,
+        'readable' => $readable,
+        'size' => $size,
+        'path' => $file,
+    ], JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Return demo log entries in Symfony format for first-run fallback.
+ */
+function respondDemoEntries(): void
+{
+    $now = date('Y-m-d H:i:s');
+    $entries = [
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-2 hours')),
+            'level' => 'INFO',
+            'location' => 'src/Controller/HomeController.php:42',
+            'message' => '[DEMO] request.INFO: Matched route "app_homepage".',
+            'context' => ['route' => 'app_homepage', 'method' => 'GET', 'route_parameters' => ['_controller' => 'App\\Controller\\HomeController::index']],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-1 hour 55 minutes')),
+            'level' => 'DEBUG',
+            'location' => 'vendor/doctrine/orm/lib/Doctrine/ORM/UnitOfWork.php:380',
+            'message' => '[DEMO] doctrine.DEBUG: SELECT u0_.id, u0_.email FROM user u0_ WHERE u0_.id = ?',
+            'context' => ['params' => [1], 'types' => ['integer']],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-1 hour 50 minutes')),
+            'level' => 'WARNING',
+            'location' => 'src/Service/PaymentService.php:128',
+            'message' => '[DEMO] payment.WARNING: Payment gateway timeout, retrying...',
+            'context' => ['gateway' => 'stripe', 'attempt' => 2, 'timeout_ms' => 5000],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-1 hour 30 minutes')),
+            'level' => 'ERROR',
+            'location' => 'src/EventSubscriber/ExceptionSubscriber.php:55',
+            'message' => '[DEMO] request.CRITICAL: Uncaught PHP Exception Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException',
+            'context' => ['exception' => 'Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException', 'message' => 'No route found for "GET /admin/secret"', 'code' => 404],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-1 hour 10 minutes')),
+            'level' => 'NOTICE',
+            'location' => 'src/Security/LoginAuthenticator.php:78',
+            'message' => '[DEMO] security.NOTICE: User "admin@example.com" logged in successfully.',
+            'context' => ['user' => 'admin@example.com', 'ip' => '192.168.1.100', 'firewall' => 'main'],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-1 hour')),
+            'level' => 'INFO',
+            'location' => 'src/Command/CacheWarmupCommand.php:35',
+            'message' => '[DEMO] cache.INFO: Cache warmup completed.',
+            'context' => ['duration_ms' => 1250, 'items_cached' => 342],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-45 minutes')),
+            'level' => 'ERROR',
+            'location' => 'src/Repository/ProductRepository.php:92',
+            'message' => '[DEMO] doctrine.ERROR: SQLSTATE[42S22]: Column not found: Unknown column "price_netto" in field list',
+            'context' => ['query' => 'SELECT price_netto FROM product WHERE id = ?', 'params' => [15]],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-30 minutes')),
+            'level' => 'CRITICAL',
+            'location' => 'src/Kernel.php:65',
+            'message' => '[DEMO] app.CRITICAL: Redis connection refused — fallback to file cache.',
+            'context' => ['dsn' => 'redis://localhost:6379', 'error' => 'Connection refused'],
+        ],
+        [
+            'datetime' => date('Y-m-d H:i:s', strtotime('-15 minutes')),
+            'level' => 'DEBUG',
+            'location' => 'src/MessageHandler/SendEmailHandler.php:40',
+            'message' => '[DEMO] messenger.DEBUG: Handling message App\\Message\\SendEmailNotification',
+            'context' => ['transport' => 'async', 'recipient' => 'user@example.com'],
+        ],
+        [
+            'datetime' => $now,
+            'level' => 'INFO',
+            'location' => '',
+            'message' => '[DEMO] === To jest demonstracja — dodaj własny katalog logów lub połącz się przez SSH. ===',
+            'context' => ['hint' => 'Użyj panelu po lewej stronie, aby dodać ścieżkę do logów lub nawiązać połączenie SSH.'],
+        ],
+    ];
+
+    echo json_encode($entries, JSON_THROW_ON_ERROR);
 }
 
 function respondError(string $message, int $code): void
