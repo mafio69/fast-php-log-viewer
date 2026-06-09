@@ -173,8 +173,12 @@ header('Expires: 0');
                 :style="selectedFile === f.file
                     ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;'
                     : 'color:#006600;border-left:3px solid transparent;'">
-                <div class="font-medium truncate">{{ f.file.split('/').pop() }}</div>
-                <div class="crt-dim text-xs">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
+                <div class="font-medium truncate">
+                    <span v-if="f.ssh" style="color:#00ccff;">🔗 </span>{{ f.ssh ? f.sshRealPath.split('/').pop() : f.file.split('/').pop() }}
+                </div>
+                <div class="crt-dim text-xs">
+                    <span v-if="f.ssh" style="color:#00ccff;">{{ f.sshConn.name }} · </span>{{ formatDate(f.date) }} · {{ formatSize(f.size) }}
+                </div>
                 <div v-if="f.allow" class="crt-dim text-xs">allow: {{ f.allow }}</div>
             </div>
         </div>
@@ -182,11 +186,20 @@ header('Expires: 0');
         <!-- Direct file path -->
         <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
             <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
-            <input type="text" v-model="directFilePath" placeholder="/var/log/php/php_errors.log"
-                class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
-            <button @click="loadDirectFile" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">
-                ⚡ ZAŁADUJ
-            </button>
+            <input type="text" v-model="directFilePath" placeholder="/var/log/syslog lub c:\logs\php_error.log"
+                class="w-full rounded px-2 py-1 text-xs crt-input mb-1"
+                @keyup.enter="loadDirectFile">
+            <div v-if="fileCheckResult" class="text-xs mb-1" :style="fileCheckResult.exists ? 'color:#00ff00;' : 'color:#ff0000;'">
+                {{ fileCheckResult.exists ? '✓ Plik znaleziony (' + formatSize(fileCheckResult.size) + ')' : '✗ Plik nie istnieje' }}
+            </div>
+            <div class="flex gap-1">
+                <button @click="checkDirectFile" class="flex-1 rounded px-2 py-1 text-xs crt-button">
+                    🔍 SPRAWDŹ
+                </button>
+                <button @click="loadDirectFile" class="flex-1 rounded px-2 py-1 text-xs crt-button font-bold">
+                    ⚡ ZAŁADUJ
+                </button>
+            </div>
         </div>
 
         <!-- Add allowed directory -->
@@ -299,10 +312,15 @@ header('Expires: 0');
             </div>
         </div>
 
+        <!-- Demo banner -->
+        <div v-if="isDemo" class="px-4 py-2 text-xs text-center" style="background:#0a0a00;border-bottom:1px solid #ffff00;color:#ffff00;">
+            ⚠ DEMO LOGS — To jest demonstracja. Dodaj katalog logów, wpisz ścieżkę lub połącz się przez SSH, aby wyświetlić prawdziwe logi.
+        </div>
+
         <!-- States -->
-        <div v-if="loading" class="flex-1 flex items-center justify-center crt-dim">Loading…</div>
-        <div v-else-if="!selectedFile" class="flex-1 flex items-center justify-center crt-dim">Select a log file.</div>
-        <div v-else-if="!filtered.length" class="flex-1 flex items-center justify-center crt-dim">No entries match filters.</div>
+        <div v-if="loading" class="flex-1 flex items-center justify-center crt-dim">Ładowanie…</div>
+        <div v-else-if="!selectedFile" class="flex-1 flex items-center justify-center crt-dim">Wybierz plik logów z listy, wpisz ścieżkę lub połącz się przez SSH.</div>
+        <div v-else-if="!filtered.length" class="flex-1 flex items-center justify-center crt-dim">Brak wpisów pasujących do filtrów.</div>
 
         <!-- Table -->
         <div v-else class="flex-1 overflow-auto">
@@ -409,6 +427,10 @@ createApp({
             name: '', host: '', user: '', port: '22',
             authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log'
         });
+        const activeSSHConnection = ref(null);
+        const sshFiles = ref([]);
+        const fileCheckResult = ref(null);
+        const isDemo = ref(false);
 
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
@@ -469,21 +491,34 @@ createApp({
             }
         }
 
+        async function checkDirectFile() {
+            const path = directFilePath.value.trim();
+            if (!path) { alert('Wpisz ścieżkę do pliku'); return; }
+            try {
+                const res = await fetchJson('?action=check-file&file=' + encodeURIComponent(path));
+                fileCheckResult.value = res;
+            } catch (e) {
+                fileCheckResult.value = { exists: false, readable: false, size: 0 };
+            }
+        }
+
         async function loadDirectFile() {
             if (!directFilePath.value.trim()) {
                 alert('Wpisz ścieżkę do pliku');
                 return;
             }
             const path = directFilePath.value.trim();
-            selectedFile.value = path;
+            isDemo.value = false;
 
             try {
                 loading.value = true;
-                const url = '?action=entries&file=' + encodeURIComponent(path);
-                console.log('Loading file from:', url);
+                // Use read-file endpoint that auto-adds dir to allowed list
+                const url = '?action=read-file&file=' + encodeURIComponent(path);
                 entries.value = await fetchJson(url);
+                selectedFile.value = path;
                 filtered.value = entries.value;
                 applyFilters();
+                fileCheckResult.value = null;
             } catch (e) {
                 alert('Błąd ładowania pliku: ' + e.message);
                 console.error('Load direct file error:', e);
@@ -546,6 +581,13 @@ createApp({
         }
 
         async function selectFile(path) {
+            // Check if this is an SSH file
+            const sshFile = files.value.find(f => f.file === path && f.ssh);
+            if (sshFile && sshFile.sshConn) {
+                await loadSSHFile(sshFile.sshConn, sshFile.sshRealPath);
+                return;
+            }
+            isDemo.value = false;
             selectedFile.value = path;
             await loadEntries();
         }
@@ -715,6 +757,58 @@ createApp({
             } catch(e) {}
         }
 
+        async function loadDemoEntries() {
+            try {
+                loading.value = true;
+                entries.value = await fetchJson('?action=demo-entries');
+                selectedFile.value = 'demo-logs';
+                isDemo.value = true;
+                applyFilters();
+            } catch(e) {
+                console.error('Demo load error:', e);
+            } finally {
+                loading.value = false;
+            }
+        }
+
+        async function loadSSHFile(conn, filePath) {
+            if (!conn) return;
+            const password = activeSSHConnection.value?.password || prompt(`Podaj hasło SSH dla ${conn.name} (lub zostaw puste dla klucza):`);
+            if (password === null) return;
+
+            try {
+                loading.value = true;
+                isDemo.value = false;
+                const payload = {
+                    ssh_host: conn.host,
+                    ssh_user: conn.user,
+                    ssh_port: parseInt(conn.port) || 22,
+                    ssh_auth_method: password ? 'password' : (conn.authMethod || 'key'),
+                    ssh_password: password || undefined,
+                    ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
+                    path: filePath,
+                };
+
+                const res = await fetch('?action=ssh-read-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success && data.entries) {
+                    entries.value = data.entries;
+                    selectedFile.value = '[SSH] ' + conn.name + ':' + filePath;
+                    applyFilters();
+                } else {
+                    alert('Błąd odczytu pliku SSH: ' + (data.error || 'Nieznany błąd'));
+                }
+            } catch(e) {
+                alert('Błąd SSH: ' + e.message);
+            } finally {
+                loading.value = false;
+            }
+        }
+
         async function init() {
             try {
                 directories.value = await fetchJson('?action=directories');
@@ -723,6 +817,34 @@ createApp({
                 }
             } catch(e) { /* fallback: no dirs endpoint = single dir mode */ }
             await loadFiles();
+
+            // First-run fallback: no files found → try scan → demo
+            if (!files.value.length) {
+                try {
+                    const scanResult = await fetchJson('?action=scan-directories');
+                    const scanDirs = Object.values(scanResult);
+                    if (scanDirs.length > 0) {
+                        // Found log dirs - add them and reload
+                        for (const sd of scanDirs) {
+                            try {
+                                await fetch('?action=config-add-dir', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name: sd.name, path: sd.path, type: 'local' })
+                                });
+                            } catch(e) { /* skip duplicates */ }
+                        }
+                        await loadDirectories();
+                        await loadFiles();
+                    }
+                } catch(e) { /* scan failed - continue to demo */ }
+            }
+
+            // Still no files → load demo
+            if (!files.value.length && !selectedFile.value) {
+                await loadDemoEntries();
+            }
+
             validateBookmarks();
         }
 
@@ -804,16 +926,17 @@ createApp({
 
         async function connectSSH(idx) {
             const conn = sshConnections.value[idx];
-            const password = prompt(`Enter SSH password for ${conn.name} (or leave empty for key auth):`);
+            const password = prompt(`Podaj hasło SSH dla ${conn.name} (lub zostaw puste dla klucza):`);
 
-            if (password === null) return; // Cancelled
+            if (password === null) return;
 
             try {
+                loading.value = true;
                 const payload = {
                     ssh_host: conn.host,
                     ssh_user: conn.user,
-                    ssh_port: conn.port,
-                    ssh_auth_method: password ? 'password' : 'key',
+                    ssh_port: parseInt(conn.port) || 22,
+                    ssh_auth_method: password ? 'password' : (conn.authMethod || 'key'),
                     ssh_password: password || undefined,
                     ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
                     path: conn.remotePath,
@@ -827,22 +950,33 @@ createApp({
 
                 const data = await res.json();
                 if (data.success) {
-                    alert(`Found ${data.files.length} log files on ${conn.name}`);
-                    // Add SSH files to file list
+                    activeSSHConnection.value = { ...conn, password };
+                    sshFiles.value = data.files;
+                    isDemo.value = false;
+
+                    // Add SSH files to sidebar file list with [SSH] prefix
                     data.files.forEach(file => {
-                        if (!files.value.some(f => f.file === file.path)) {
-                            files.value.push({
-                                file: file.path,
+                        const sshPath = '[SSH:' + conn.name + '] ' + file.path;
+                        if (!files.value.some(f => f.file === sshPath)) {
+                            files.value.unshift({
+                                file: sshPath,
                                 date: new Date().toISOString().split('T')[0],
-                                size: file.size || 0
+                                size: file.size || 0,
+                                ssh: true,
+                                sshConn: conn,
+                                sshRealPath: file.path,
                             });
                         }
                     });
+
+                    showSSHModal.value = false;
                 } else {
-                    alert('Failed to list files: ' + (data.error || 'Unknown error'));
+                    alert('Błąd listowania plików: ' + (data.error || 'Nieznany błąd'));
                 }
             } catch(e) {
-                alert('SSH connection failed: ' + e.message);
+                alert('Błąd połączenia SSH: ' + e.message);
+            } finally {
+                loading.value = false;
             }
         }
 
@@ -850,12 +984,13 @@ createApp({
             files, entries, filtered, selectedFile, filterText, loading, expanded,
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
             excludedLevels, editorUrl, directories, selectedDir, directFilePath, allowedDirPath,
-            bookmarks, showBookmarks,
-            showSSHModal, sshConnections, sshForm,
+            bookmarks, showBookmarks, fileCheckResult, isDemo,
+            showSSHModal, sshConnections, sshForm, sshFiles, activeSSHConnection,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
             changeDir, formatSize, formatDate, levelColor, levelDot, rowBg, hasContext, openInEditor,
             toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
-            testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,
+            testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH,
+            loadDirectFile, checkDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories, loadDemoEntries,
         };
     }
 }).mount('#app');
