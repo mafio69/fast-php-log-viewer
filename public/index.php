@@ -1011,7 +1011,11 @@ createApp({
                         });
                     }
 
-                alert(`File ${filePath} downloaded successfully!\nSaved as: ${downloadData.localPath}\nSize: ${downloadData.size} bytes`);
+                    // Auto-load the downloaded file entries
+                    selectedFile.value = downloadData.localPath;
+                    await loadEntries();
+
+                    alert(`File ${filePath} downloaded successfully!\nSaved as: ${downloadData.localPath}\nSize: ${downloadData.size} bytes\nLoaded ${filtered.value.length} log entries`);
             } catch(e) {
                 alert('SSH operation failed: ' + e.message);
             } finally {
