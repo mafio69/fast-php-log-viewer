@@ -305,7 +305,7 @@ header('Expires: 0');
                         <tr @click="toggle(i)" class="cursor-pointer"
                             :style="'border-bottom:1px solid #002200;' + rowBg(entry.level)">
                             <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">{{ formatDate(entry.datetime) }}</td>
-                            <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ entry.level }}</td>
+                            <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ levelIcon(entry.level) }} {{ entry.level }}</td>
                             <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">
                                 <a v-if="editorUrl && entry.location"
                                    :href="openInEditor(entry.location)"
@@ -356,9 +356,14 @@ const LEVEL_DOTS = {
     ALERT:'#cc7a00', EMERGENCY:'#cc0052',
 };
 const ROW_BG = {
-    ERROR:'background:#0a0500;', CRITICAL:'background:#0a0200;',
-    ALERT:'background:#0a0400;', EMERGENCY:'background:#0a0010;',
-    WARNING:'background:#0a0a00;',
+    DEBUG:'background:#000800;', INFO:'background:#000a00;', NOTICE:'background:#000900;',
+    WARNING:'background:#0a0a00;', ERROR:'background:#0f0500;',
+    CRITICAL:'background:#120200;', ALERT:'background:#0f0400;', EMERGENCY:'background:#100015;',
+};
+const LEVEL_ICONS = {
+    DEBUG:'☰', INFO:'ℹ', NOTICE:'☆',
+    WARNING:'⚠', ERROR:'✖', CRITICAL:'🔥',
+    ALERT:'🚨', EMERGENCY:'💥',
 };
 
 createApp({
@@ -406,6 +411,7 @@ createApp({
         const levelColor  = l => LEVEL_COLORS[l] ?? '#9ca3af';
         const levelDot    = l => LEVEL_DOTS[l]   ?? '#6b7280';
         const rowBg       = l => ROW_BG[l]        ?? '';
+        const levelIcon   = l => LEVEL_ICONS[l]   ?? '';
 
         function levelPillStyle(level) {
             const active = !excludedLevels.value.includes(level);
@@ -847,7 +853,7 @@ createApp({
             bookmarks, showBookmarks,
             showSSHModal, sshConnections, sshForm,
             selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel, levelPillStyle,
-            changeDir, formatSize, formatDate, levelColor, levelDot, rowBg, hasContext, openInEditor,
+            changeDir, formatSize, formatDate, levelColor, levelDot, levelIcon, rowBg, hasContext, openInEditor,
             toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
             testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,
         };
