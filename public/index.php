@@ -97,46 +97,9 @@ header('Expires: 0');
 <div id="app" v-cloak class="flex h-screen" :style="{ fontSize: fontSize + 'px' }">
 
     <!-- Sidebar -->
-    <aside style="width:280px;min-width:280px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
+    <aside style="width:220px;min-width:220px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
         <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
             <div class="font-bold text-sm crt-glow">⚡ LOG-VIEWER</div>
-        </div>
-
-        <!-- Filters -->
-        <div style="border-top:1px solid #00ff00;" class="px-3 py-2 flex flex-col gap-2">
-
-            <!-- Sort -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">SORTOWANIE</div>
-                <button @click="toggleSort"
-                    class="w-full rounded px-2 py-1 text-xs text-left crt-button">
-                    {{ sortOrder === 'desc' ? '↓ Najnowsze' : '↑ Najstarsze' }}
-                </button>
-            </div>
-
-            <!-- Date range -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">ZAKRES DAT</div>
-                <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-1 text-xs crt-dim">
-                        <span style="width:20px;">Od</span>
-                        <input type="date" v-model="dateFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
-                    </div>
-                    <div class="flex items-center gap-1 text-xs crt-dim">
-                        <span style="width:20px;">Do</span>
-                        <input type="date" v-model="dateTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
-                    </div>
-                </div>
-                <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium crt-button">Zastosuj</button>
-            </div>
-
-            <!-- Stats -->
-            <div class="text-xs crt-dim">
-                {{ filtered.length }} entries<br>
-                <span v-if="selectedFile">{{ selectedFile.split('/').pop() }}</span>
-            </div>
         </div>
 
         <!-- Directory selector -->
