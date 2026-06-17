@@ -175,6 +175,7 @@ class SSH
     public function readFile(string $path): string
     {
         $command = sprintf('cat %s 2>/dev/null', escapeshellarg($path));
+
         return $this->exec($command);
     }
 
@@ -185,6 +186,7 @@ class SSH
     {
         $command = sprintf('test -f %s && echo "exists" || echo "not exists"', escapeshellarg($path));
         $output = trim($this->exec($command));
+
         return $output === 'exists';
     }
 
@@ -195,6 +197,7 @@ class SSH
     {
         $command = sprintf('test -d %s && echo "exists" || echo "not exists"', escapeshellarg($path));
         $output = trim($this->exec($command));
+
         return $output === 'exists';
     }
 
@@ -205,6 +208,7 @@ class SSH
     {
         $command = sprintf('stat -f%%z %s 2>/dev/null || stat -c%%s %s 2>/dev/null || echo "0"', escapeshellarg($path), escapeshellarg($path));
         $output = trim($this->exec($command));
+
         return (int)$output;
     }
 

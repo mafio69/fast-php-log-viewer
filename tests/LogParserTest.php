@@ -60,7 +60,8 @@ class LogParserTest extends TestCase
     public function testParseFileReturnsEntriesReversed(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'log');
-        file_put_contents($tmp,
+        file_put_contents(
+            $tmp,
             "[2026-05-03 10:00:00] [INFO] [a.php:1] first\n" .
             "[2026-05-03 11:00:00] [INFO] [a.php:2] second\n"
         );
@@ -76,7 +77,8 @@ class LogParserTest extends TestCase
     public function testParseFileSkipsInvalidLines(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'log');
-        file_put_contents($tmp,
+        file_put_contents(
+            $tmp,
             "[2026-05-03 10:00:00] [INFO] [a.php:1] valid\n" .
             "garbage line\n"
         );
@@ -95,7 +97,8 @@ class LogParserTest extends TestCase
     public function testParsesNginxErrorLogFormat(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'log');
-        file_put_contents($tmp,
+        file_put_contents(
+            $tmp,
             "2026/06/05 07:00:00 [error] 1234#0: *12345 upstream timed out\n" .
             "2026/06/05 07:01:00 [warn] 1234#0: *12346 client closed connection\n"
         );

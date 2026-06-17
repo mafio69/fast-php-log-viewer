@@ -18,7 +18,8 @@ class SSHConnection
         public ?string $password = null,
         public ?string $keyPath = null,
         public ?string $keyPassphrase = null
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {
@@ -30,7 +31,7 @@ class SSHConnection
             'username' => $this->username,
             'password' => $this->password,
             'keyPath' => $this->keyPath,
-            'keyPassphrase' => $this->keyPassphrase
+            'keyPassphrase' => $this->keyPassphrase,
         ];
     }
 

@@ -9,7 +9,9 @@ namespace Mariusz\LogViewer\Service;
  */
 readonly class LogFinder
 {
-    public function __construct(private string $logDir) {}
+    public function __construct(private string $logDir)
+    {
+    }
 
     /**
      * Returns all log files sorted newest first.
@@ -21,11 +23,11 @@ readonly class LogFinder
         $dir   = self::normalizePath($this->logDir);
         $files = array_unique(array_merge(
             glob($dir . '/*/*/*.log') ?: [],
-            glob($dir . '/*/*.log')   ?: [],
-            glob($dir . '/*.log')     ?: [],
+            glob($dir . '/*/*.log') ?: [],
+            glob($dir . '/*.log') ?: [],
             glob($dir . '/*/*/*.php') ?: [],
-            glob($dir . '/*/*.php')   ?: [],
-            glob($dir . '/*.php')     ?: [],
+            glob($dir . '/*/*.php') ?: [],
+            glob($dir . '/*.php') ?: [],
         ));
 
         $result = [];
@@ -37,7 +39,7 @@ readonly class LogFinder
             ];
         }
 
-        usort($result, static fn($a, $b) => strcmp($b['date'], $a['date']));
+        usort($result, static fn ($a, $b) => strcmp($b['date'], $a['date']));
 
         return $result;
     }
@@ -47,6 +49,7 @@ readonly class LogFinder
         $path = str_replace('\\', '/', $path);
         // Remove double slashes and trailing slash
         $path = preg_replace('/\/+/', '/', $path);
+
         return rtrim($path, '/');
     }
 

@@ -33,12 +33,12 @@ if (file_exists($_autoload)) {
 }
 unset($_autoload);
 
+use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\LogFinder;
 use Mariusz\LogViewer\Service\LogParser;
-use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\LogScanner;
-use Mariusz\LogViewer\Service\SSH;
 use Mariusz\LogViewer\Service\RemoteLogFinder;
+use Mariusz\LogViewer\Service\SSH;
 
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
@@ -92,6 +92,7 @@ function resolveLogDir(): string
 {
     $dirs = getLogDirs();
     $key  = $_GET['dir'] ?? array_key_first($dirs);
+
     return $dirs[$key] ?? reset($dirs);
 }
 
@@ -103,7 +104,7 @@ function respondDirectories(): void
         $dirs = $config->getDirectories();
 
         // Convert to consistent format with 'key' instead of 'name'
-        $dirs = array_map(fn($d) => ['key' => $d['name'], 'path' => $d['path']], $dirs);
+        $dirs = array_map(fn ($d) => ['key' => $d['name'], 'path' => $d['path']], $dirs);
 
         // Also include LOG_DIR/LOG_DIRS for backwards compatibility
         $envDirs = getLogDirs();
@@ -133,7 +134,7 @@ function respondFiles(): void
     $finder = new LogFinder($logDir);
     $files  = $finder->findAll();
 
-    echo json_encode(array_map(static fn($f) => [
+    echo json_encode(array_map(static fn ($f) => [
         'file' => $f['path'],
         'date' => $f['date'],
         'size' => $f['size'],
@@ -147,6 +148,7 @@ function respondEntries(): void
 
     if ($file === '') {
         respondError('Missing file parameter', 400);
+
         return;
     }
 
@@ -167,6 +169,7 @@ function respondEntries(): void
 
     if (!$allowed) {
         respondError('Access denied', 403);
+
         return;
     }
 
@@ -175,7 +178,7 @@ function respondEntries(): void
 
     $level = $_GET['level'] ?? '';
     if ($level !== '') {
-        $entries = array_values(array_filter($entries, static fn($e) => $e['level'] === strtoupper($level)));
+        $entries = array_values(array_filter($entries, static fn ($e) => $e['level'] === strtoupper($level)));
     }
 
     echo json_encode($entries, JSON_THROW_ON_ERROR);
@@ -196,6 +199,7 @@ function respondAddDirectory(): void
         $input = json_decode(file_get_contents('php://input'), true);
         if (!$input) {
             respondError('Invalid JSON input', 400);
+
             return;
         }
 
@@ -225,12 +229,14 @@ function respondUpdateDirectory(): void
     $id = (int)($_GET['id'] ?? 0);
     if ($id === 0) {
         respondError('Missing ID parameter', 400);
+
         return;
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         respondError('Invalid JSON input', 400);
+
         return;
     }
 
@@ -245,6 +251,7 @@ function respondDeleteDirectory(): void
     $id = (int)($_GET['id'] ?? 0);
     if ($id === 0) {
         respondError('Missing ID parameter', 400);
+
         return;
     }
 
@@ -274,12 +281,14 @@ function respondTestSSHConnection(): void
 {
     if (!SSH::isAvailable()) {
         respondError('SSH2 extension is not available', 500);
+
         return;
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         respondError('Invalid JSON input', 400);
+
         return;
     }
 
@@ -298,18 +307,21 @@ function respondSSHListFiles(): void
 {
     if (!SSH::isAvailable()) {
         respondError('SSH2 extension is not available', 500);
+
         return;
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         respondError('Invalid JSON input', 400);
+
         return;
     }
 
     $path = $input['path'] ?? '/var/log';
     if (empty($path)) {
         respondError('Path is required', 400);
+
         return;
     }
 
@@ -330,18 +342,21 @@ function respondSSHReadFile(): void
 {
     if (!SSH::isAvailable()) {
         respondError('SSH2 extension is not available', 500);
+
         return;
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         respondError('Invalid JSON input', 400);
+
         return;
     }
 
     $path = $input['path'] ?? '';
     if (empty($path)) {
         respondError('Path is required', 400);
+
         return;
     }
 

@@ -132,22 +132,6 @@ header('Expires: 0');
                 <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium crt-button">Zastosuj</button>
             </div>
 
-            <!-- Levels -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">POZIOMY</div>
-                <div class="flex flex-col gap-0.5">
-                    <label v-for="level in levels" :key="level" class="flex items-center gap-2 text-xs cursor-pointer crt-dim">
-                        <span class="w-2 h-2 rounded-full inline-block" :style="'background:' + levelDot(level)"></span>
-                        <input type="checkbox" :checked="!excludedLevels.includes(level)" @change="toggleLevel(level)" class="hidden">
-                        <span @click="toggleLevel(level)"
-                            :style="excludedLevels.includes(level) ? 'color:#003300;' : 'color:#00ff00;'">
-                            {{ level }}
-                        </span>
-                        <span class="ml-auto crt-dim">{{ levelCounts[level] || '' }}</span>
-                    </label>
-                </div>
-            </div>
-
             <!-- Stats -->
             <div class="text-xs crt-dim">
                 {{ filtered.length }} entries<br>
@@ -264,6 +248,19 @@ header('Expires: 0');
 
     <!-- Main -->
     <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Bar: Level Filter Pills -->
+        <div class="flex items-center gap-1 px-4 py-2 flex-wrap" style="background:#000;border-bottom:1px solid #003300;">
+            <button v-for="level in levels" :key="level"
+                @click="toggleLevel(level)"
+                class="px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all duration-200"
+                :style="levelPillStyle(level)">
+                <span class="inline-block w-2 h-2 rounded-full mr-1" :style="'background:' + levelDot(level)"></span>
+                {{ level }}
+                <span v-if="levelCounts[level]" class="ml-1 opacity-70">({{ levelCounts[level] }})</span>
+            </button>
+            <span class="ml-auto text-xs crt-dim">{{ filtered.length }} entries</span>
+        </div>
+
         <!-- Toolbar -->
         <div class="flex items-center gap-2 px-4 py-2" style="background:#000;border-bottom:1px solid #00ff00;">
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
@@ -421,6 +418,15 @@ createApp({
         const levelColor  = l => LEVEL_COLORS[l] ?? '#9ca3af';
         const levelDot    = l => LEVEL_DOTS[l]   ?? '#6b7280';
         const rowBg       = l => ROW_BG[l]        ?? '';
+
+        function levelPillStyle(level) {
+            const active = !excludedLevels.value.includes(level);
+            const color = LEVEL_COLORS[level] ?? '#9ca3af';
+            if (active) {
+                return `background:${color}22;border:1px solid ${color};color:${color};`;
+            }
+            return 'background:#001100;border:1px solid #003300;color:#003300;';
+        }
         const hasContext  = e => e.context && Object.keys(e.context).length > 0;
 
         // Move DEBUG and INFO to top
@@ -852,7 +858,7 @@ createApp({
             excludedLevels, editorUrl, directories, selectedDir, directFilePath, allowedDirPath,
             bookmarks, showBookmarks,
             showSSHModal, sshConnections, sshForm,
-            selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
+            selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel, levelPillStyle,
             changeDir, formatSize, formatDate, levelColor, levelDot, rowBg, hasContext, openInEditor,
             toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
             testSSHConnection, addSSHConnection, deleteSSHConnection, connectSSH, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,

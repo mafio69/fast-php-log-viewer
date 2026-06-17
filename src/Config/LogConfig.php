@@ -82,16 +82,16 @@ class LogConfig
     public function addDirectory(array $config): int
     {
         // Check if directory already exists
-        $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
+        $stmt = $this->db->prepare('SELECT id FROM log_directories WHERE path = :path');
         $stmt->execute([':path' => $config['path']]);
         if ($stmt->fetch()) {
             throw new Exception('Directory already exists: ' . $config['path']);
         }
 
-        $stmt = $this->db->prepare("
+        $stmt = $this->db->prepare('
             INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path)
             VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path)
-        ");
+        ');
 
         $stmt->execute([
             ':name' => $config['name'],
@@ -111,7 +111,8 @@ class LogConfig
      */
     public function getDirectories(): array
     {
-        $stmt = $this->db->query("SELECT * FROM log_directories WHERE is_active = 1 ORDER BY name");
+        $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 1 ORDER BY name');
+
         return $stmt->fetchAll();
     }
 
@@ -120,13 +121,14 @@ class LogConfig
      */
     public function removeDuplicates(): int
     {
-        $this->db->exec("
+        $this->db->exec('
             DELETE FROM log_directories
             WHERE id NOT IN (
                 SELECT MIN(id) FROM log_directories GROUP BY path
             )
-        ");
-        return $this->db->exec("DELETE FROM log_directories WHERE path IN (SELECT path FROM log_directories GROUP BY path HAVING COUNT(*) > 1) AND id NOT IN (SELECT MIN(id) FROM log_directories GROUP BY path)");
+        ');
+
+        return $this->db->exec('DELETE FROM log_directories WHERE path IN (SELECT path FROM log_directories GROUP BY path HAVING COUNT(*) > 1) AND id NOT IN (SELECT MIN(id) FROM log_directories GROUP BY path)');
     }
 
     /**
@@ -134,9 +136,10 @@ class LogConfig
      */
     public function getDirectory(int $id): ?array
     {
-        $stmt = $this->db->prepare("SELECT * FROM log_directories WHERE id = :id");
+        $stmt = $this->db->prepare('SELECT * FROM log_directories WHERE id = :id');
         $stmt->execute([':id' => $id]);
         $result = $stmt->fetch();
+
         return $result ?: null;
     }
 
@@ -159,10 +162,11 @@ class LogConfig
             return false;
         }
 
-        $fields[] = "updated_at = CURRENT_TIMESTAMP";
-        $sql = "UPDATE log_directories SET " . implode(', ', $fields) . " WHERE id = :id";
+        $fields[] = 'updated_at = CURRENT_TIMESTAMP';
+        $sql = 'UPDATE log_directories SET ' . implode(', ', $fields) . ' WHERE id = :id';
 
         $stmt = $this->db->prepare($sql);
+
         return $stmt->execute($params);
     }
 
@@ -171,7 +175,8 @@ class LogConfig
      */
     public function deleteDirectory(int $id): bool
     {
-        $stmt = $this->db->prepare("DELETE FROM log_directories WHERE id = :id");
+        $stmt = $this->db->prepare('DELETE FROM log_directories WHERE id = :id');
+
         return $stmt->execute([':id' => $id]);
     }
 
@@ -180,10 +185,11 @@ class LogConfig
      */
     public function rememberFile(int $directoryId, string $filePath): bool
     {
-        $stmt = $this->db->prepare("
+        $stmt = $this->db->prepare('
             INSERT OR REPLACE INTO log_files (directory_id, file_path, last_seen)
             VALUES (:directory_id, :file_path, CURRENT_TIMESTAMP)
-        ");
+        ');
+
         return $stmt->execute([
             ':directory_id' => $directoryId,
             ':file_path' => $filePath,
@@ -195,12 +201,13 @@ class LogConfig
      */
     public function getRememberedFiles(int $directoryId): array
     {
-        $stmt = $this->db->prepare("
+        $stmt = $this->db->prepare('
             SELECT * FROM log_files
             WHERE directory_id = :directory_id
             ORDER BY last_seen DESC
-        ");
+        ');
         $stmt->execute([':directory_id' => $directoryId]);
+
         return $stmt->fetchAll();
     }
 
@@ -209,8 +216,9 @@ class LogConfig
      */
     public function hasConfigurations(): bool
     {
-        $stmt = $this->db->query("SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1");
+        $stmt = $this->db->query('SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1');
         $result = $stmt->fetch();
+
         return ($result['count'] ?? 0) > 0;
     }
 

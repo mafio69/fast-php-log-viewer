@@ -92,7 +92,7 @@ class LogScanner
 
         // Remove duplicates and sort by modification time
         $files = array_values(array_unique($files, SORT_REGULAR));
-        usort($files, fn($a, $b) => $b['mtime'] <=> $a['mtime']);
+        usort($files, fn ($a, $b) => $b['mtime'] <=> $a['mtime']);
 
         return $files;
     }

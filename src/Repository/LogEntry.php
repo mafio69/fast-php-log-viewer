@@ -16,7 +16,8 @@ class LogEntry
         public ?string $context = null,
         public ?string $file = null,
         public ?int $line = null
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {
@@ -26,7 +27,7 @@ class LogEntry
             'message' => $this->message,
             'context' => $this->context,
             'file' => $this->file,
-            'line' => $this->line
+            'line' => $this->line,
         ];
     }
 

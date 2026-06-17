@@ -90,6 +90,7 @@ class LogRepository
                     return false;
                 }
             }
+
             return true;
         });
     }
