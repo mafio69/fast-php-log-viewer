@@ -245,11 +245,15 @@ header('Expires: 0');
                 class="px-2 py-0.5 rounded text-xs crt-button" title="Wyczyść filtry daty">✕ Reset</button>
         </div>
 
-        <!-- Toolbar -->
+        <!-- Toolbar: Sort + Search + Tools -->
         <div class="flex items-center gap-2 px-4 py-2" style="background:#000;border-bottom:1px solid #00ff00;">
-            <input v-model="filterText" @input="applyFilters" placeholder="Search…"
-                class="rounded px-3 py-1 text-sm flex-1 max-w-xs crt-input">
-            <button @click="loadEntries" title="Refresh"
+            <button @click="toggleSort"
+                class="px-3 py-1 rounded text-xs crt-button whitespace-nowrap" title="Zmień kolejność">
+                {{ sortOrder === 'desc' ? '↓ Najnowsze' : '↑ Najstarsze' }}
+            </button>
+            <input v-model="filterText" @input="applyFilters" placeholder="Szukaj w logach…"
+                class="rounded px-3 py-1 text-sm flex-1 max-w-md crt-input">
+            <button @click="loadEntries" title="Odśwież"
                 class="px-3 py-1 rounded text-sm crt-button">↺</button>
             <div class="flex items-center gap-1 rounded overflow-hidden crt-border">
                 <button @click="fontSize = Math.max(10, fontSize - 1)"
