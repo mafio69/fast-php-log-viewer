@@ -37,6 +37,7 @@ class DirectoryRepository
     public function getByKey(string $key): ?array
     {
         $directories = $this->config->getLogDirectories();
+
         return $directories[$key] ?? null;
     }
 

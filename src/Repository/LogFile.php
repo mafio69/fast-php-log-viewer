@@ -15,7 +15,8 @@ class LogFile
         public ?string $directory = null,
         public ?int $size = null,
         public ?string $modified = null
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {
@@ -24,7 +25,7 @@ class LogFile
             'name' => $this->name,
             'directory' => $this->directory,
             'size' => $this->size,
-            'modified' => $this->modified
+            'modified' => $this->modified,
         ];
     }
 

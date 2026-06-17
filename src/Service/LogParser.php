@@ -69,7 +69,7 @@ class LogParser
                     'level' => $level,
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -89,7 +89,7 @@ class LogParser
                     'level' => strtoupper($m['level']),
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -172,7 +172,7 @@ class LogParser
                     'level' => 'INFO',
                     'location' => '',
                     'message' => 'Running apk: ' . $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -186,7 +186,7 @@ class LogParser
                     'level' => $level,
                     'location' => '',
                     'message' => "({$m['num']}/{$m['total']}) {$m['action']} {$m['message']}",
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -199,7 +199,7 @@ class LogParser
                     'level' => 'WARNING',
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -212,7 +212,7 @@ class LogParser
                     'level' => 'INFO',
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -225,7 +225,7 @@ class LogParser
                     'level' => 'INFO',
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;

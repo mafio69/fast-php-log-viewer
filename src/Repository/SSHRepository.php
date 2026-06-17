@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Repository;
 
-use Mariusz\LogViewer\Repository\Model\SSHConnection;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Repository\Model\SSHConnection;
 
 /**
  * Repository for SSH connections.
@@ -27,7 +27,8 @@ class SSHRepository
     public function getAll(): array
     {
         $connections = $this->config->getSSHConnections();
-        return array_map(fn($conn) => SSHConnection::fromArray($conn), $connections);
+
+        return array_map(fn ($conn) => SSHConnection::fromArray($conn), $connections);
     }
 
     /**
@@ -39,6 +40,7 @@ class SSHRepository
     public function getById(int $id): ?SSHConnection
     {
         $connection = $this->config->getSSHConnection($id);
+
         return $connection ? SSHConnection::fromArray($connection) : null;
     }
 
