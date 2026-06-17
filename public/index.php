@@ -224,6 +224,27 @@ header('Expires: 0');
             <span class="ml-auto text-xs crt-dim">{{ filtered.length }} entries</span>
         </div>
 
+        <!-- Top Bar: Date/Time Filter -->
+        <div class="flex items-center gap-2 px-4 py-1 flex-wrap" style="background:#000;border-bottom:1px solid #003300;">
+            <span class="text-xs crt-dim font-semibold">ZAKRES:</span>
+            <div class="flex items-center gap-1">
+                <input type="date" v-model="dateFrom" @change="applyFilters"
+                    class="rounded px-1 py-0.5 text-xs crt-input" style="max-width:130px;">
+                <span class="text-xs crt-dim">—</span>
+                <input type="date" v-model="dateTo" @change="applyFilters"
+                    class="rounded px-1 py-0.5 text-xs crt-input" style="max-width:130px;">
+            </div>
+            <div class="flex items-center gap-1">
+                <input type="time" v-model="timeFrom" @change="applyFilters" step="1"
+                    class="rounded px-1 py-0.5 text-xs crt-input" style="max-width:100px;" placeholder="Od">
+                <span class="text-xs crt-dim">—</span>
+                <input type="time" v-model="timeTo" @change="applyFilters" step="1"
+                    class="rounded px-1 py-0.5 text-xs crt-input" style="max-width:100px;" placeholder="Do">
+            </div>
+            <button @click="dateFrom='';dateTo='';timeFrom='';timeTo='';applyFilters()"
+                class="px-2 py-0.5 rounded text-xs crt-button" title="Wyczyść filtry daty">✕ Reset</button>
+        </div>
+
         <!-- Toolbar -->
         <div class="flex items-center gap-2 px-4 py-2" style="background:#000;border-bottom:1px solid #00ff00;">
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
