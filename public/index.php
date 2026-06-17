@@ -21,9 +21,7 @@ header('Expires: 0');
     <title>fast-php-log-viewer</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+
     <style>
         [v-cloak] { display: none; }
         body { background:#000; color:#00ff00; font-family: 'Courier New', monospace; }
@@ -41,55 +39,7 @@ header('Expires: 0');
         .crt-button { background: #001100; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; }
         .crt-button:hover { background: #002200; box-shadow: 0 0 5px #00ff00; }
 
-        /* DataTables CRT theme */
-        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing,
-        .dataTables_wrapper .dataTables_paginate {
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_length select, .dataTables_wrapper .dataTables_filter input {
-            background: #000 !important;
-            border: 1px solid #00ff00 !important;
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            color: #00ff00 !important;
-            border: 1px solid #00ff00 !important;
-            background: #000 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-            background: #002200 !important;
-            color: #00ff00 !important;
-            border: 1px solid #00ff00 !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
-            color: #006600 !important;
-            border: 1px solid #003300 !important;
-        }
-        table.dataTable thead th, table.dataTable thead td {
-            border-bottom: 1px solid #00ff00 !important;
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-            background: #001100 !important;
-        }
-        table.dataTable tbody tr {
-            background: #000 !important;
-        }
-        table.dataTable tbody tr:hover {
-            background: #001100 !important;
-        }
-        table.dataTable td {
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing {
-            margin: 12px !important;
-        }
+
     </style>
 </head>
 <body class="h-screen overflow-hidden crt-text crt-bg">
@@ -291,7 +241,7 @@ header('Expires: 0');
 
         <!-- Table -->
         <div v-else class="flex-1 overflow-auto">
-            <table id="logsTable" class="w-full text-sm border-collapse display">
+            <table class="w-full text-sm border-collapse">
                 <thead style="background:#001100;border-bottom:1px solid #00ff00;" class="sticky top-0 z-10">
                     <tr>
                         <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:155px;">Datetime</th>
@@ -301,8 +251,8 @@ header('Expires: 0');
                     </tr>
                 </thead>
                 <tbody>
-                    <template v-for="(entry, i) in filtered" :key="i">
-                        <tr @click="toggle(i)" class="cursor-pointer"
+                    <template v-for="(entry, pi) in paginatedEntries" :key="pageOffset + pi">
+                        <tr @click="toggle(pageOffset + pi)" class="cursor-pointer"
                             :style="'border-bottom:1px solid #002200;' + rowBg(entry.level)">
                             <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">{{ formatDate(entry.datetime) }}</td>
                             <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ levelIcon(entry.level) }} {{ entry.level }}</td>
@@ -317,10 +267,10 @@ header('Expires: 0');
                                 <span class="block truncate">
                                     <span v-if="isBookmarked(entry)" style="color:#ffff00;" title="Zakładka">★ </span>{{ entry.message }}
                                 </span>
-                                <span class="text-xs crt-dim">{{ expanded[i] ? '▲' : '▼' }}</span>
+                                <span class="text-xs crt-dim">{{ expanded[pageOffset + pi] ? '▲' : '▼' }}</span>
                             </td>
                         </tr>
-                        <tr v-if="expanded[i]" style="background:#001100;border-bottom:1px solid #002200;">
+                        <tr v-if="expanded[pageOffset + pi]" style="background:#001100;border-bottom:1px solid #002200;">
                             <td colspan="4" class="px-3 py-2">
                                 <div class="flex items-start gap-2">
                                     <div class="flex-1">
@@ -337,6 +287,32 @@ header('Expires: 0');
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="filtered.length" class="flex items-center justify-between px-4 py-2" style="background:#001100;border-top:1px solid #00ff00;">
+            <div class="flex items-center gap-2">
+                <span class="text-xs crt-dim">Pokaż</span>
+                <select v-model.number="pageSize" @change="currentPage = 1" class="rounded px-1 py-0.5 text-xs crt-input">
+                    <option :value="25">25</option>
+                    <option :value="50">50</option>
+                    <option :value="100">100</option>
+                    <option :value="250">250</option>
+                </select>
+                <span class="text-xs crt-dim">wpisów</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button @click="currentPage = 1" :disabled="currentPage <= 1"
+                    class="px-2 py-1 text-xs crt-button" :class="{'opacity-30 cursor-default': currentPage <= 1}">«</button>
+                <button @click="currentPage--" :disabled="currentPage <= 1"
+                    class="px-2 py-1 text-xs crt-button" :class="{'opacity-30 cursor-default': currentPage <= 1}">‹</button>
+                <span class="px-2 text-xs crt-text">{{ currentPage }} / {{ totalPages }}</span>
+                <button @click="currentPage++" :disabled="currentPage >= totalPages"
+                    class="px-2 py-1 text-xs crt-button" :class="{'opacity-30 cursor-default': currentPage >= totalPages}">›</button>
+                <button @click="currentPage = totalPages" :disabled="currentPage >= totalPages"
+                    class="px-2 py-1 text-xs crt-button" :class="{'opacity-30 cursor-default': currentPage >= totalPages}">»</button>
+            </div>
+            <span class="text-xs crt-dim">{{ pageOffset + 1 }}–{{ Math.min(pageOffset + pageSize, filtered.length) }} z {{ filtered.length }}</span>
         </div>
     </div>
 </div>
@@ -390,7 +366,12 @@ createApp({
         const bookmarks    = ref(JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'));
         const showBookmarks = ref(false);
         const MAX_BOOKMARKS = 10;
-        let dataTable = null;
+        const currentPage  = ref(1);
+        const pageSize     = ref(25);
+
+        const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)));
+        const pageOffset = computed(() => (currentPage.value - 1) * pageSize.value);
+        const paginatedEntries = computed(() => filtered.value.slice(pageOffset.value, pageOffset.value + pageSize.value));
 
         // SSH State
         const showSSHModal = ref(false);
@@ -590,38 +571,7 @@ createApp({
             }
             if (sortOrder.value === 'asc') r = [...r].reverse();
             filtered.value = r;
-            initDataTable();
-        }
-
-        function initDataTable() {
-            nextTick(() => {
-                const table = document.getElementById('logsTable');
-                if (!table) return;
-
-                if (dataTable) {
-                    dataTable.destroy();
-                }
-
-                dataTable = $('#logsTable').DataTable({
-                    pageLength: 25,
-                    lengthMenu: [10, 25, 50, 100],
-                    order: [[0, 'desc']],
-                    language: {
-                        search: "Szukaj:",
-                        lengthMenu: "Pokaż _MENU_ wpisów",
-                        info: "Pokazano _START_ do _END_ z _TOTAL_ wpisów",
-                        paginate: {
-                            first: "Pierwsza",
-                            last: "Ostatnia",
-                            next: "Następna",
-                            previous: "Poprzednia"
-                        }
-                    },
-                    columnDefs: [
-                        { orderable: true, targets: [0, 1, 2, 3] }
-                    ]
-                });
-            });
+            currentPage.value = 1;
         }
 
         function toggleLevel(level) {
@@ -849,6 +799,7 @@ createApp({
         return {
             files, entries, filtered, selectedFile, filterText, loading, expanded,
             levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
+            currentPage, pageSize, totalPages, pageOffset, paginatedEntries,
             excludedLevels, editorUrl, directories, selectedDir, directFilePath, allowedDirPath,
             bookmarks, showBookmarks,
             showSSHModal, sshConnections, sshForm,
