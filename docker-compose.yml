@@ -8,9 +8,9 @@ services:
     env_file:
       - .env
       - .config
-    ports:
+    ports: # map host:container
       - "9123:80"
-    volumes:
+    volumes: # map host:container
       - .:/var/www/html
       - ./docker-logs/nginx:/var/log/nginx
       - /var/log:/host/var/log
