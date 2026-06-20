@@ -8,6 +8,14 @@
             <directory>tests</directory>
         </testsuite>
     </testsuites>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="LOG_DIR" value="temp/logs"/>
+        <env name="BACKUP_ENCRYPTION_KEY" value="00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"/>
+        <ini name="display_errors" value="1"/>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="default_socket_timeout" value="2"/>
+    </php>
     <source>
         <include>
             <directory>src</directory>

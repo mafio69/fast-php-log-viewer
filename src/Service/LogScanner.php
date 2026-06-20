@@ -30,6 +30,15 @@ class LogScanner
         '*php*', '*apache*', '*nginx*', '*fpm*',
     ];
 
+    private function getLastErrorMessage(): string
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return '';
+        }
+        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
+    }
+
     /**
      * Scan common log directories for log files
      */
@@ -102,11 +111,21 @@ class LogScanner
      */
     private function getFileInfo(string $path): array
     {
+        $size = @filesize($path);
+        if ($size === false) {
+            throw new \RuntimeException("(@filesize(\$path) === false) Failed to get filesize for: $path (path: $path)" . $this->getLastErrorMessage());
+        }
+
+        $mtime = @filemtime($path);
+        if ($mtime === false) {
+            throw new \RuntimeException("(@filemtime(\$path) === false) Failed to get mtime for: $path (path: $path)" . $this->getLastErrorMessage());
+        }
+
         return [
             'path' => $path,
             'name' => basename($path),
-            'size' => filesize($path) ?: 0,
-            'mtime' => filemtime($path) ?: 0,
+            'size' => $size,
+            'mtime' => $mtime,
             'extension' => pathinfo($path, PATHINFO_EXTENSION),
         ];
     }

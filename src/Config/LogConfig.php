@@ -27,6 +27,15 @@ class LogConfig
         $this->restoreFromBackupIfEmpty();
     }
 
+    private function getLastErrorMessage(): string
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return '';
+        }
+        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
+    }
+
     private function ensureDbDirectory(): void
     {
         $dir = dirname($this->dbPath);
@@ -42,7 +51,7 @@ class LogConfig
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            throw new RuntimeException('Failed to connect to SQLite: ' . $e->getMessage());
+            throw new RuntimeException("(new PDO('sqlite:' . \$this->dbPath)) Failed to connect to SQLite: " . $e->getMessage() . " (dbPath: {$this->dbPath})" . $this->getLastErrorMessage());
         }
     }
 
@@ -88,7 +97,7 @@ class LogConfig
         $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
         $stmt->execute([':path' => $config['path']]);
         if ($stmt->fetch()) {
-            throw new Exception('Directory already exists: ' . $config['path']);
+            throw new Exception("(\$stmt->fetch()) Directory already exists: " . $config['path'] . " (path: {$config['path']})");
         }
 
         $stmt = $this->db->prepare("
@@ -395,7 +404,7 @@ class LogConfig
 
         $ciphertext = openssl_encrypt($plaintext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
         if ($ciphertext === false) {
-            throw new RuntimeException('Encryption failed');
+            throw new RuntimeException("(\$ciphertext === false) Encryption failed" . $this->getLastErrorMessage());
         }
 
         return base64_encode($iv.$tag.$ciphertext);
@@ -415,7 +424,7 @@ class LogConfig
 
         $raw = base64_decode($encoded, true);
         if ($raw === false || strlen($raw) <= $ivLen + $tagLen) {
-            throw new RuntimeException('Invalid encrypted data');
+            throw new RuntimeException("(\$raw === false || strlen(\$raw) <= \$ivLen + \$tagLen) Invalid encrypted data (encoded length: " . (is_string($encoded) ? strlen($encoded) : 0) . ")" . $this->getLastErrorMessage());
         }
 
         $iv = substr($raw, 0, $ivLen);
@@ -424,7 +433,7 @@ class LogConfig
 
         $plaintext = openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
         if ($plaintext === false) {
-            throw new RuntimeException('Decryption failed — wrong key or corrupted data');
+            throw new RuntimeException("(\$plaintext === false) Decryption failed — wrong key or corrupted data" . $this->getLastErrorMessage());
         }
 
         return $plaintext;
@@ -439,12 +448,12 @@ class LogConfig
     {
         $hex = getenv('BACKUP_ENCRYPTION_KEY');
         if (empty($hex)) {
-            throw new RuntimeException('BACKUP_ENCRYPTION_KEY is not set in environment');
+            throw new RuntimeException("(empty(\$hex)) BACKUP_ENCRYPTION_KEY is not set in environment");
         }
 
         $key = hex2bin($hex);
         if ($key === false || strlen($key) !== 32) {
-            throw new RuntimeException('BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
+            throw new RuntimeException("(\$key === false || strlen(\$key) !== 32) BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes) (hex: " . (is_string($hex) ? $hex : 'null') . ")");
         }
 
         return $key;

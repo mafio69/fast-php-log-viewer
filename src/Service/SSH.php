@@ -17,6 +17,15 @@ class SSH
         $this->config = $config;
     }
 
+    private function getLastErrorMessage(): string
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return '';
+        }
+        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
+    }
+
     /**
      * Connect to SSH server
      */
@@ -30,13 +39,22 @@ class SSH
             throw new \InvalidArgumentException('SSH host and user are required');
         }
 
+        $authMethod = $this->config['ssh_auth_method'] ?? 'password';
+
+        // Check for credentials early to avoid connection if they are missing
+        if ($authMethod === 'key') {
+            $this->validateKeyFile();
+        } else {
+            if (empty($this->config['ssh_password'])) {
+                throw new \InvalidArgumentException('SSH password is required for password authentication');
+            }
+        }
+
         $this->connection = @ssh2_connect($host, $port);
 
         if (!$this->connection) {
-            throw new \RuntimeException("Failed to connect to SSH server: $host:$port");
+            throw new \RuntimeException("(!$this->connection) Failed to connect to SSH server: $host:$port (host: $host, port: $port)" . $this->getLastErrorMessage());
         }
-
-        $authMethod = $this->config['ssh_auth_method'] ?? 'password';
 
         if ($authMethod === 'key') {
             return $this->authenticateWithKey();
@@ -46,31 +64,60 @@ class SSH
     }
 
     /**
+     * Internal validation of key file existence for early failure
+     */
+    private function validateKeyFile(): void
+    {
+        $keyPath = $this->config['ssh_key_path'] ?? null;
+        if (!$keyPath) {
+            $keyPath = $this->findDefaultKeyPath();
+        }
+
+        if (!$keyPath || !file_exists($keyPath)) {
+            throw new \RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
+        }
+    }
+
+    private function findDefaultKeyPath(): ?string
+    {
+        $defaultKeys = [
+            ($_SERVER['HOME'] ?? '/home/www-data') . '/.ssh/id_rsa',
+            ($_SERVER['HOME'] ?? '/home/www-data') . '/.ssh/id_ed25519',
+            ($_SERVER['HOME'] ?? '/home/www-data') . '/.ssh/id_ecdsa',
+            '/var/www/.ssh/id_rsa',
+            '/var/www/.ssh/id_ed25519',
+            '/var/www/.ssh/id_ecdsa',
+            '/home/www-data/.ssh/id_rsa',
+            '/home/www-data/.ssh/id_ed25519',
+            '/home/www-data/.ssh/id_ecdsa',
+            '/home/' . get_current_user() . '/.ssh/id_rsa',
+        ];
+
+        foreach ($defaultKeys as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Authenticate using SSH key
      */
     private function authenticateWithKey(): bool
     {
-        $keyPath = $this->config['ssh_key_path'] ?? null;
-
-        // Try default key paths if not specified
-        if (!$keyPath) {
-            $defaultKeys = [
-                $_SERVER['HOME'] . '/.ssh/id_rsa',
-                $_SERVER['HOME'] . '/.ssh/id_ed25519',
-                $_SERVER['HOME'] . '/.ssh/id_ecdsa',
-                '/home/' . get_current_user() . '/.ssh/id_rsa',
-            ];
-
-            foreach ($defaultKeys as $path) {
-                if (file_exists($path)) {
-                    $keyPath = $path;
-                    break;
-                }
-            }
-        }
+        $keyPath = $this->config['ssh_key_path'] ?? $this->findDefaultKeyPath();
 
         if (!$keyPath || !file_exists($keyPath)) {
-            throw new \RuntimeException('SSH key file not found: ' . ($keyPath ?? 'default paths'));
+            throw new \RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
+        }
+
+        // Check permissions (SSH2 extension is sensitive to this)
+        $perms = fileperms($keyPath) & 0777;
+        if ($perms > 0600 && PHP_OS_FAMILY !== 'Windows') {
+            // Log warning but continue, as Docker volumes might have fixed permissions
+            error_log("SSH Warning: Key file $keyPath has loose permissions (" . decoct($perms) . "). Expected 600.");
         }
 
         // Try without passphrase first
@@ -95,10 +142,12 @@ class SSH
                 $this->config['ssh_key_passphrase']
             );
 
-            return $authResult;
+            if ($authResult) {
+                return true;
+            }
         }
 
-        throw new \RuntimeException('SSH key authentication failed');
+        throw new \RuntimeException("SSH key authentication failed (keyPath: $keyPath, user: {$this->config['ssh_user']})" . $this->getLastErrorMessage());
     }
 
     /**
@@ -115,7 +164,7 @@ class SSH
         $authResult = @ssh2_auth_password($this->connection, $this->config['ssh_user'], $password);
 
         if (!$authResult) {
-            throw new \RuntimeException('SSH password authentication failed');
+            throw new \RuntimeException("(!$authResult) SSH password authentication failed (user: {$this->config['ssh_user']})" . $this->getLastErrorMessage());
         }
 
         return true;
@@ -133,7 +182,7 @@ class SSH
         $stream = @ssh2_exec($this->connection, $command);
 
         if (!$stream) {
-            throw new \RuntimeException('Failed to execute SSH command');
+            throw new \RuntimeException("(!$stream) Failed to execute SSH command (command: $command)" . $this->getLastErrorMessage());
         }
 
         stream_set_blocking($stream, true);

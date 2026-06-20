@@ -7,9 +7,23 @@ namespace Mariusz\LogViewer\Service;
 /**
  * Finds log files produced by fast-php-logger (default structure: logDir/Y/m/Y-m-d.log).
  */
-readonly class LogFinder
+class LogFinder
 {
-    public function __construct(private string $logDir) {}
+    private string $logDir;
+
+    public function __construct(string $logDir)
+    {
+        $this->logDir = $logDir;
+    }
+
+    private function getLastErrorMessage(): string
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return '';
+        }
+        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
+    }
 
     /**
      * Returns all log files sorted newest first.
@@ -30,10 +44,15 @@ readonly class LogFinder
 
         $result = [];
         foreach ($files as $path) {
+            $size = @filesize($path);
+            if ($size === false) {
+                throw new \RuntimeException("(@filesize(\$path) === false) Failed to get filesize for: $path (path: $path)" . $this->getLastErrorMessage());
+            }
+
             $result[] = [
                 'path' => self::normalizePath($path),
                 'date' => $this->extractDate($path),
-                'size' => filesize($path) ?: 0,
+                'size' => $size,
             ];
         }
 
@@ -58,6 +77,11 @@ readonly class LogFinder
             return $m[1];
         }
 
-        return date('Y-m-d', filemtime($path) ?: time());
+        $mtime = @filemtime($path);
+        if ($mtime === false) {
+            throw new \RuntimeException("(@filemtime(\$path) === false) Failed to get mtime for: $path (path: $path)" . $this->getLastErrorMessage());
+        }
+
+        return date('Y-m-d', $mtime);
     }
 }
