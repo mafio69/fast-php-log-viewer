@@ -7,6 +7,7 @@ services:
         GITHUB_TOKEN: ${GIT_ACCES_TOKEN}
     env_file:
       - .env
+      - .config
     ports:
       - "9123:80"
     volumes:
@@ -14,6 +15,3 @@ services:
       - ./docker-logs/nginx:/var/log/nginx
       - /var/log:/host/var/log
       - ~/.ssh:/var/www/.ssh
-    environment:
-      APP_ENV: development
-      LOG_DIR: /var/www/html/logs
