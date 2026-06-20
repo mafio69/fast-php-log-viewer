@@ -16,6 +16,8 @@ namespace Mariusz\LogViewer\Service;
  *   nginx access: 192.168.1.1 - - [05/Jun/2026:09:00:00 +0000] "GET / HTTP/1.1" 200 1234
  *   apk log: Running `apk ...` at 2026-05-07 16:44:06 or (N/M) Installing package (version)
  *   syslog: Jun  9 20:24:01 hostname process[pid]: message
+ *   apt/bootstrap: 2024-08-27 15:37:02 URL:http://... -> ...
+ *   systemd journal: 2026-06-07T10:44:33.740726+00:00 hostname process[pid]: message
  */
 class LogParser
 {
@@ -32,6 +34,8 @@ class LogParser
     private const string PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
     private const string PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
     private const string PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
+    private const string PATTERN_APT_LOG = '/^(?P<datetime>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<message>.+)$/';
+    private const string PATTERN_SYSTEMD_JOURNAL = '/^(?P<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
     public function parseFile(string $path): array
@@ -286,6 +290,54 @@ class LogParser
                     'location' => '',
                     'message' => $m['message'],
                     'context' => []
+                ];
+                $i++;
+                continue;
+            }
+
+            // APT/bootstrap log format: 2024-08-27 15:37:02 URL:http://... -> ...
+            if (preg_match(self::PATTERN_APT_LOG, $line, $m)) {
+                // Try to detect log level from message
+                $messageLower = strtolower($m['message']);
+                $level = 'INFO';
+                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
+                    $level = 'ERROR';
+                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
+                    $level = 'WARNING';
+                }
+
+                $entries[] = [
+                    'datetime' => $m['datetime'],
+                    'level' => $level,
+                    'location' => '',
+                    'message' => $m['message'],
+                    'context' => [],
+                ];
+                $i++;
+                continue;
+            }
+
+            // Systemd journal format: 2026-06-07T10:44:33.740726+00:00 hostname process[pid]: message
+            if (preg_match(self::PATTERN_SYSTEMD_JOURNAL, $line, $m)) {
+                // Convert ISO 8601 to simple format: 2026-06-07T10:44:33.740726+00:00 -> 2026-06-07 10:44:33
+                $datetime = preg_replace('/T(\d{2}:\d{2}:\d{2})\.\d+[+-]\d{2}:\d{2}/', ' $1', $m['datetime']);
+                $location = $m['hostname'].' '.$m['process'].(isset($m['pid']) ? '['.$m['pid'].']' : '');
+
+                // Try to detect log level from message
+                $messageLower = strtolower($m['message']);
+                $level = 'INFO';
+                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
+                    $level = 'ERROR';
+                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
+                    $level = 'WARNING';
+                }
+
+                $entries[] = [
+                    'datetime' => $datetime,
+                    'level' => $level,
+                    'location' => $location,
+                    'message' => $m['message'],
+                    'context' => [],
                 ];
                 $i++;
                 continue;

@@ -13,6 +13,11 @@ services:
       - ./logs:/var/www/html/logs
       - ./data:/var/www/html/data
       - ./docker-logs/nginx:/var/log/nginx
+      - ./src:/var/www/html/src
+      - ./public:/var/www/html/public
+      - ./temp:/var/www/html/temp
+      - /var/log:/host/var/log:ro
+      - ~/.ssh:/home/mariusz/.ssh:ro
     environment:
       APP_ENV: development
       LOG_DIR: /var/www/html/logs

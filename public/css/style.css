@@ -1,0 +1,89 @@
+/* fast-php-log-viewer - CRT Terminal Theme */
+
+[v-cloak] {
+    display: none;
+}
+
+body {
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #001100;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #003300;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #004400;
+}
+
+/* CRT Effects */
+.crt-glow {
+    text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00;
+}
+
+.crt-border {
+    border: 1px solid #00ff00;
+}
+
+.crt-bg {
+    background: #001100;
+}
+
+.crt-text {
+    color: #00ff00;
+}
+
+.crt-dim {
+    color: #006600;
+}
+
+.crt-input {
+    background: #000;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+}
+
+.crt-input:focus {
+    outline: none;
+    box-shadow: 0 0 5px #00ff00;
+}
+
+.crt-button {
+    background: #001100;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    cursor: pointer;
+}
+
+.crt-button:hover {
+    background: #002200;
+    box-shadow: 0 0 5px #00ff00;
+}
+
+/* DataTable Styles */
+th.cursor-pointer:hover {
+    background: #002200;
+    color: #00ff00;
+    text-shadow: 0 0 5px #00ff00;
+}
+
+th.cursor-pointer {
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.hover\:crt-glow:hover {
+    text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00;
+}

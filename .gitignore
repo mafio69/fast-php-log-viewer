@@ -4,4 +4,6 @@
 /.env
 /composer.phar
 /data/php_errors.log
+/data/logviewer.db
+/data/directories.json
 /temp/

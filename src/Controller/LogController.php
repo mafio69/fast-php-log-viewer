@@ -53,6 +53,7 @@ try {
         'config-dirs' => respondConfigDirectories(),
         'config-add-dir' => respondAddDirectory(),
         'config-cleanup-duplicates' => respondCleanupDuplicates(),
+        'config-cleanup-allowed' => respondCleanupAllowed(),
         'config-update-dir' => respondUpdateDirectory(),
         'config-delete-dir' => respondDeleteDirectory(),
         'config-init-defaults' => respondInitDefaults(),
@@ -84,6 +85,17 @@ function getLogDirs(): array
     } catch (Exception $e) {
         // LogConfig might not be initialized yet - log error but continue
         error_log('LogConfig error: ' . $e->getMessage());
+    }
+
+    // Also add directories from JSON config file (fallback for systems without SQLite)
+    $jsonConfigFile = dirname(__DIR__, 2).'/data/directories.json';
+    if (file_exists($jsonConfigFile)) {
+        $jsonConfig = json_decode(file_get_contents($jsonConfigFile), true);
+        if (is_array($jsonConfig)) {
+            foreach ($jsonConfig as $dir) {
+                $dirs[$dir['name']] = $dir['path'];
+            }
+        }
     }
 
     return $dirs;
@@ -200,9 +212,41 @@ function respondAddDirectory(): void
             return;
         }
 
-        $config = new LogConfig();
-        $id = $config->addDirectory($input);
-        echo json_encode(['success' => true, 'id' => $id], JSON_THROW_ON_ERROR);
+        // Try to add to SQLite first
+        try {
+            $config = new LogConfig();
+            $id = $config->addDirectory($input);
+            echo json_encode(['success' => true, 'id' => $id], JSON_THROW_ON_ERROR);
+        } catch (Exception $e) {
+            // Fallback to JSON config if SQLite fails
+            error_log('SQLite addDirectory failed, using JSON fallback: '.$e->getMessage());
+            $jsonConfigFile = dirname(__DIR__, 2).'/data/directories.json';
+            $directories = [];
+            if (file_exists($jsonConfigFile)) {
+                $directories = json_decode(file_get_contents($jsonConfigFile), true) ?: [];
+            }
+
+            // Check for duplicates
+            foreach ($directories as $dir) {
+                if ($dir['path'] === $input['path']) {
+                    respondError('Directory already exists: '.$input['path'], 400);
+
+                    return;
+                }
+            }
+
+            $directories[] = [
+                'name' => $input['name'],
+                'path' => $input['path'],
+                'type' => $input['type'] ?? 'local',
+            ];
+
+            if (file_put_contents($jsonConfigFile, json_encode($directories, JSON_PRETTY_PRINT))) {
+                echo json_encode(['success' => true, 'id' => count($directories) - 1], JSON_THROW_ON_ERROR);
+            } else {
+                respondError('Failed to save directory configuration', 500);
+            }
+        }
     } catch (Exception $e) {
         respondError('Failed to add directory: ' . $e->getMessage(), 500);
     }
@@ -217,6 +261,18 @@ function respondCleanupDuplicates(): void
         echo json_encode(['success' => true, 'removed' => $removed], JSON_THROW_ON_ERROR);
     } catch (Exception $e) {
         respondError('Failed to cleanup duplicates: ' . $e->getMessage(), 500);
+    }
+}
+
+/** @throws JsonException */
+function respondCleanupAllowed(): void
+{
+    try {
+        $config = new LogConfig();
+        $removed = $config->removeAllowedEntries();
+        echo json_encode(['success' => true, 'removed' => $removed], JSON_THROW_ON_ERROR);
+    } catch (Exception $e) {
+        respondError('Failed to cleanup allowed entries: '.$e->getMessage(), 500);
     }
 }
 
@@ -249,9 +305,29 @@ function respondDeleteDirectory(): void
         return;
     }
 
-    $config = new LogConfig();
-    $success = $config->deleteDirectory($id);
-    echo json_encode(['success' => $success], JSON_THROW_ON_ERROR);
+    // Try SQLite first
+    try {
+        $config = new LogConfig();
+        $success = $config->deleteDirectory($id);
+        echo json_encode(['success' => $success], JSON_THROW_ON_ERROR);
+    } catch (Exception $e) {
+        // Fallback to JSON config
+        error_log('SQLite deleteDirectory failed, using JSON fallback: '.$e->getMessage());
+        $jsonConfigFile = dirname(__DIR__, 2).'/data/directories.json';
+        $directories = [];
+        if (file_exists($jsonConfigFile)) {
+            $directories = json_decode(file_get_contents($jsonConfigFile), true) ?: [];
+        }
+
+        if (isset($directories[$id])) {
+            unset($directories[$id]);
+            $directories = array_values($directories); // Reindex array
+            $success = file_put_contents($jsonConfigFile, json_encode($directories, JSON_PRETTY_PRINT)) !== false;
+            echo json_encode(['success' => $success], JSON_THROW_ON_ERROR);
+        } else {
+            respondError('Directory not found', 404);
+        }
+    }
 }
 
 /** @throws JsonException */
@@ -289,7 +365,7 @@ function respondTestSSHConnection(): void
         $ssh->connect();
         $ssh->disconnect();
         echo json_encode(['success' => true, 'message' => 'SSH connection successful'], JSON_THROW_ON_ERROR);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         respondError('SSH connection failed: ' . $e->getMessage(), 500);
     }
 }
@@ -322,7 +398,7 @@ function respondSSHListFiles(): void
         $files = $finder->findAll($path, $allFiles);
         $ssh->disconnect();
         echo json_encode(['success' => true, 'files' => $files], JSON_THROW_ON_ERROR);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         error_log('SSH file listing failed: ' . $e->getMessage());
         respondError('SSH file listing failed: ' . $e->getMessage(), 500);
     }
@@ -359,7 +435,7 @@ function respondSSHReadFile(): void
         $entries = $parser->parseString($content);
 
         echo json_encode(['success' => true, 'entries' => $entries], JSON_THROW_ON_ERROR);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         error_log('SSH file reading failed: ' . $e->getMessage());
         respondError('SSH file reading failed: ' . $e->getMessage(), 500);
     }
@@ -481,7 +557,7 @@ function respondSSHDownloadFile(): void
         }
 
         echo json_encode(['success' => true, 'localPath' => $finalPath, 'size' => strlen($content)], JSON_THROW_ON_ERROR);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         respondError('SSH file download failed: ' . $e->getMessage(), 500);
     }
 }

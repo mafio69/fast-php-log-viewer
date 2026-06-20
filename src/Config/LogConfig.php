@@ -7,6 +7,8 @@ namespace Mariusz\LogViewer\Config;
 use Exception;
 use PDO;
 use PDOException;
+use Mariusz\LogViewer\Service\LogScanner;
+use RuntimeException;
 
 /**
  * Manages log file configuration using SQLite for persistence.
@@ -22,6 +24,7 @@ class LogConfig
         $this->ensureDbDirectory();
         $this->connect();
         $this->initSchema();
+        $this->restoreFromBackupIfEmpty();
     }
 
     private function ensureDbDirectory(): void
@@ -39,7 +42,7 @@ class LogConfig
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            throw new \RuntimeException('Failed to connect to SQLite: ' . $e->getMessage());
+            throw new RuntimeException('Failed to connect to SQLite: ' . $e->getMessage());
         }
     }
 
@@ -103,7 +106,10 @@ class LogConfig
             ':ssh_key_path' => $config['ssh_key_path'] ?? null,
         ]);
 
-        return (int) $this->db->lastInsertId();
+        $id = (int)$this->db->lastInsertId();
+        $this->exportBackup();
+
+        return $id;
     }
 
     /**
@@ -127,6 +133,17 @@ class LogConfig
             )
         ");
         return $this->db->exec("DELETE FROM log_directories WHERE path IN (SELECT path FROM log_directories GROUP BY path HAVING COUNT(*) > 1) AND id NOT IN (SELECT MIN(id) FROM log_directories GROUP BY path)");
+    }
+
+    /**
+     * Remove entries with auto-generated allowed_* names
+     */
+    public function removeAllowedEntries(): int
+    {
+        $stmt = $this->db->prepare("DELETE FROM log_directories WHERE name LIKE 'allowed_%'");
+        $stmt->execute();
+
+        return $stmt->rowCount();
     }
 
     /**
@@ -163,7 +180,12 @@ class LogConfig
         $sql = "UPDATE log_directories SET " . implode(', ', $fields) . " WHERE id = :id";
 
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
+        $result = $stmt->execute($params);
+        if ($result) {
+            $this->exportBackup();
+        }
+
+        return $result;
     }
 
     /**
@@ -172,7 +194,12 @@ class LogConfig
     public function deleteDirectory(int $id): bool
     {
         $stmt = $this->db->prepare("DELETE FROM log_directories WHERE id = :id");
-        return $stmt->execute([':id' => $id]);
+        $result = $stmt->execute([':id' => $id]);
+        if ($result) {
+            $this->exportBackup();
+        }
+
+        return $result;
     }
 
     /**
@@ -233,7 +260,7 @@ class LogConfig
                     'path' => $path,
                     'type' => 'local',
                 ]);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Skip if directory cannot be added
             }
         }
@@ -248,11 +275,178 @@ class LogConfig
                 if (is_dir($config['path'])) {
                     try {
                         $this->addDirectory($config);
-                    } catch (\Exception $e) {
+                    } catch (Exception $e) {
                         // Skip if directory cannot be added
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Export all directories to JSON backup file.
+     * Called automatically after every write operation.
+     * Sensitive fields (passwords, passphrases) are excluded from the backup.
+     * The backup file is AES-256-GCM encrypted using BACKUP_ENCRYPTION_KEY from env.
+     */
+    private function exportBackup(): void
+    {
+        try {
+            $dirs = $this->getDirectories();
+
+            // Strip sensitive fields before writing to disk
+            $sensitiveFields = ['ssh_password', 'ssh_key_passphrase', 'password'];
+            $safeDirs = array_map(function (array $dir) use ($sensitiveFields): array {
+                foreach ($sensitiveFields as $field) {
+                    unset($dir[$field]);
+                }
+
+                return $dir;
+            }, $dirs);
+
+            $json = json_encode($safeDirs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            $backupPath = dirname($this->dbPath).'/logviewer_backup.json';
+
+            $encrypted = $this->encryptData($json);
+            file_put_contents($backupPath, $encrypted);
+
+            // Restrict file to owner read/write only
+            chmod($backupPath, 0600);
+        } catch (Exception $e) {
+            error_log('LogConfig backup failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Restore directories from JSON backup when the database is empty.
+     * Called automatically on construction after initSchema().
+     */
+    private function restoreFromBackupIfEmpty(): void
+    {
+        if ($this->hasConfigurations()) {
+            return;
+        }
+
+        $backupPath = dirname($this->dbPath).'/logviewer_backup.json';
+        if (!file_exists($backupPath)) {
+            return;
+        }
+
+        $raw = file_get_contents($backupPath);
+        if ($raw === false) {
+            return;
+        }
+
+        // Try to decrypt; fall back to plain JSON for legacy unencrypted backups
+        try {
+            $json = $this->decryptData($raw);
+        } catch (Exception $e) {
+            error_log('LogConfig: backup decryption failed, trying plain JSON: '.$e->getMessage());
+            $json = $raw;
+        }
+
+        $dirs = json_decode($json, true);
+        if (!is_array($dirs)) {
+            return;
+        }
+
+        foreach ($dirs as $dir) {
+            try {
+                $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
+                $stmt->execute([':path' => $dir['path']]);
+                if ($stmt->fetch()) {
+                    continue;
+                }
+
+                $stmt = $this->db->prepare(
+                    "
+                    INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path)
+                    VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path)
+                "
+                );
+                $stmt->execute([
+                    ':name' => $dir['name'],
+                    ':path' => $dir['path'],
+                    ':type' => $dir['type'] ?? 'local',
+                    ':ssh_host' => $dir['ssh_host'] ?? null,
+                    ':ssh_user' => $dir['ssh_user'] ?? null,
+                    ':ssh_auth_method' => $dir['ssh_auth_method'] ?? null,
+                    ':ssh_key_path' => $dir['ssh_key_path'] ?? null,
+                ]);
+            } catch (Exception $e) {
+                error_log('LogConfig restore failed for '.($dir['name'] ?? '?').': '.$e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Encrypt data using AES-256-GCM.
+     * Output format: base64(iv . tag . ciphertext)
+     *
+     * @throws RuntimeException if encryption fails or key is missing
+     */
+    private function encryptData(string $plaintext): string
+    {
+        $key = $this->getEncryptionKey();
+        $cipher = 'aes-256-gcm';
+        $ivLen = openssl_cipher_iv_length($cipher);
+        $iv = random_bytes($ivLen);
+        $tag = '';
+
+        $ciphertext = openssl_encrypt($plaintext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+        if ($ciphertext === false) {
+            throw new RuntimeException('Encryption failed');
+        }
+
+        return base64_encode($iv.$tag.$ciphertext);
+    }
+
+    /**
+     * Decrypt data encrypted by encryptData().
+     *
+     * @throws RuntimeException if decryption fails
+     */
+    private function decryptData(string $encoded): string
+    {
+        $key = $this->getEncryptionKey();
+        $cipher = 'aes-256-gcm';
+        $ivLen = openssl_cipher_iv_length($cipher);
+        $tagLen = 16;
+
+        $raw = base64_decode($encoded, true);
+        if ($raw === false || strlen($raw) <= $ivLen + $tagLen) {
+            throw new RuntimeException('Invalid encrypted data');
+        }
+
+        $iv = substr($raw, 0, $ivLen);
+        $tag = substr($raw, $ivLen, $tagLen);
+        $ciphertext = substr($raw, $ivLen + $tagLen);
+
+        $plaintext = openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
+        if ($plaintext === false) {
+            throw new RuntimeException('Decryption failed — wrong key or corrupted data');
+        }
+
+        return $plaintext;
+    }
+
+    /**
+     * Load and validate the encryption key from environment.
+     *
+     * @throws RuntimeException if key is missing or invalid length
+     */
+    private function getEncryptionKey(): string
+    {
+        $hex = getenv('BACKUP_ENCRYPTION_KEY');
+        if (empty($hex)) {
+            throw new RuntimeException('BACKUP_ENCRYPTION_KEY is not set in environment');
+        }
+
+        $key = hex2bin($hex);
+        if ($key === false || strlen($key) !== 32) {
+            throw new RuntimeException('BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
+        }
+
+        return $key;
     }
 }

@@ -6,6 +6,9 @@ mkdir -p /var/log/nginx /run/nginx
 touch /var/log/nginx/access.log /var/log/nginx/error.log
 chown -R nginx:nginx /var/log/nginx /run/nginx || true
 
+# Add www-data to adm group for log access
+addgroup www-data adm 2>/dev/null || true
+
 echo "[start] Testing nginx configuration..."
 nginx -t
 
