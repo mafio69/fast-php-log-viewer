@@ -1,0 +1,7 @@
+[
+    {
+        "name": "system",
+        "path": "/var/log/",
+        "type": "local"
+    }
+]

@@ -54,3 +54,50 @@
 [05-Jun-2026 01:13:51 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
 [05-Jun-2026 04:58:32 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
 [05-Jun-2026 05:22:29 UTC] PHP Deprecated:  Mariusz\LogViewer\Config\LogConfig::__construct(): Implicitly marking parameter $dbPath as nullable is deprecated, the explicit nullable type must be used instead in /var/www/html/src/Config/LogConfig.php on line 18
+[09-Jun-2026 19:20:09 UTC] PHP Warning:  preg_match(): Unknown modifier 'r' in /home/mariusz/PhpstormProjects/fast-php-log-viewer/src/Controller/LogController.php on line 610
+[10-Jun-2026 17:33:25 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:33:27 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:33:28 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:34:51 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:34:52 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:35:09 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:35:10 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:35:12 UTC] SQLite addDirectory failed, using JSON fallback: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:35:17 UTC] SQLite deleteDirectory failed, using JSON fallback: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:35:35 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:35:35 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:39:38 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:39:39 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:39:43 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:39:44 UTC] LogConfig error: Failed to connect to SQLite: could not find driver
+[10-Jun-2026 17:42:46 UTC] SQLite addDirectory failed, using JSON fallback: Directory already exists: /var/log
+[10-Jun-2026 17:42:46 UTC] PHP Warning:  file_put_contents(/var/www/html/data/directories.json): Failed to open stream: Read-only file system in /var/www/html/src/Controller/LogController.php on line 242
+[10-Jun-2026 17:42:55 UTC] SQLite addDirectory failed, using JSON fallback: Directory already exists: /var/log
+[10-Jun-2026 17:42:55 UTC] PHP Warning:  file_put_contents(/var/www/html/data/directories.json): Failed to open stream: Read-only file system in /var/www/html/src/Controller/LogController.php on line 242
+[10-Jun-2026 17:43:07 UTC] SQLite addDirectory failed, using JSON fallback: Directory already exists: /var/log
+[10-Jun-2026 17:43:07 UTC] PHP Warning:  file_put_contents(/var/www/html/data/directories.json): Failed to open stream: Read-only file system in /var/www/html/src/Controller/LogController.php on line 242
+[10-Jun-2026 21:51:28 UTC] PHP Warning:  filemtime(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 61
+[10-Jun-2026 21:51:28 UTC] PHP Warning:  filesize(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 36
+[10-Jun-2026 21:54:13 UTC] PHP Warning:  filemtime(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 61
+[10-Jun-2026 21:54:13 UTC] PHP Warning:  filesize(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 36
+[10-Jun-2026 21:56:19 UTC] PHP Warning:  filemtime(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 61
+[10-Jun-2026 21:56:19 UTC] PHP Warning:  filesize(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 36
+[12-Jun-2026 19:48:44 UTC] SSH file listing failed: SSH key file not found: default paths
+[12-Jun-2026 19:50:07 UTC] SSH file listing failed: SSH password authentication failed
+[12-Jun-2026 19:52:23 UTC] SSH file listing failed: SSH password authentication failed
+[12-Jun-2026 20:10:10 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:11:30 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:31:30 UTC] PHP Warning:  filemtime(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 61
+[12-Jun-2026 20:31:30 UTC] PHP Warning:  filesize(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 36
+[12-Jun-2026 20:31:53 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[12-Jun-2026 20:33:06 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:33:42 UTC] PHP Warning:  filemtime(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 61
+[12-Jun-2026 20:33:42 UTC] PHP Warning:  filesize(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 36
+[12-Jun-2026 20:38:02 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:38:28 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:43:37 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:44:23 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[12-Jun-2026 20:51:04 UTC] PHP Warning:  preg_match(): Unknown modifier '\' in /var/www/html/src/Controller/LogController.php on line 685
+[20-Jun-2026 11:18:54 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 12:03:41 UTC] SSH file listing failed: Failed to connect to SSH server: DexterMafio22\\:22
+[20-Jun-2026 12:05:04 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519

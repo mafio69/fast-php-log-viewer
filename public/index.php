@@ -21,134 +21,25 @@ header('Expires: 0');
     <title>fast-php-log-viewer</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-    <style>
-        [v-cloak] { display: none; }
-        body { background:#000; color:#00ff00; font-family: 'Courier New', monospace; }
-        ::-webkit-scrollbar { width:6px; height:6px; }
-        ::-webkit-scrollbar-track { background:#001100; }
-        ::-webkit-scrollbar-thumb { background:#003300; border-radius:3px; }
-        ::-webkit-scrollbar-thumb:hover { background:#004400; }
-        .crt-glow { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00; }
-        .crt-border { border: 1px solid #00ff00; }
-        .crt-bg { background: #001100; }
-        .crt-text { color: #00ff00; }
-        .crt-dim { color: #006600; }
-        .crt-input { background: #000; border: 1px solid #00ff00; color: #00ff00; }
-        .crt-input:focus { outline: none; box-shadow: 0 0 5px #00ff00; }
-        .crt-button { background: #001100; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; }
-        .crt-button:hover { background: #002200; box-shadow: 0 0 5px #00ff00; }
-
-        /* DataTables CRT theme */
-        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing,
-        .dataTables_wrapper .dataTables_paginate {
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_length select, .dataTables_wrapper .dataTables_filter input {
-            background: #000 !important;
-            border: 1px solid #00ff00 !important;
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            color: #00ff00 !important;
-            border: 1px solid #00ff00 !important;
-            background: #000 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-            background: #002200 !important;
-            color: #00ff00 !important;
-            border: 1px solid #00ff00 !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
-            color: #006600 !important;
-            border: 1px solid #003300 !important;
-        }
-        table.dataTable thead th, table.dataTable thead td {
-            border-bottom: 1px solid #00ff00 !important;
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-            background: #001100 !important;
-        }
-        table.dataTable tbody tr {
-            background: #000 !important;
-        }
-        table.dataTable tbody tr:hover {
-            background: #001100 !important;
-        }
-        table.dataTable td {
-            color: #00ff00 !important;
-            font-family: 'Courier New', monospace !important;
-        }
-        .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing {
-            margin: 12px !important;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        window.FPLV_CONFIG = {
+            editorUrl: <?= json_encode(EDITOR_URL) ?>
+        };
+    </script>
 </head>
 <body class="h-screen overflow-hidden crt-text crt-bg">
 
 <div id="app" v-cloak class="flex h-screen" :style="{ fontSize: fontSize + 'px' }">
 
     <!-- Sidebar -->
-    <aside style="width:280px;min-width:280px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
+    <aside style="width:350px;min-width:350px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
         <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
             <div class="font-bold text-sm crt-glow">⚡ LOG-VIEWER</div>
         </div>
 
-        <!-- Filters -->
-        <div style="border-top:1px solid #00ff00;" class="px-3 py-2 flex flex-col gap-2">
-
-            <!-- Sort -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">SORTOWANIE</div>
-                <button @click="toggleSort"
-                    class="w-full rounded px-2 py-1 text-xs text-left crt-button">
-                    {{ sortOrder === 'desc' ? '↓ Najnowsze' : '↑ Najstarsze' }}
-                </button>
-            </div>
-
-            <!-- Date range -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">ZAKRES DAT</div>
-                <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-1 text-xs crt-dim">
-                        <span style="width:20px;">Od</span>
-                        <input type="date" v-model="dateFrom" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
-                    </div>
-                    <div class="flex items-center gap-1 text-xs crt-dim">
-                        <span style="width:20px;">Do</span>
-                        <input type="date" v-model="dateTo" @change="applyFilters"
-                            class="flex-1 rounded px-1 py-0.5 text-xs crt-input">
-                    </div>
-                </div>
-                <button @click="applyFilters" class="mt-1 w-full rounded py-0.5 text-xs font-medium crt-button">Zastosuj</button>
-            </div>
-
-            <!-- Levels -->
-            <div>
-                <div class="text-xs font-semibold mb-1 crt-dim">POZIOMY</div>
-                <div class="flex flex-col gap-0.5">
-                    <label v-for="level in levels" :key="level" class="flex items-center gap-2 text-xs cursor-pointer crt-dim">
-                        <span class="w-2 h-2 rounded-full inline-block" :style="'background:' + levelDot(level)"></span>
-                        <input type="checkbox" :checked="!excludedLevels.includes(level)" @change="toggleLevel(level)" class="hidden">
-                        <span @click="toggleLevel(level)"
-                            :style="excludedLevels.includes(level) ? 'color:#003300;' : 'color:#00ff00;'">
-                            {{ level }}
-                        </span>
-                        <span class="ml-auto crt-dim">{{ levelCounts[level] || '' }}</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Stats -->
+        <!-- Stats -->
+        <div style="border-top:1px solid #00ff00;" class="px-3 py-2">
             <div class="text-xs crt-dim">
                 {{ filtered.length }} entries<br>
                 <span v-if="selectedFile">{{ selectedFile.split('/').pop() }}</span>
@@ -158,14 +49,23 @@ header('Expires: 0');
         <!-- Directory selector -->
         <div v-if="directories.length > 1" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
             <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
-            <select v-model="selectedDir" @change="changeDir"
-                class="w-full rounded px-2 py-1 text-xs crt-input">
-                <option v-for="d in directories" :key="d.key" :value="d.key">{{ d.key }}</option>
-            </select>
+            <div class="flex gap-2">
+                <select v-model="selectedDir" @change="changeDir"
+                        class="flex-1 rounded px-2 py-1 text-xs crt-input">
+                    <option v-for="d in directories" :key="d.key" :value="d.key">{{ d.key }}</option>
+                </select>
+                <button v-if="selectedDir && selectedDir.startsWith('ssh:')" @click="refreshSSHDir(selectedDir)"
+                        class="px-2 py-1 text-xs crt-button" title="Odśwież">
+                    ↻
+                </button>
+            </div>
         </div>
 
         <!-- File list -->
-        <div class="flex-1 overflow-y-auto" style="flex:3;">
+        <div class="flex-1 overflow-y-auto" style="flex:6;">
+            <div v-if="files.length === 0" class="px-3 py-8 text-center crt-dim" style="font-size:12px;">
+                pusto
+            </div>
             <div v-for="f in files" :key="f.file"
                 @click="selectFile(f.file)"
                 class="px-3 py-2 cursor-pointer"
@@ -173,9 +73,9 @@ header('Expires: 0');
                 :style="selectedFile === f.file
                     ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;'
                     : 'color:#006600;border-left:3px solid transparent;'">
-                <div class="font-medium truncate">{{ f.file.split('/').pop() }}</div>
-                <div class="crt-dim text-xs">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
-                <div v-if="f.allow" class="crt-dim text-xs">allow: {{ f.allow }}</div>
+                <div class="font-medium truncate" style="font-size:10px;">{{ f.file.split('/').pop() }}</div>
+                <div class="crt-dim" style="font-size:10px;">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
+                <div v-if="f.allow" class="crt-dim" style="font-size:10px;">allow: {{ f.allow }}</div>
             </div>
         </div>
 
@@ -197,8 +97,11 @@ header('Expires: 0');
             <button @click="addAllowedDir" class="w-full rounded px-2 py-1 text-xs crt-button mb-2">
                 DODAJ
             </button>
-            <button @click="cleanupDuplicates" class="w-full rounded px-2 py-1 text-xs crt-button crt-dim">
+            <button @click="cleanupDuplicates" class="w-full rounded px-2 py-1 text-xs crt-button crt-dim mb-1">
                 🧹 Czyść duplikaty
+            </button>
+            <button @click="cleanupAllowed" class="w-full rounded px-2 py-1 text-xs crt-button crt-dim">
+                🧹 Czyść nazwy allowed_*
             </button>
         </div>
 
@@ -314,6 +217,63 @@ header('Expires: 0');
         <div class="flex items-center gap-2 px-4 py-2" style="background:#000;border-bottom:1px solid #00ff00;">
             <input v-model="filterText" @input="applyFilters" placeholder="Search…"
                 class="rounded px-3 py-1 text-sm flex-1 max-w-xs crt-input">
+
+            <!-- Level quick filters (DEBUG, INFO, NOTICE) -->
+            <div class="flex items-center gap-1">
+                <button v-for="level in ['DEBUG','INFO','NOTICE']" :key="level"
+                        @click="toggleLevel(level)"
+                        class="px-2 py-1 text-xs rounded crt-button"
+                        :style="excludedLevels.includes(level) ? 'border-color:#003300;color:#003300;' : 'border-color:' + levelDot(level) + ';color:' + levelColor(level)">
+                    {{ level }}
+                </button>
+            </div>
+
+            <!-- Filters: Sort, Date, Levels -->
+            <div class="flex items-center gap-2">
+                <!-- Levels dropdown with Sort and Date -->
+                <div class="relative">
+                    <button @click="showLevelFilters = !showLevelFilters" class="px-2 py-1 text-xs crt-button">
+                        FILTRY ▼
+                    </button>
+                    <div v-if="showLevelFilters" class="absolute left-0 top-full mt-1 rounded shadow-lg z-20 p-3"
+                         style="background:#000;border:1px solid #00ff00;min-width:250px;">
+                        <!-- Sort -->
+                        <div class="mb-3 pb-2" style="border-bottom:1px solid #002200;">
+                            <div class="text-xs crt-dim mb-1">Sortowanie</div>
+                            <button @click="toggleSort" class="w-full px-2 py-1 text-xs crt-button">
+                                {{ sortOrder === 'desc' ? '↓ Najnowsze na górze' : '↑ Najstarsze na górze' }}
+                            </button>
+                        </div>
+                        <!-- Date range -->
+                        <div class="mb-3 pb-2" style="border-bottom:1px solid #002200;">
+                            <div class="text-xs crt-dim mb-1">Zakres daty</div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <input type="date" v-model="dateFrom" @change="applyFilters"
+                                       class="px-1 py-0.5 text-xs crt-input flex-1">
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="date" v-model="dateTo" @change="applyFilters"
+                                       class="px-1 py-0.5 text-xs crt-input flex-1">
+                            </div>
+                        </div>
+                        <!-- All Levels -->
+                        <div class="text-xs crt-dim mb-1">Poziomy logów</div>
+                        <label v-for="level in levels" :key="level"
+                               class="flex items-center gap-2 text-xs cursor-pointer crt-dim mb-1">
+                            <span class="w-2 h-2 rounded-full inline-block"
+                                  :style="'background:' + levelDot(level)"></span>
+                            <input type="checkbox" :checked="!excludedLevels.includes(level)"
+                                   @change="toggleLevel(level)" class="hidden">
+                            <span @click="toggleLevel(level)"
+                                  :style="excludedLevels.includes(level) ? 'color:#003300;' : 'color:#00ff00;'">
+                                {{ level }}
+                            </span>
+                            <span class="ml-auto crt-dim">{{ levelCounts[level] || '' }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <button @click="loadEntries" title="Refresh"
                 class="px-3 py-1 rounded text-sm crt-button">↺</button>
             <div class="flex items-center gap-1 rounded overflow-hidden crt-border">
@@ -350,699 +310,134 @@ header('Expires: 0');
         <div v-else-if="!selectedFile" class="flex-1 flex items-center justify-center crt-dim">Select a log file.</div>
         <div v-else-if="!filtered.length" class="flex-1 flex items-center justify-center crt-dim">No entries match filters.</div>
 
-        <!-- Table -->
-        <div v-else class="flex-1 overflow-auto">
-            <table id="logsTable" class="w-full text-sm border-collapse display">
-                <thead style="background:#001100;border-bottom:1px solid #00ff00;" class="sticky top-0 z-10">
+        <!-- DataTable -->
+        <div v-else class="flex-1 flex flex-col overflow-hidden">
+            <!-- DataTable Toolbar -->
+            <div class="flex items-center justify-between px-4 py-2"
+                 style="background:#001100;border-bottom:1px solid #002200;">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs crt-dim">Pokaż:</span>
+                    <select v-model="tablePageSize" @change="setTablePageSize(parseInt($event.target.value))"
+                            class="crt-input text-xs px-2 py-1 rounded">
+                        <option v-for="size in TABLE_PAGE_SIZES" :key="size" :value="size">{{ size }}</option>
+                    </select>
+                    <span class="text-xs crt-dim">na stronę</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs crt-dim">{{ tableStartRow }}-{{ tableEndRow }} z {{ filtered.length }}</span>
+                    <button @click="tablePrevPage" :disabled="tablePage === 1" class="px-2 py-1 text-xs crt-button"
+                            :style="tablePage === 1 ? 'opacity:0.3;cursor:not-allowed;' : ''">←
+                    </button>
+                    <span class="text-xs crt-text">Strona {{ tablePage }} / {{ tableTotalPages }}</span>
+                    <button @click="tableNextPage" :disabled="tablePage === tableTotalPages"
+                            class="px-2 py-1 text-xs crt-button"
+                            :style="tablePage === tableTotalPages ? 'opacity:0.3;cursor:not-allowed;' : ''">→
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="flex-1 overflow-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead style="background:#001100;border-bottom:1px solid #00ff00;" class="sticky top-0 z-10">
                     <tr>
-                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:155px;">Datetime</th>
-                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:90px;">Level</th>
-                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim" style="width:200px;">Location</th>
-                        <th class="text-left px-3 py-2 font-medium text-xs crt-dim">Message</th>
+                        <th @click="toggleTableSort('datetime')"
+                            class="text-left px-3 py-2 font-medium text-xs crt-dim cursor-pointer hover:crt-glow"
+                            style="width:155px;">
+                            Datetime {{ tableSortColumn === 'datetime' ? (tableSortDirection === 'asc' ? '↑' : '↓') : ''
+                            }}
+                        </th>
+                        <th @click="toggleTableSort('level')"
+                            class="text-left px-3 py-2 font-medium text-xs crt-dim cursor-pointer hover:crt-glow"
+                            style="width:90px;">
+                            Level {{ tableSortColumn === 'level' ? (tableSortDirection === 'asc' ? '↑' : '↓') : '' }}
+                        </th>
+                        <th @click="toggleTableSort('location')"
+                            class="text-left px-3 py-2 font-medium text-xs crt-dim cursor-pointer hover:crt-glow"
+                            style="width:200px;">
+                            Location {{ tableSortColumn === 'location' ? (tableSortDirection === 'asc' ? '↑' : '↓') : ''
+                            }}
+                        </th>
+                        <th @click="toggleTableSort('message')"
+                            class="text-left px-3 py-2 font-medium text-xs crt-dim cursor-pointer hover:crt-glow">
+                            Message {{ tableSortColumn === 'message' ? (tableSortDirection === 'asc' ? '↑' : '↓') : ''}}
+                        </th>
                     </tr>
-                </thead>
-                <tbody>
-                    <template v-for="(entry, i) in filtered" :key="i">
-                        <tr @click="toggle(i)" class="cursor-pointer"
+                    </thead>
+                    <tbody>
+                    <template v-for="(entry, i) in tablePaginatedData" :key="tableStartRow + i - 1">
+                        <tr @click="toggle(tableStartRow + i - 1)" class="cursor-pointer"
                             :style="'border-bottom:1px solid #002200;' + rowBg(entry.level)">
-                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">{{ formatDate(entry.datetime) }}</td>
-                            <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap" :style="'color:' + levelColor(entry.level)">{{ entry.level }}</td>
+                            <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">
+                                {{ formatDate(entry.datetime) }}
+                            </td>
+                            <td class="px-3 py-1.5 text-xs font-bold whitespace-nowrap"
+                                :style="'color:' + levelColor(entry.level)">{{ entry.level }}
+                            </td>
                             <td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap crt-dim">
                                 <a v-if="editorUrl && entry.location"
                                    :href="openInEditor(entry.location)"
                                    @click.stop
-                                   class="hover:underline" :style="'color:' + levelColor(entry.level)">{{ entry.location }}</a>
+                                   class="hover:underline" :style="'color:' + levelColor(entry.level)">{{ entry.location
+                                    }}</a>
                                 <span v-else>{{ entry.location }}</span>
                             </td>
                             <td class="px-3 py-1.5 truncate max-w-0 w-full crt-text">
-                                <span class="block truncate">
-                                    <span v-if="isBookmarked(entry)" style="color:#ffff00;" title="Zakładka">★ </span>{{ entry.message }}
-                                </span>
-                                <span class="text-xs crt-dim">{{ expanded[i] ? '▲' : '▼' }}</span>
+                                    <span class="block truncate">
+                                        <span v-if="isBookmarked(entry)" style="color:#ffff00;"
+                                              title="Zakładka">★ </span>{{ entry.message }}
+                                    </span>
+                                <span class="text-xs crt-dim">{{ expanded[tableStartRow + i - 1] ? '▲' : '▼' }}</span>
                             </td>
                         </tr>
-                        <tr v-if="expanded[i]" style="background:#001100;border-bottom:1px solid #002200;">
+                        <tr v-if="expanded[tableStartRow + i - 1]"
+                            style="background:#001100;border-bottom:1px solid #002200;">
                             <td colspan="4" class="px-3 py-2">
                                 <div class="flex items-start gap-2">
                                     <div class="flex-1">
-                                        <div class="text-sm mb-1 crt-text" style="white-space:pre-wrap;word-break:break-word;">{{ entry.message }}</div>
-                                        <div v-if="entry.location" class="text-xs mb-1 crt-dim">📍 {{ entry.location }}</div>
-                                        <pre v-if="hasContext(entry)" class="text-xs font-mono whitespace-pre-wrap crt-dim">{{ JSON.stringify(entry.context, null, 2) }}</pre>
+                                        <div class="text-sm mb-1 crt-text"
+                                             style="white-space:pre-wrap;word-break:break-word;">{{ entry.message }}
+                                        </div>
+                                        <div v-if="entry.location" class="text-xs mb-1 crt-dim">📍 {{ entry.location}}
+                                        </div>
+                                        <pre v-if="hasContext(entry)"
+                                             class="text-xs font-mono whitespace-pre-wrap crt-dim">{{ JSON.stringify(entry.context, null, 2) }}</pre>
                                     </div>
                                     <button @click.stop="toggleBookmark(entry)"
-                                        class="text-lg flex-shrink-0 crt-button" :title="isBookmarked(entry) ? 'Usuń zakładkę' : 'Dodaj zakładkę'"
-                                        :style="isBookmarked(entry) ? 'border-color:#ffff00;color:#ffff00;' : 'border-color:#006600;color:#006600;'">★</button>
+                                            class="text-lg flex-shrink-0 crt-button"
+                                            :title="isBookmarked(entry) ? 'Usuń zakładkę' : 'Dodaj zakładkę'"
+                                            :style="isBookmarked(entry) ? 'border-color:#ffff00;color:#ffff00;' : 'border-color:#006600;color:#006600;'">
+                                        ★
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                     </template>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- DataTable Footer -->
+            <div class="flex items-center justify-between px-4 py-2"
+                 style="background:#001100;border-top:1px solid #002200;">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs crt-dim">Idź do strony:</span>
+                    <input type="number" v-model.number="tablePage"
+                           @change="setTablePage(Math.max(1, Math.min(tableTotalPages, $event.target.value)))" min="1"
+                           :max="tableTotalPages" class="crt-input text-xs px-2 py-1 rounded" style="width:60px;">
+                </div>
+                <div class="flex items-center gap-1">
+                    <button v-for="p in Math.min(10, tableTotalPages)" :key="p" @click="setTablePage(p)"
+                            class="px-2 py-1 text-xs crt-button"
+                            :style="p === tablePage ? 'background:#00ff00;color:#000;' : ''">{{ p }}
+                    </button>
+                    <span v-if="tableTotalPages > 10" class="text-xs crt-dim">... ({{ tableTotalPages }})</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<script>
-const { createApp, ref, computed, reactive, watch, nextTick } = Vue;
-const EDITOR_URL = <?= json_encode(EDITOR_URL) ?>;
-
-const LEVEL_COLORS = {
-    DEBUG:'#00ff00', INFO:'#00ff00', NOTICE:'#00ff00',
-    WARNING:'#ffff00', ERROR:'#ff6600', CRITICAL:'#ff0000',
-    ALERT:'#ff9900', EMERGENCY:'#ff0066',
-};
-const LEVEL_DOTS = {
-    DEBUG:'#00cc00', INFO:'#00cc00', NOTICE:'#00cc00',
-    WARNING:'#cccc00', ERROR:'#cc5200', CRITICAL:'#cc0000',
-    ALERT:'#cc7a00', EMERGENCY:'#cc0052',
-};
-const ROW_BG = {
-    ERROR:'background:#0a0500;', CRITICAL:'background:#0a0200;',
-    ALERT:'background:#0a0400;', EMERGENCY:'background:#0a0010;',
-    WARNING:'background:#0a0a00;',
-};
-
-createApp({
-    setup() {
-        const files        = ref([]);
-        const entries      = ref([]);
-        const filtered     = ref([]);
-        const selectedFile = ref('');
-        const selectedDir  = ref('');
-        const directories  = ref([]);
-        const directFilePath = ref('');
-        const allowedDirPath = ref('/var/log');
-        const filterText   = ref('');
-        const loading      = ref(false);
-        const expanded     = reactive({});
-        const excludedLevels = ref([]);
-        const sortOrder    = ref('desc');
-        const dateFrom     = ref('');
-        const dateTo       = ref('');
-        const timeFrom     = ref('');
-        const timeTo       = ref('');
-        const editorUrl    = ref(EDITOR_URL);
-        const fontSize     = ref(parseInt(localStorage.getItem('fplv_fontsize') || '13'));
-        const bookmarks    = ref(JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'));
-        const showBookmarks = ref(false);
-        const MAX_BOOKMARKS = 10;
-        let dataTable = null;
-
-        // SSH State
-        const showSSHModal = ref(false);
-        const showPasswordModal = ref(false);
-        const showManualFileModal = ref(false);
-        const passwordForConnection = ref('');
-        const manualFilePath = ref('');
-        const connectingConnectionIndex = ref(-1);
-        const sshConnections = ref(JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'));
-        const editingIndex = ref(-1); // -1 means adding, >=0 means editing
-        const sshForm = reactive({
-            name: '', host: '', user: '', port: '22',
-            authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
-
-        watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
-
-        const levelCounts = computed(() => {
-            const c = {};
-            for (const e of entries.value) c[e.level] = (c[e.level] ?? 0) + 1;
-            return c;
-        });
-
-        const levelColor  = l => LEVEL_COLORS[l] ?? '#9ca3af';
-        const levelDot    = l => LEVEL_DOTS[l]   ?? '#6b7280';
-        const rowBg       = l => ROW_BG[l]        ?? '';
-        const hasContext  = e => e.context && Object.keys(e.context).length > 0;
-
-        // Move DEBUG and INFO to top
-        const levels = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'];
-
-        function openInEditor(location) {
-            const [file, line] = location.split(':');
-            return editorUrl.value.replace('{file}', encodeURIComponent(file)).replace('{line}', line ?? '1');
-        }
-
-        function formatSize(b) {
-            if (b < 1024) return b + ' B';
-            if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-            return (b/1048576).toFixed(1) + ' MB';
-        }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            try {
-                const d = new Date(dateStr);
-                return d.toLocaleString('pl-PL', { 
-                    year: 'numeric', month: '2-digit', day: '2-digit',
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
-                });
-            } catch {
-                return dateStr;
-            }
-        }
-
-        async function fetchJson(url) {
-            const r = await fetch(url);
-            if (!r.ok) throw new Error(await r.text());
-            return r.json();
-        }
-
-        async function loadFiles() {
-            const dirParam = selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : '';
-            files.value = await fetchJson('?action=files' + dirParam);
-            if (files.value.length) {
-                selectedFile.value = files.value[0].file;
-                await loadEntries();
-            } else {
-                selectedFile.value = '';
-                entries.value = [];
-                filtered.value = [];
-            }
-        }
-
-        async function loadDirectFile() {
-            if (!directFilePath.value.trim()) {
-                alert('Wpisz ścieżkę do pliku');
-                return;
-            }
-            const path = directFilePath.value.trim();
-            selectedFile.value = path;
-
-            try {
-                loading.value = true;
-                const url = '?action=entries&file=' + encodeURIComponent(path);
-                console.log('Loading file from:', url);
-                entries.value = await fetchJson(url);
-                filtered.value = entries.value;
-                applyFilters();
-            } catch (e) {
-                alert('Błąd ładowania pliku: ' + e.message);
-                console.error('Load direct file error:', e);
-            } finally {
-                loading.value = false;
-            }
-        }
-
-        async function addAllowedDir() {
-            if (!allowedDirPath.value.trim()) {
-                alert('Wpisz ścieżkę katalogu');
-                return;
-            }
-            const dir = allowedDirPath.value.trim();
-
-            try {
-                loading.value = true;
-                const res = await fetch('?action=config-add-dir', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: 'allowed_' + Date.now(), path: dir })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Katalog dodany: ' + dir);
-                    await loadDirectories(); // Reload directories
-                } else {
-                    alert('Błąd: ' + (data.error || 'Unknown error'));
-                }
-            } catch (e) {
-                alert('Błąd dodawania katalogu: ' + e.message);
-            } finally {
-                loading.value = false;
-            }
-        }
-
-        async function cleanupDuplicates() {
-            try {
-                loading.value = true;
-                const res = await fetch('?action=config-cleanup-duplicates', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Usunięto duplikaty: ' + data.removed);
-                    await loadDirectories();
-                } else {
-                    alert('Błąd: ' + (data.error || 'Unknown error'));
-                }
-            } catch (e) {
-                alert('Błąd czyszczenia: ' + e.message);
-            } finally {
-                loading.value = false;
-            }
-        }
-
-        async function changeDir() {
-            selectedFile.value = '';
-            entries.value = [];
-            filtered.value = [];
-            await loadFiles();
-        }
-
-        async function selectFile(path) {
-            selectedFile.value = path;
-            await loadEntries();
-        }
-
-        async function loadEntries() {
-            if (!selectedFile.value) return;
-            loading.value = true;
-            Object.keys(expanded).forEach(k => delete expanded[k]);
-            try {
-                entries.value = await fetchJson('?action=entries&file=' + encodeURIComponent(selectedFile.value));
-                applyFilters();
-            } finally {
-                loading.value = false;
-            }
-        }
-
-        function applyFilters() {
-            let r = entries.value;
-            if (excludedLevels.value.length)
-                r = r.filter(e => !excludedLevels.value.includes(e.level));
-            if (filterText.value.trim()) {
-                const q = filterText.value.toLowerCase();
-                r = r.filter(e => e.message.toLowerCase().includes(q) || e.location.toLowerCase().includes(q));
-            }
-            if (dateFrom.value || dateTo.value) {
-                r = r.filter(e => {
-                    if (!e.datetime) return true; // Skip date filter for entries without datetime
-                    const d = e.datetime.slice(0, 10);
-                    if (dateFrom.value && d < dateFrom.value) return false;
-                    if (dateTo.value   && d > dateTo.value)   return false;
-                    return true;
-                });
-            }
-            if (timeFrom.value || timeTo.value) {
-                r = r.filter(e => {
-                    if (!e.datetime) return true; // Skip time filter for entries without datetime
-                    const t = e.datetime.slice(11, 16);
-                    if (timeFrom.value && t < timeFrom.value) return false;
-                    if (timeTo.value   && t > timeTo.value)   return false;
-                    return true;
-                });
-            }
-            if (sortOrder.value === 'asc') r = [...r].reverse();
-            filtered.value = r;
-            initDataTable();
-        }
-
-        function initDataTable() {
-            nextTick(() => {
-                const table = document.getElementById('logsTable');
-                if (!table) return;
-
-                if (dataTable) {
-                    dataTable.destroy();
-                }
-
-                dataTable = $('#logsTable').DataTable({
-                    pageLength: 25,
-                    lengthMenu: [10, 25, 50, 100],
-                    order: [[0, 'desc']],
-                    language: {
-                        search: "Szukaj:",
-                        lengthMenu: "Pokaż _MENU_ wpisów",
-                        info: "Pokazano _START_ do _END_ z _TOTAL_ wpisów",
-                        paginate: {
-                            first: "Pierwsza",
-                            last: "Ostatnia",
-                            next: "Następna",
-                            previous: "Poprzednia"
-                        }
-                    },
-                    columnDefs: [
-                        { orderable: true, targets: [0, 1, 2, 3] }
-                    ]
-                });
-            });
-        }
-
-        function toggleLevel(level) {
-            const arr = excludedLevels.value;
-            const idx = arr.indexOf(level);
-            if (idx >= 0) arr.splice(idx, 1);
-            else arr.push(level);
-            applyFilters();
-        }
-
-        function toggle(i) { expanded[i] ? delete expanded[i] : (expanded[i] = true); }
-
-        function toggleSort() {
-            sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
-            applyFilters();
-        }
-
-        function bookmarkKey(entry) {
-            return entry.datetime + '|' + entry.message.slice(0, 80);
-        }
-
-        function isBookmarked(entry) {
-            const key = bookmarkKey(entry);
-            return bookmarks.value.some(b => b.key === key);
-        }
-
-        function toggleBookmark(entry) {
-            const key = bookmarkKey(entry);
-            const idx = bookmarks.value.findIndex(b => b.key === key);
-            if (idx >= 0) {
-                bookmarks.value.splice(idx, 1);
-            } else {
-                if (bookmarks.value.length >= MAX_BOOKMARKS) {
-                    bookmarks.value.shift();
-                }
-                bookmarks.value.push({
-                    key,
-                    file: selectedFile.value,
-                    datetime: entry.datetime,
-                    level: entry.level,
-                    message: entry.message.slice(0, 120),
-                    location: entry.location,
-                });
-            }
-            localStorage.setItem('fplv_bookmarks', JSON.stringify(bookmarks.value));
-        }
-
-        function removeBookmark(idx) {
-            bookmarks.value.splice(idx, 1);
-            localStorage.setItem('fplv_bookmarks', JSON.stringify(bookmarks.value));
-        }
-
-        async function goToBookmark(bm) {
-            showBookmarks.value = false;
-            try {
-                const res = await fetch('?action=files' + (selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : ''));
-                const allFiles = await res.json();
-                if (!allFiles.some(f => f.file === bm.file)) {
-                    alert('Plik już nie istnieje: ' + bm.file.split('/').pop());
-                    removeBookmark(bookmarks.value.findIndex(b => b.key === bm.key));
-                    return;
-                }
-            } catch(e) {}
-            await selectFile(bm.file);
-            // Find and expand the matching entry
-            const idx = filtered.value.findIndex(e => bookmarkKey(e) === bm.key);
-            if (idx >= 0) {
-                expanded[idx] = true;
-                await nextTick();
-                const rows = document.querySelectorAll('tbody tr');
-                // Each entry has 1-2 rows (main + expanded), find the right one
-                let rowIdx = 0;
-                for (let j = 0; j < idx; j++) {
-                    rowIdx++;
-                    if (expanded[j]) rowIdx++;
-                }
-                if (rows[rowIdx]) rows[rowIdx].scrollIntoView({ block: 'center' });
-            }
-        }
-
-        async function validateBookmarks() {
-            try {
-                const res = await fetch('?action=files' + (selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : ''));
-                const allFiles = await res.json();
-                const validPaths = new Set(allFiles.map(f => f.file));
-                const valid = bookmarks.value.filter(b => validPaths.has(b.file));
-                if (valid.length !== bookmarks.value.length) {
-                    bookmarks.value = valid;
-                    localStorage.setItem('fplv_bookmarks', JSON.stringify(valid));
-                }
-            } catch(e) {}
-        }
-
-        async function init() {
-            try {
-                directories.value = await fetchJson('?action=directories');
-                if (directories.value.length) {
-                    selectedDir.value = directories.value[0].key;
-                }
-            } catch(e) { /* fallback: no dirs endpoint = single dir mode */ }
-            await loadFiles();
-            validateBookmarks();
-        }
-
-        async function loadDirectories() {
-            try {
-                directories.value = await fetchJson('?action=directories');
-                if (directories.value.length) {
-                    selectedDir.value = directories.value[0].key;
-                }
-            } catch(e) { /* fallback */ }
-        }
-
-        init();
-
-        // SSH Functions
-        async function testSSHConnection() {
-            try {
-                const payload = {
-                    ssh_host: sshForm.host,
-                    ssh_user: sshForm.user,
-                    ssh_port: parseInt(sshForm.port) || 22,
-                    ssh_auth_method: sshForm.authMethod,
-                    ssh_password: sshForm.authMethod === 'password' ? sshForm.password : undefined,
-                    ssh_key_path: sshForm.authMethod === 'key' ? sshForm.keyPath : undefined,
-                    ssh_key_passphrase: sshForm.authMethod === 'key' ? sshForm.keyPassphrase : undefined,
-                };
-
-                const res = await fetch('?action=ssh-test-connection', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    alert('SSH connection successful!');
-                } else {
-                    alert('SSH connection failed: ' + (data.error || 'Unknown error'));
-                }
-            } catch(e) {
-                alert('SSH connection failed: ' + e.message);
-            }
-        }
-
-        function addSSHConnection() {
-            if (!sshForm.name || !sshForm.host || !sshForm.user) {
-                alert('Please fill in name, host, and user');
-                return;
-            }
-
-            const conn = {
-                name: sshForm.name,
-                host: sshForm.host,
-                user: sshForm.user,
-                port: parseInt(sshForm.port) || 22,
-                authMethod: sshForm.authMethod,
-                remotePath: sshForm.remotePath || '/var/log',
-                keyPath: sshForm.authMethod === 'key' ? sshForm.keyPath : undefined,
-                allFiles: sshForm.allFiles || false,
-                // Note: We don't save passwords for security
-            };
-
-            if (editingIndex.value >= 0) {
-                // Update existing connection
-                sshConnections.value[editingIndex.value] = conn;
-                alert('SSH connection updated!');
-            } else {
-                // Add new connection
-                sshConnections.value.push(conn);
-                alert('SSH connection saved!');
-            }
-
-            localStorage.setItem('fplv_ssh_connections', JSON.stringify(sshConnections.value));
-
-            // Reset form
-            editingIndex.value = -1;
-            Object.assign(sshForm, {
-                name: '', host: '', user: '', port: '22',
-                authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log'
-            });
-
-            alert('SSH connection saved! Note: Password is not saved for security.');
-        }
-
-        function deleteSSHConnection(idx) {
-            if (confirm('Delete this SSH connection?')) {
-                sshConnections.value.splice(idx, 1);
-                localStorage.setItem('fplv_ssh_connections', JSON.stringify(sshConnections.value));
-            }
-        }
-
-        function editSSHConnection(idx) {
-            const conn = sshConnections.value[idx];
-            Object.assign(sshForm, {
-                name: conn.name,
-                host: conn.host,
-                user: conn.user,
-                port: String(conn.port || 22),
-                authMethod: conn.authMethod,
-                password: '', // Don't load saved password for security
-                keyPath: conn.keyPath || '',
-                keyPassphrase: '',
-                remotePath: conn.remotePath || '/var/log',
-                allFiles: conn.allFiles || false
-            });
-            editingIndex.value = idx;
-            showSSHModal.value = true;
-        }
-
-        function cancelEdit() {
-            editingIndex.value = -1;
-            Object.assign(sshForm, {
-                name: '', host: '', user: '', port: '22',
-                authMethod: 'password', password: '', keyPath: '', keyPassphrase: '', remotePath: '/var/log', allFiles: false
-            });
-        }
-
-        async function connectSSH(idx) {
-            const conn = sshConnections.value[idx];
-            connectingConnectionIndex.value = idx;
-            passwordForConnection.value = '';
-            showPasswordModal.value = true;
-        }
-
-        async function executeSSHConnection() {
-            const idx = connectingConnectionIndex.value;
-            const conn = sshConnections.value[idx];
-            const password = passwordForConnection.value;
-            showPasswordModal.value = false;
-
-            try {
-                const payload = {
-                    ssh_host: conn.host,
-                    ssh_user: conn.user,
-                    ssh_port: parseInt(conn.port) || 22,
-                    ssh_auth_method: password ? 'password' : 'key',
-                    ssh_password: password || undefined,
-                    ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
-                    path: conn.remotePath,
-                    allFiles: conn.allFiles || false,
-                };
-
-                const res = await fetch('?action=ssh-list-files', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    alert(`Found ${data.files.length} log files on ${conn.name}`);
-                    // Add SSH files to file list
-                    data.files.forEach(file => {
-                        if (!files.value.some(f => f.file === file.path)) {
-                            files.value.push({
-                                file: file.path,
-                                date: new Date().toISOString().split('T')[0],
-                                size: file.size || 0
-                            });
-                        }
-                    });
-                } else {
-                    alert('Failed to list files: ' + (data.error || 'Unknown error'));
-                }
-            } catch(e) {
-                alert('SSH connection failed: ' + e.message);
-            } finally {
-                connectingConnectionIndex.value = -1;
-                passwordForConnection.value = '';
-            }
-        }
-
-        function cancelPasswordModal() {
-            showPasswordModal.value = false;
-            connectingConnectionIndex.value = -1;
-            passwordForConnection.value = '';
-        }
-
-        function addManualSSHFile(idx) {
-            connectingConnectionIndex.value = idx;
-            manualFilePath.value = '';
-            showManualFileModal.value = true;
-        }
-
-        async function executeManualFileAdd() {
-            const idx = connectingConnectionIndex.value;
-            const conn = sshConnections.value[idx];
-            const password = passwordForConnection.value;
-            let filePath = manualFilePath.value;
-
-            if (!filePath) {
-                alert('Please enter a file path');
-                return;
-            }
-
-            // Ensure path starts with /
-            if (!filePath.startsWith('/')) {
-                filePath = '/' + filePath;
-            }
-
-            showManualFileModal.value = false;
-
-            try {
-                const payload = {
-                    ssh_host: conn.host,
-                    ssh_user: conn.user,
-                    ssh_port: parseInt(conn.port) || 22,
-                    ssh_auth_method: password ? 'password' : 'key',
-                    ssh_password: password || undefined,
-                    ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
-                    remotePath: filePath,
-                    localName: filePath.split('/').pop()
-                };
-
-                // Download file first
-                const downloadRes = await fetch('?action=ssh-download-file', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const downloadData = await downloadRes.json();
-                if (!downloadData.success) {
-                    alert('Failed to download file: ' + (downloadData.error || 'Unknown error'));
-                    return;
-                }
-
-                // Add downloaded file to list
-                    if (!files.value.some(f => f.file === downloadData.localPath)) {
-                        files.value.push({
-                            file: downloadData.localPath,
-                            date: new Date().toISOString().split('T')[0],
-                            size: downloadData.size
-                        });
-                    }
-
-                    // Auto-load the downloaded file entries
-                    selectedFile.value = downloadData.localPath;
-                    await loadEntries();
-
-                    alert(`File ${filePath} downloaded successfully!\nSaved as: ${downloadData.localPath}\nSize: ${downloadData.size} bytes\nLoaded ${filtered.value.length} log entries`);
-            } catch(e) {
-                alert('SSH operation failed: ' + e.message);
-            } finally {
-                connectingConnectionIndex.value = -1;
-                manualFilePath.value = '';
-            }
-        }
-
-        function cancelManualFileModal() {
-            showManualFileModal.value = false;
-            connectingConnectionIndex.value = -1;
-            manualFilePath.value = '';
-        }
-
-        return {
-            files, entries, filtered, selectedFile, filterText, loading, expanded,
-            levels, levelCounts, dateFrom, dateTo, timeFrom, timeTo, sortOrder, fontSize,
-            excludedLevels, editorUrl, directories, selectedDir, directFilePath, allowedDirPath,
-            bookmarks, showBookmarks,
-            showSSHModal, showPasswordModal, showManualFileModal, passwordForConnection, manualFilePath, sshConnections, sshForm,
-            selectFile, loadEntries, applyFilters, toggle, toggleSort, toggleLevel,
-            changeDir, formatSize, formatDate, levelColor, levelDot, rowBg, hasContext, openInEditor,
-            toggleBookmark, isBookmarked, removeBookmark, goToBookmark,
-            testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection, cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal, addManualSSHFile, executeManualFileAdd, cancelManualFileModal, loadDirectFile, addAllowedDir, cleanupDuplicates, loadDirectories,
-        };
-    }
-}).mount('#app');
-</script>
+<script src="js/app.js"></script>
 </body>
 </html>
