@@ -15,3 +15,4 @@ services:
       - ./docker-logs/nginx:/var/log/nginx
       - /var/log:/host/var/log
       - ~/.ssh:/var/www/.ssh
+      - .${LOG_DIR}:/var/www/html/logs
