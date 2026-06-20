@@ -13,7 +13,8 @@ class ConfigManager
     }
 
     /**
-     * Checks if setup is complete.
+     * Zwraca true wtedy i tylko wtedy, gdy plik istnieje, jest prawidłowym JSON
+     * i zawiera setup_complete === true (strict).
      */
     public function isSetupComplete(): bool
     {
@@ -27,36 +28,56 @@ class ConfigManager
         }
 
         try {
-            $config = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-            return isset($config['setup_complete']) && $config['setup_complete'] === true;
+            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+            return isset($data['setup_complete']) && $data['setup_complete'] === true;
         } catch (\JsonException) {
             return false;
         }
     }
 
     /**
-     * Gets current setup status.
+     * Zwraca {state, steps[{name, status}]}.
      */
     public function getSetupStatus(): array
     {
         $config = $this->getConfig();
+        $state = $this->getSetupState();
+        
+        $steps = [
+            ['name' => 'General Configuration', 'status' => isset($config['installation_id']) ? 'complete' : 'pending'],
+            ['name' => 'SSH Configuration', 'status' => (isset($config['ssh_connections']) && count($config['ssh_connections']) > 0) ? 'complete' : 'pending'],
+            ['name' => 'Encryption Key', 'status' => isset($config['encryption_key_raw']) ? 'complete' : 'pending'],
+        ];
+
         return [
-            'state' => $config['setup_state'] ?? 'not_started',
-            'steps' => $config['setup_steps'] ?? []
+            'state' => $state,
+            'steps' => $steps
         ];
     }
 
     /**
-     * Gets current setup state.
+     * Zwraca not_started|in_progress|complete|skipped.
      */
     public function getSetupState(): string
     {
+        if ($this->isSetupComplete()) {
+            return 'complete';
+        }
+
         $config = $this->getConfig();
-        return $config['setup_state'] ?? 'not_started';
+        if (empty($config)) {
+            return 'not_started';
+        }
+
+        if (isset($config['setup_state'])) {
+            return (string)$config['setup_state'];
+        }
+
+        return 'in_progress';
     }
 
     /**
-     * Marks setup as complete.
+     * Ustawia setup_complete: true, setup_state: complete.
      */
     public function markSetupComplete(): void
     {
@@ -67,19 +88,21 @@ class ConfigManager
     }
 
     /**
-     * Generates a valid UUID v4.
+     * Generuje UUID v4 przez random_bytes(16) z formatowaniem.
      */
     public function generateInstallationId(): string
     {
         $data = random_bytes(16);
-        $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // version 4
-        $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // variant [89ab]
+
+        // Ustaw bity wersji (4) i wariantu (8, 9, a lub b)
+        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
 
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 
     /**
-     * Generates a 64-char hex encryption key.
+     * Generuje 64-znakowy klucz szyfrujący w formacie hex.
      */
     public function generateEncryptionKey(): string
     {
@@ -87,7 +110,7 @@ class ConfigManager
     }
 
     /**
-     * Reads configuration from app_config.json.
+     * Metoda pomocnicza do pobierania konfiguracji.
      */
     public function getConfig(): array
     {
@@ -97,77 +120,108 @@ class ConfigManager
 
         $content = @file_get_contents($this->configPath);
         if ($content === false) {
+            error_log("Failed to read config file: {$this->configPath}");
             return [];
         }
 
         try {
-            return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+            return json_decode($content, true, 512, JSON_THROW_ON_ERROR) ?: [];
         } catch (\JsonException $e) {
-            error_log('ConfigManager: Failed to parse config JSON: ' . $e->getMessage());
+            error_log("Invalid JSON in config file: {$this->configPath}. Error: " . $e->getMessage());
             return [];
         }
     }
 
     /**
-     * Gets public configuration (filtered).
+     * Zwraca konfigurację z odfiltrowanymi polami wrażliwymi.
      */
     public function getPublicConfig(): array
     {
-        $config = $this->getConfig();
-        return $this->filterSensitiveFields($config);
+        return $this->filterSensitiveFields($this->getConfig());
     }
 
     /**
-     * Saves configuration atomically.
+     * Zapisuje konfigurację w sposób atomowy.
      */
     public function saveConfig(array $config): void
     {
-        $tmpFile = dirname($this->configPath) . '/.tmp.' . bin2hex(random_bytes(8));
-        
-        try {
-            $json = json_encode($config, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
-            if (file_put_contents($tmpFile, $json) === false) {
-                throw new \RuntimeException('Failed to write temporary config file');
-            }
-
-            if (!rename($tmpFile, $this->configPath)) {
-                throw new \RuntimeException('Failed to rename temporary config file to final destination');
-            }
-
-            @chmod($this->configPath, 0600);
-        } catch (\Throwable $e) {
-            if (file_exists($tmpFile)) {
-                @unlink($tmpFile);
-            }
-            throw new \RuntimeException('Failed to save config: ' . $e->getMessage(), 0, $e);
-        }
+        $this->validateAndWriteJson($this->configPath, $config);
     }
 
     /**
-     * Merges partial configuration.
+     * Aktualizuje konfigurację (merge rekursywny) i zapisuje.
      */
     public function updateConfig(array $partial): void
     {
         $config = $this->getConfig();
-        $config = array_replace_recursive($config, $partial);
-        $this->saveConfig($config);
+        $newConfig = array_replace_recursive($config, $partial);
+        $this->saveConfig($newConfig);
     }
 
     /**
-     * Filters sensitive fields from config.
+     * Sprawdza uprawnienia pliku konfiguracji.
      */
-    private function filterSensitiveFields(array $config): array
+    public function checkFilePermissions(): void
     {
-        $sensitive = ['ssh_password', 'ssh_key', 'encryption_key', 'password'];
+        if (!file_exists($this->configPath)) {
+            return;
+        }
+
+        $perms = fileperms($this->configPath) & 0777;
+        if ($perms > 0640) {
+            $errorLogPath = dirname($this->configPath) . '/php_errors.log';
+            $message = "[" . date('Y-m-d H:i:s') . "] WARNING: Config file permissions are too open: " . sprintf('%o', $perms) . ". Recommended: 0600\n";
+            @file_put_contents($errorLogPath, $message, FILE_APPEND);
+        }
+    }
+
+    /**
+     * Atomowy zapis JSON: tmp-file + verify + rename + chmod 0600.
+     */
+    private function validateAndWriteJson(string $path, array $data): void
+    {
+        $tmpPath = $path . '.tmp.' . bin2hex(random_bytes(8));
         
-        foreach ($config as $key => $value) {
+        try {
+            $json = json_encode($data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+            
+            if (file_put_contents($tmpPath, $json) === false) {
+                throw new \RuntimeException("Failed to write temporary config file: $tmpPath");
+            }
+
+            // Weryfikacja zapisanego pliku
+            $verifyContent = file_get_contents($tmpPath);
+            json_decode($verifyContent, true, 512, JSON_THROW_ON_ERROR);
+
+            if (!rename($tmpPath, $path)) {
+                throw new \RuntimeException("Failed to rename temporary config file to: $path");
+            }
+
+            chmod($path, 0600);
+
+        } catch (\Throwable $e) {
+            if (file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
+            throw new \RuntimeException("Atomic JSON write failed for $path: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Rekursywnie usuwa lub maskuje pola wrażliwe z tablicy.
+     */
+    private function filterSensitiveFields(array $data): array
+    {
+        $sensitive = ['ssh_password', 'ssh_key_passphrase', 'encryption_key_raw', 'encryption_key'];
+        
+        foreach ($data as $key => $value) {
             if (in_array($key, $sensitive, true)) {
-                $config[$key] = '********';
+                $data[$key] = '********';
             } elseif (is_array($value)) {
-                $config[$key] = $this->filterSensitiveFields($value);
+                $data[$key] = $this->filterSensitiveFields($value);
             }
         }
-        
-        return $config;
+
+        return $data;
     }
 }
