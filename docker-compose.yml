@@ -10,12 +10,8 @@ services:
     ports:
       - "9123:80"
     volumes:
-      - ./logs:/var/www/html/logs
-      - ./data:/var/www/html/data
+      - .:/var/www/html
       - ./docker-logs/nginx:/var/log/nginx
-      - ./src:/var/www/html/src
-      - ./public:/var/www/html/public
-      - ./temp:/var/www/html/temp
       - /var/log:/host/var/log
       - ~/.ssh:/var/www/.ssh
     environment:
