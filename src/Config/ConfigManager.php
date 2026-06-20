@@ -169,7 +169,7 @@ class ConfigManager
 
         $perms = fileperms($this->configPath) & 0777;
         if ($perms > 0640) {
-            $errorLogPath = dirname($this->configPath) . '/php_errors.log';
+            $errorLogPath = DATA_DIR . '/php_errors.log';
             $message = "[" . date('Y-m-d H:i:s') . "] WARNING: Config file permissions are too open: " . sprintf('%o', $perms) . ". Recommended: 0600\n";
             @file_put_contents($errorLogPath, $message, FILE_APPEND);
         }
