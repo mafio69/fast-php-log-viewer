@@ -139,4 +139,51 @@ class ConfigManagerPropertyTest extends TestCase
             }
         });
     }
+
+    /**
+     * Property 6: Every config save sets 0600 permissions
+     */
+    public function testEveryConfigSaveSets0600Permissions(): void
+    {
+        $this->forAll(
+            \Eris\Generator\associative([
+                'foo' => \Eris\Generator\string()
+            ])
+        )
+        ->then(function ($data) {
+            $this->configManager->saveConfig($data);
+            $this->assertEquals(0600, fileperms($this->tempConfig) & 0777);
+        });
+    }
+
+    /**
+     * Property 1: Setup detection is always correct
+     */
+    public function testSetupDetectionIsAlwaysCorrect(): void
+    {
+        $this->forAll(
+            \Eris\Generator\oneOf(
+                \Eris\Generator\constant(null),
+                \Eris\Generator\constant(false),
+                \Eris\Generator\constant(true),
+                \Eris\Generator\string(),
+                \Eris\Generator\associative(['setup_complete' => \Eris\Generator\bool()]),
+                \Eris\Generator\associative(['setup_complete' => \Eris\Generator\constant('yes')])
+            )
+        )
+        ->then(function ($input) {
+            if ($input === null) {
+                if (file_exists($this->tempConfig)) unlink($this->tempConfig);
+            } else {
+                file_put_contents($this->tempConfig, is_array($input) ? json_encode($input) : (string)$input);
+            }
+
+            $expected = false;
+            if (is_array($input) && isset($input['setup_complete']) && $input['setup_complete'] === true) {
+                $expected = true;
+            }
+
+            $this->assertEquals($expected, $this->configManager->isSetupComplete(), "Failed for input: " . json_encode($input));
+        });
+    }
 }

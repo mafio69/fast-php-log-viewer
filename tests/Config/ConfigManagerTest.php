@@ -104,4 +104,77 @@ class ConfigManagerTest extends TestCase
         file_put_contents($this->tempConfig, '{ invalid }');
         $this->assertEquals([], $this->configManager->getConfig());
     }
+
+    public function testSaveSSHProfileExcludesPasswordFields(): void
+    {
+        $profile = [
+            'name' => 'Test',
+            'ssh_password' => 'secret',
+            'host' => 'localhost'
+        ];
+        
+        $this->configManager->saveSSHProfile($profile);
+        
+        $profiles = $this->configManager->getSSHProfiles();
+        $this->assertEquals('********', $profiles['profile_1']['ssh_password']);
+        
+        $config = $this->configManager->getConfig();
+        $this->assertEquals('secret', $config['ssh_profiles']['profile_1']['ssh_password']);
+    }
+
+    public function testSaveEncryptionKeyToEnvWritesKeyToFile(): void
+    {
+        $key = str_repeat('a', 64);
+        $result = $this->configManager->saveEncryptionKeyToEnv($key);
+        
+        $this->assertTrue($result);
+        $this->assertStringContainsString("BACKUP_ENCRYPTION_KEY=$key", file_get_contents($this->tempEnv));
+    }
+
+    public function testSaveEncryptionKeyToEnvThrowsExceptionOnInvalidKey(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->configManager->saveEncryptionKeyToEnv('too-short');
+    }
+
+    public function testIsSshEnabledDefaultTrue(): void
+    {
+        $this->assertTrue($this->configManager->isSshEnabled());
+    }
+
+    public function testIsSshEnabledFollowsConfig(): void
+    {
+        $this->configManager->saveConfig(['ssh_enabled' => false]);
+        $this->assertFalse($this->configManager->isSshEnabled());
+    }
+
+    public function testGetSetupStateTransitions(): void
+    {
+        $this->assertEquals('not_started', $this->configManager->getSetupState());
+        
+        $this->configManager->saveConfig(['some' => 'data']);
+        $this->assertEquals('in_progress', $this->configManager->getSetupState());
+        
+        $this->configManager->markSetupComplete();
+        $this->assertEquals('complete', $this->configManager->getSetupState());
+    }
+
+    public function testCheckFilePermissionsLogsWarning(): void
+    {
+        if (!defined('DATA_DIR')) {
+            define('DATA_DIR', sys_get_temp_dir());
+        }
+        $logFile = DATA_DIR . '/php_errors.log';
+        if (file_exists($logFile)) unlink($logFile);
+
+        $this->configManager->saveConfig(['test' => 1]);
+        chmod($this->tempConfig, 0666);
+        
+        $this->configManager->checkFilePermissions();
+        
+        $this->assertFileExists($logFile);
+        $this->assertStringContainsString('WARNING: Config file permissions are too open', file_get_contents($logFile));
+        
+        unlink($logFile);
+    }
 }

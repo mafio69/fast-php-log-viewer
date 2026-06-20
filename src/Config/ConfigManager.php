@@ -208,6 +208,98 @@ class ConfigManager
     }
 
     /**
+     * Zwraca profil SSH po ID (bez pól wrażliwych).
+     */
+    public function getSSHProfile(string $id): ?array
+    {
+        $config = $this->getConfig();
+        $profile = $config['ssh_profiles'][$id] ?? null;
+        return $profile ? $this->filterSensitiveFields($profile) : null;
+    }
+
+    /**
+     * Zwraca listę profili SSH (bez pól wrażliwych).
+     */
+    public function getSSHProfiles(): array
+    {
+        $config = $this->getConfig();
+        $profiles = $config['ssh_profiles'] ?? [];
+        return $this->filterSensitiveFields($profiles);
+    }
+
+    /**
+     * Zapisuje profil SSH.
+     */
+    public function saveSSHProfile(array $profileData): string
+    {
+        $config = $this->getConfig();
+        
+        if (!isset($config['ssh_profiles'])) {
+            $config['ssh_profiles'] = [];
+        }
+
+        $id = $profileData['id'] ?? ('profile_' . (count($config['ssh_profiles']) + 1));
+        $profileData['id'] = $id;
+
+        $config['ssh_profiles'][$id] = $profileData;
+        
+        $this->saveConfig($config);
+        return $id;
+    }
+
+    /**
+     * Sprawdza czy SSH jest włączone.
+     */
+    public function isSshEnabled(): bool
+    {
+        $config = $this->getConfig();
+        return (bool)($config['ssh_enabled'] ?? true);
+    }
+
+    /**
+     * Zapisuje klucz szyfrowania do pliku .env.
+     */
+    public function saveEncryptionKeyToEnv(string $hexKey): bool
+    {
+        if (!preg_match('/^[0-9a-f]{64}$/i', $hexKey)) {
+            throw new \InvalidArgumentException("Invalid encryption key format. Expected 64-char hex.");
+        }
+
+        $content = '';
+        if (file_exists($this->envPath)) {
+            $content = file_get_contents($this->envPath);
+        }
+
+        $line = "BACKUP_ENCRYPTION_KEY=$hexKey";
+        
+        if (preg_match('/^BACKUP_ENCRYPTION_KEY=.*$/m', $content)) {
+            $newContent = preg_replace('/^BACKUP_ENCRYPTION_KEY=.*$/m', $line, $content);
+        } else {
+            $newContent = rtrim($content) . "\n" . $line . "\n";
+        }
+
+        if (@file_put_contents($this->envPath, $newContent) === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Eksportuje backup konfiguracji (delegacja lub nowa logika).
+     */
+    public function exportBackup(): string
+    {
+        $config = $this->getConfig();
+        $backupPath = DATA_DIR . '/logviewer_backup_' . date('Ymd_His') . '.json';
+        
+        // W backupie chcemy mieć wszystko, ale plik musi być chroniony
+        $this->validateAndWriteJson($backupPath, $config);
+        
+        return $backupPath;
+    }
+
+    /**
      * Rekursywnie usuwa lub maskuje pola wrażliwe z tablicy.
      */
     private function filterSensitiveFields(array $data): array
