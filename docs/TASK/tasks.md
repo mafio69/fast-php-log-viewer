@@ -42,12 +42,14 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Zaimplementuj `getSetupState(): string` — zwraca `not_started|in_progress|complete|skipped`
     - Zaimplementuj `markSetupComplete(): void` — ustawia `setup_complete: true`, `setup_state: complete`
     - _Wymagania: 1.1, 1.2, 1.3, 1.4_
+    - Napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 2.2 Zaimplementuj generatory kluczy w `ConfigManager`
     - Metoda `generateInstallationId(): string` — UUID v4 przez `random_bytes(16)` z formatowaniem
       `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` (wersja 4 z bitem variant `[89ab]`)
     - Metoda `generateEncryptionKey(): string` — `bin2hex(random_bytes(32))` → 64 znaki lowercase hex
     - _Wymagania: 2.1, 2.2_
+   - Napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 2.3 Napisz testy property-based dla generatorów kluczy
 
@@ -57,11 +59,13 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Asercja: każdy wynik pasuje do `/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`
     - Asercja: żadne dwa ID nie są identyczne
     - **Validates: Requirements 2.1**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - **Property 3: Generated EncryptionKeys are 64-char hex**
     - Generator: wywołaj `generateEncryptionKey()` wielokrotnie
     - Asercja: `strlen($key) === 64` i `preg_match('/^[0-9a-f]{64}$/', $key) === 1`
     - Asercja: żadne dwa klucze nie są identyczne
     - **Validates: Requirements 2.2**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 
 - [ ] 2.4 Zaimplementuj odczyt/zapis konfiguracji w `ConfigManager`
@@ -78,6 +82,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Metoda `checkFilePermissions(): void` — jeśli perms > 0640, loguje ostrzeżenie do
       `data/php_errors.log`
     - _Wymagania: 6.1, 6.2, 6.3, 9.1, 9.2, 9.3, 9.5_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 2.5 Napisz testy property-based dla round-trip serializacji i uprawnień
 
@@ -87,16 +92,19 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Asercja: `getConfig()` po `saveConfig($data)` zwraca strukturę równoważną `$data`
     - Asercja: plik JSON jest prawidłowy i ma wcięcia (`JSON_PRETTY_PRINT`)
     - **Validates: Requirements 6.1, 6.3**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - **Property 5: Sensitive fields never leave the system**
     - Generator eris: tablice z dowolnymi wartościami kluczy `ssh_password`, `ssh_key_passphrase`,
       `encryption_key_raw`
     - Asercja: po `saveConfig()` plik `app_config.json` nie zawiera żadnego z tych kluczy
     - Asercja: `getPublicConfig()` nie zawiera żadnego z tych kluczy
     - **Validates: Requirements 4.3, 6.2, 9.2, 9.3**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - **Property 6: Every config save sets 0600 permissions**
     - Generator eris: różne zawartości tablicy konfiguracyjnej
     - Asercja: po każdym `saveConfig()` plik ma uprawnienia `0600` (sprawdź przez `fileperms()`)
     - **Validates: Requirements 2.6, 9.1**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 2.6 Napisz testy property-based dla detekcji stanu setupu
 
@@ -107,6 +115,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Asercja: `isSetupComplete()` zwraca `true` tylko gdy plik istnieje, JSON prawidłowy
       i `setup_complete === true`
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 
 - [ ] 2.7 Zaimplementuj obsługę SSH Profiles i klucza szyfrowania w `ConfigManager`
@@ -119,6 +128,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Metoda `exportBackup(): void` — deleguje do istniejącej logiki `LogConfig::exportBackup()`
       lub implementuje nową wersję zapisującą `data/logviewer_backup.json` z uprawnieniami 0600
     - _Wymagania: 4.3, 5.1, 5.2, 5.3, 5.4, 6.4, 9.2_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 2.8 Napisz testy jednostkowe dla `ConfigManager` (edge cases)
 
@@ -132,12 +142,14 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - `testSaveEncryptionKeyToEnvReturnsFalseWhenEnvNotWritable()`
 - `testSaveSSHProfileExcludesPasswordFields()`
 - _Wymagania: 2.5, 2.6, 4.3, 6.2, 9.1, 9.2, 9.5_
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 
     3. Checkpoint — testy ConfigManager
 
     - Upewnij się, że wszystkie testy `ConfigManagerTest` i `ConfigManagerPropertyTest` przechodzą.
       Zapytaj użytkownika jeśli pojawią się wątpliwości dotyczące zachowania `isSetupComplete()`.
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 ### 4. Backend — SetupWizard
 
@@ -155,6 +167,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - `local_directories`: "Brak skonfigurowanych katalogów lokalnych..."
         - `finalize`: odpowiedni komunikat dla kroku finalizacji
     - _Wymagania: 3.1, 3.2, 3.4, 8.1, 8.2_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 4.2 Zaimplementuj logikę kroków wizarda w `SetupWizard`
     - Metoda `processStep(string $step, array $data, bool $skip): array` — dispatcher do prywatnych
@@ -179,6 +192,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Prywatna `validateSSHFields(array $data): ?array` — zwraca `null` gdy `ssh_host` i `ssh_user`
       niepuste; inaczej `['fields' => ['ssh_host']]` lub `['fields' => ['ssh_user']]` lub obu
     - _Wymagania: 3.2, 3.3, 3.5, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.5, 8.1_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 4.3 Zaimplementuj migrację SSH w `SetupWizard`
     - Metoda `migrateSSHFromLocalStorage(array $connections): array` — iteruje po połączeniach,
@@ -186,6 +200,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
       wywołuje `configManager->saveSSHProfile()`; zwraca `{migrated: <int>, warnings: [...]}`
     - Dla pustej tablicy zwraca `{migrated: 0, warnings: []}` (wymaganie 7.5)
     - _Wymagania: 7.1, 7.2, 7.3, 7.5_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 2.9 Napisz testy property-based dla kroków wizarda
 
@@ -200,6 +215,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Asercja: `isSetupComplete()` zwraca `true` gdy każdy krok ma `complete` lub `skipped`
     - Asercja: `isSetupComplete()` zwraca `false` gdy jakikolwiek krok ma `pending`
     - **Validates: Requirements 3.4, 3.5**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 4.4 Napisz testy property-based dla walidacji SSH i filtrowania katalogów
 
@@ -218,6 +234,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
       tylko katalogi z `type != 'ssh'`
     - Asercja: gdy `ssh_enabled=true`, katalogi SSH są uwzględniane
     - **Validates: Requirements 4.5**
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 4.5 Napisz testy jednostkowe dla `SetupWizard`
 
@@ -232,12 +249,14 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - `testFinalizeMarksSetsupComplete()`
 - `testSkipGenerateKeysReturnNoEncryptionWarning()`
 - _Wymagania: 3.2, 3.3, 4.1, 4.4, 5.1, 5.5, 7.3, 7.5, 8.2_
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 
     5. Checkpoint — testy SetupWizard
 
     - Upewnij się, że wszystkie testy `SetupWizardTest` przechodzą.
       Zapytaj użytkownika jeśli kolejność kroków lub komunikaty ostrzeżeń wymagają weryfikacji.
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 ### 6. Backend — Bootstrap Slim Framework 4
 
@@ -256,6 +275,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - `SetupMiddleware::class` — wstrzykuje `ConfigManager`
     - Zdefiniuj stałe `ROOT_DIR` i `DATA_DIR` jako parametry kontenera
     - _Wymagania: prerequisite dla wszystkich kontrolerów_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 6.2 Utwórz plik `src/Bootstrap/routes.php` z routingiem
     - Plik: `src/Bootstrap/routes.php`
@@ -278,6 +298,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - `POST /api/ssh/read-file` → `[SSHController::class, 'readFile']`
         - `POST /api/ssh/download-file` → `[SSHController::class, 'downloadFile']`
     - _Wymagania: wszystkie wymagania dot. API_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 6.3 Utwórz plik `src/Bootstrap/app.php` z bootstrapem Slim App
     - Plik: `src/Bootstrap/app.php`
@@ -287,6 +308,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
       (logger do `data/php_errors.log`), `$app->add(SetupMiddleware::class)`
     - Zaincluduj `routes.php`; zwróć `$app`
     - _Wymagania: 1.4, prerequisite dla index.php_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 ### 7. Backend — SetupMiddleware
 
@@ -301,6 +323,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
           zwróć odpowiedź HTTP 503 z treścią `{"error":"setup_required"}`
         - W przeciwnym razie: `return $handler->handle($request)`
     - _Wymagania: 1.4_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ]* 7.2 Napisz testy jednostkowe dla `SetupMiddleware`
 
@@ -310,6 +333,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - `testAllowsSetupEndpointsWithoutSetup()` — przepuszcza `/api/setup/status`
 - `testAllowsDirectoriesWhenSetupComplete()` — 200 dla `/api/directories` gdy setup kompletny
 - _Wymagania: 1.4_
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 ### 8. Backend — Kontrolery Slim
 
@@ -332,6 +356,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - Wywołaj `$this->wizard->migrateSSHFromLocalStorage($connections)`
         - Zwróć JSON 200
     - _Wymagania: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 7.1, 7.2, 7.3_
+    - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 - [ ] 8.2 Zaimplementuj `src/Controller/AppConfigController.php`
     - Plik: `src/Controller/AppConfigController.php`, namespace `Mariusz\LogViewer\Controller`

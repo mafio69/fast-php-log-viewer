@@ -19,6 +19,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Dodaj namespace `"Mariusz\\LogViewer\\Bootstrap\\"` → `"src/Bootstrap/"` do `autoload.psr-4`
     - Uruchom `composer install` (lub zaktualizuj `composer.lock`)
     - _Wymagania: wszystkie wymagania (prerequisite)_
+    - Uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ] 1.2 Utwórz katalogi struktury projektu
     - Utwórz katalog `src/Middleware/` (plik `.gitkeep` jeśli pusty)
@@ -28,6 +29,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Utwórz katalog `tests/Middleware/`
     - Utwórz katalog `tests/Controller/`
     - _Wymagania: wszystkie wymagania (prerequisite)_
+    - Uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 ### 2. Backend — ConfigManager
 
@@ -42,12 +44,14 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Zaimplementuj `getSetupState(): string` — zwraca `not_started|in_progress|complete|skipped`
     - Zaimplementuj `markSetupComplete(): void` — ustawia `setup_complete: true`, `setup_state: complete`
     - _Wymagania: 1.1, 1.2, 1.3, 1.4_
+    - Napisz testy jeśli potrzeba (2.3, 2.6); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ] 2.2 Zaimplementuj generatory kluczy w `ConfigManager`
     - Metoda `generateInstallationId(): string` — UUID v4 przez `random_bytes(16)` z formatowaniem
       `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` (wersja 4 z bitem variant `[89ab]`)
     - Metoda `generateEncryptionKey(): string` — `bin2hex(random_bytes(32))` → 64 znaki lowercase hex
     - _Wymagania: 2.1, 2.2_
+    - Napisz testy jeśli potrzeba (2.3); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ]* 2.3 Napisz testy property-based dla generatorów kluczy
 
@@ -78,6 +82,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Metoda `checkFilePermissions(): void` — jeśli perms > 0640, loguje ostrzeżenie do
       `data/php_errors.log`
     - _Wymagania: 6.1, 6.2, 6.3, 9.1, 9.2, 9.3, 9.5_
+    - Napisz testy jeśli potrzeba (2.5, 2.8); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ]* 2.5 Napisz testy property-based dla round-trip serializacji i uprawnień
 
@@ -119,6 +124,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Metoda `exportBackup(): void` — deleguje do istniejącej logiki `LogConfig::exportBackup()`
       lub implementuje nową wersję zapisującą `data/logviewer_backup.json` z uprawnieniami 0600
     - _Wymagania: 4.3, 5.1, 5.2, 5.3, 5.4, 6.4, 9.2_
+    - Napisz testy jeśli potrzeba (2.8); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ]* 2.8 Napisz testy jednostkowe dla `ConfigManager` (edge cases)
 
@@ -155,6 +161,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - `local_directories`: "Brak skonfigurowanych katalogów lokalnych..."
         - `finalize`: odpowiedni komunikat dla kroku finalizacji
     - _Wymagania: 3.1, 3.2, 3.4, 8.1, 8.2_
+    - Napisz testy jeśli potrzeba (4.5); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ] 4.2 Zaimplementuj logikę kroków wizarda w `SetupWizard`
     - Metoda `processStep(string $step, array $data, bool $skip): array` — dispatcher do prywatnych
@@ -179,6 +186,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Prywatna `validateSSHFields(array $data): ?array` — zwraca `null` gdy `ssh_host` i `ssh_user`
       niepuste; inaczej `['fields' => ['ssh_host']]` lub `['fields' => ['ssh_user']]` lub obu
     - _Wymagania: 3.2, 3.3, 3.5, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.5, 8.1_
+    - Napisz testy jeśli potrzeba (2.9, 4.4, 4.5); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ] 4.3 Zaimplementuj migrację SSH w `SetupWizard`
     - Metoda `migrateSSHFromLocalStorage(array $connections): array` — iteruje po połączeniach,
@@ -186,6 +194,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
       wywołuje `configManager->saveSSHProfile()`; zwraca `{migrated: <int>, warnings: [...]}`
     - Dla pustej tablicy zwraca `{migrated: 0, warnings: []}` (wymaganie 7.5)
     - _Wymagania: 7.1, 7.2, 7.3, 7.5_
+    - Napisz testy jeśli potrzeba (4.5); uruchom wszystkie testy (`vendor/bin/phpunit`) i wykonaj commit jeśli przejdą
 
 - [ ]* 2.9 Napisz testy property-based dla kroków wizarda
 
