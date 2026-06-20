@@ -15,14 +15,19 @@
         "ext-pdo": "*",
         "ext-ssh2": "*",
         "ext-pdo_sqlite": "*",
-        "mafio69/fast-php-logger": "^1.0"
+        "mafio69/fast-php-logger": "^1.0",
+        "slim/slim": "^4.12",
+        "slim/psr7": "^1.7",
+        "php-di/php-di": "^7.0"
     },
     "autoload": {
         "psr-4": {
             "Mariusz\\LogViewer\\Controller\\": "src/Controller/",
             "Mariusz\\LogViewer\\Service\\": "src/Service/",
             "Mariusz\\LogViewer\\Repository\\": "src/Repository/",
-            "Mariusz\\LogViewer\\Config\\": "src/Config/"
+            "Mariusz\\LogViewer\\Config\\": "src/Config/",
+            "Mariusz\\LogViewer\\Middleware\\": "src/Middleware/",
+            "Mariusz\\LogViewer\\Bootstrap\\": "src/Bootstrap/"
         }
     },
     "autoload-dev": {
@@ -31,7 +36,8 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.0"
+        "phpunit/phpunit": "^11.0",
+        "giorgiosironi/eris": "^0.14"
     },
     "scripts": {
         "build": "php bin/build.php",
