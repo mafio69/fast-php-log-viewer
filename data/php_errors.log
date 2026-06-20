@@ -101,3 +101,11 @@
 [20-Jun-2026 11:18:54 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
 [20-Jun-2026 12:03:41 UTC] SSH file listing failed: Failed to connect to SSH server: DexterMafio22\\:22
 [20-Jun-2026 12:05:04 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 13:23:09 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 13:31:42 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 17:42:49 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 17:43:52 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 17:44:23 UTC] SSH file listing failed: SSH key file not found: /home/mariusz/.ssh/id_ed25519
+[20-Jun-2026 17:50:02 UTC] PHP Warning:  filemtime(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 61
+[20-Jun-2026 17:50:02 UTC] PHP Warning:  filesize(): stat failed for /host/var/log/installer/ubuntu_bootstrap.log in /var/www/html/src/Service/LogFinder.php on line 36
+[20-Jun-2026 18:20:54 UTC] SSH file listing failed: (!/home/mariusz/.ssh/id_ed25519 || !file_exists(/home/mariusz/.ssh/id_ed25519)) SSH key file not found: /home/mariusz/.ssh/id_ed25519 (keyPath: /home/mariusz/.ssh/id_ed25519)

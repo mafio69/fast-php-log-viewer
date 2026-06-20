@@ -16,6 +16,15 @@ class RemoteLogFinder
         $this->ssh = $ssh;
     }
 
+    private function getLastErrorMessage(): string
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return '';
+        }
+        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
+    }
+
     /**
      * Find all log files in remote directory
      */

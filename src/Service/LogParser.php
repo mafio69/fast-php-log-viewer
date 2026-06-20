@@ -21,21 +21,30 @@ namespace Mariusz\LogViewer\Service;
  */
 class LogParser
 {
-    private const string PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
-    private const string PATTERN_SIMPLE  = '/^\[(?P<datetime>[^\]]+)\] (?P<level>[A-Z]+): (?P<message>.+)$/';
-    private const string PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
-    private const string PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
-    private const string PATTERN_NGINX_ERR = '/^(?P<datetime>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>error|warn|notice|info|crit|alert|emerg)\] (?P<pid>\d+)#\d+: \*(?P<tid>\d+) (?P<message>.+)$/i';
-    private const string PATTERN_NGINX_ACCESS = '/^(?P<ip>[\d\.]+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP\/[\d\.]+" (?P<status>\d+) (?P<size>\d+)/';
-    private const string PATTERN_APK_LOG = '/^Running `apk (?P<message>.+)` at (?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})$/';
-    private const string PATTERN_APK_INSTALL = '/^\((?P<num>\d+)\/(?P<total>\d+)\) (?P<action>Installing|Purging) (?P<message>.+)$/';
-    private const string PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
-    private const string PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
-    private const string PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
-    private const string PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
-    private const string PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
-    private const string PATTERN_APT_LOG = '/^(?P<datetime>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<message>.+)$/';
-    private const string PATTERN_SYSTEMD_JOURNAL = '/^(?P<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
+    private const PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
+    private const PATTERN_SIMPLE  = '/^\[(?P<datetime>[^\]]+)\] (?P<level>[A-Z]+): (?P<message>.+)$/';
+    private const PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
+    private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
+    private const PATTERN_NGINX_ERR = '/^(?P<datetime>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>error|warn|notice|info|crit|alert|emerg)\] (?P<pid>\d+)#\d+: \*(?P<tid>\d+) (?P<message>.+)$/i';
+    private const PATTERN_NGINX_ACCESS = '/^(?P<ip>[\d\.]+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP\/[\d\.]+" (?P<status>\d+) (?P<size>\d+)/';
+    private const PATTERN_APK_LOG = '/^Running `apk (?P<message>.+)` at (?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})$/';
+    private const PATTERN_APK_INSTALL = '/^\((?P<num>\d+)\/(?P<total>\d+)\) (?P<action>Installing|Purging) (?P<message>.+)$/';
+    private const PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
+    private const PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
+    private const PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
+    private const PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
+    private const PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
+    private const PATTERN_APT_LOG = '/^(?P<datetime>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<message>.+)$/';
+    private const PATTERN_SYSTEMD_JOURNAL = '/^(?P<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
+
+    private function getLastErrorMessage(): string
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return '';
+        }
+        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
+    }
 
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
     public function parseFile(string $path): array
@@ -44,9 +53,9 @@ class LogParser
             return [];
         }
 
-        $content = file_get_contents($path);
+        $content = @file_get_contents($path);
         if ($content === false) {
-            return [];
+            throw new \RuntimeException("(\$content === false) Failed to read log file: $path (path: $path)" . $this->getLastErrorMessage());
         }
 
         return $this->parseString($content);

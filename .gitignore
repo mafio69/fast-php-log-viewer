@@ -7,3 +7,4 @@
 /data/logviewer.db
 /data/directories.json
 /temp/
+/logs/php_errors.log

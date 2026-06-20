@@ -9,6 +9,11 @@ chown -R nginx:nginx /var/log/nginx /run/nginx || true
 # Add www-data to adm group for log access
 addgroup www-data adm 2>/dev/null || true
 
+# Ensure .ssh directory exists and has correct owner (if not a read-only mount)
+mkdir -p /var/www/.ssh
+chown -R www-data:www-data /var/www/.ssh || true
+chmod 700 /var/www/.ssh || true
+
 echo "[start] Testing nginx configuration..."
 nginx -t
 
