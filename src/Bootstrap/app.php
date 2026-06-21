@@ -20,17 +20,17 @@ return function (): App {
 
     $app = AppFactory::create();
 
-    // Add middleware BEFORE routing
-    $app->addBodyParsingMiddleware();
-    $app->addRoutingMiddleware();
-    $app->addErrorMiddleware(false, true, true);
-
-    // Add SetupMiddleware
-    $app->add(\Mariusz\LogViewer\Middleware\SetupMiddleware::class);
-
-    // Load routes
+    // Load routes FIRST
     $routes = require __DIR__ . '/routes.php';
     $routes($app);
+
+    // Add middleware AFTER routing (reverse order of execution)
+    $app->addBodyParsingMiddleware();
+    $app->addRoutingMiddleware();
+    $app->addErrorMiddleware(true, true, true);
+
+    // Add SetupMiddleware LAST (executes FIRST)
+    $app->add(\Mariusz\LogViewer\Middleware\SetupMiddleware::class);
 
     return $app;
 };

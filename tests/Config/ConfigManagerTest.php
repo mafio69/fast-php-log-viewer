@@ -18,6 +18,7 @@ class ConfigManagerTest extends TestCase
         $this->tempConfig = sys_get_temp_dir() . '/config_' . bin2hex(random_bytes(8)) . '.json';
         $this->tempEnv = sys_get_temp_dir() . '/env_' . bin2hex(random_bytes(8));
         $this->configManager = new ConfigManager($this->tempConfig, $this->tempEnv);
+        $this->configManager->setLogging(false);
     }
 
     protected function tearDown(): void
@@ -161,6 +162,8 @@ class ConfigManagerTest extends TestCase
 
     public function testCheckFilePermissionsLogsWarning(): void
     {
+        $this->configManager->setLogging(true);
+
         if (!defined('DATA_DIR')) {
             define('DATA_DIR', sys_get_temp_dir());
         }

@@ -6,10 +6,17 @@ namespace Mariusz\LogViewer\Config;
 
 class ConfigManager
 {
+    private bool $loggingEnabled = true;
+
     public function __construct(
         private readonly string $configPath,
         private readonly string $envPath
     ) {
+    }
+
+    public function setLogging(bool $enabled): void
+    {
+        $this->loggingEnabled = $enabled;
     }
 
     /**
@@ -120,14 +127,18 @@ class ConfigManager
 
         $content = @file_get_contents($this->configPath);
         if ($content === false) {
-            error_log("Failed to read config file: {$this->configPath}");
+            if ($this->loggingEnabled) {
+                error_log("Failed to read config file: {$this->configPath}");
+            }
             return [];
         }
 
         try {
             return json_decode($content, true, 512, JSON_THROW_ON_ERROR) ?: [];
         } catch (\JsonException $e) {
-            error_log("Invalid JSON in config file: {$this->configPath}. Error: " . $e->getMessage());
+            if ($this->loggingEnabled) {
+                error_log("Invalid JSON in config file: {$this->configPath}. Error: " . $e->getMessage());
+            }
             return [];
         }
     }
@@ -169,9 +180,11 @@ class ConfigManager
 
         $perms = fileperms($this->configPath) & 0777;
         if ($perms > 0640) {
-            $errorLogPath = DATA_DIR . '/php_errors.log';
-            $message = "[" . date('Y-m-d H:i:s') . "] WARNING: Config file permissions are too open: " . sprintf('%o', $perms) . ". Recommended: 0600\n";
-            @file_put_contents($errorLogPath, $message, FILE_APPEND);
+            if ($this->loggingEnabled) {
+                $errorLogPath = DATA_DIR . '/php_errors.log';
+                $message = "[" . date('Y-m-d H:i:s') . "] WARNING: Config file permissions are too open: " . sprintf('%o', $perms) . ". Recommended: 0600\n";
+                @file_put_contents($errorLogPath, $message, FILE_APPEND);
+            }
         }
     }
 
