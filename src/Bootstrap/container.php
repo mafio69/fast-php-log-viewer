@@ -37,7 +37,7 @@ return function (ContainerBuilder $containerBuilder): void {
         },
 
         // SetupWizard - wstrzykuje ConfigManager i LogConfig
-        SetupWizard::class => function (ContainerInterface $c) {
+        SetupWizard::class => function ($c) {
             return new SetupWizard(
                 $c->get(ConfigManager::class),
                 $c->get(LogConfig::class)
@@ -45,21 +45,21 @@ return function (ContainerBuilder $containerBuilder): void {
         },
 
         // SetupController - wstrzykuje SetupWizard
-        \Mariusz\LogViewer\Controller\SetupController::class => function (ContainerInterface $c) {
+        \Mariusz\LogViewer\Controller\SetupController::class => function ($c) {
             return new \Mariusz\LogViewer\Controller\SetupController(
                 $c->get(SetupWizard::class)
             );
         },
 
         // AppConfigController - wstrzykuje ConfigManager
-        \Mariusz\LogViewer\Controller\AppConfigController::class => function (ContainerInterface $c) {
+        \Mariusz\LogViewer\Controller\AppConfigController::class => function ($c) {
             return new \Mariusz\LogViewer\Controller\AppConfigController(
                 $c->get(ConfigManager::class)
             );
         },
 
         // LogController (nowy Slim) - wstrzykuje LogConfig i ConfigManager
-        \Mariusz\LogViewer\Controller\LogController::class => function (ContainerInterface $c) {
+        \Mariusz\LogViewer\Controller\LogController::class => function ($c) {
             return new \Mariusz\LogViewer\Controller\LogController(
                 $c->get(LogConfig::class),
                 $c->get(ConfigManager::class)
@@ -67,19 +67,19 @@ return function (ContainerBuilder $containerBuilder): void {
         },
 
         // DirectoryController - wstrzykuje LogConfig
-        \Mariusz\LogViewer\Controller\DirectoryController::class => function (ContainerInterface $c) {
+        \Mariusz\LogViewer\Controller\DirectoryController::class => function ($c) {
             return new \Mariusz\LogViewer\Controller\DirectoryController(
                 $c->get(LogConfig::class)
             );
         },
 
         // SSHController - brak zależności
-        \Mariusz\LogViewer\Controller\SSHController::class => function (ContainerInterface $c) {
+        \Mariusz\LogViewer\Controller\SSHController::class => function ($c) {
             return new \Mariusz\LogViewer\Controller\SSHController();
         },
 
         // SetupMiddleware - wstrzykuje ConfigManager
-        \Mariusz\LogViewer\Middleware\SetupMiddleware::class => function (ContainerInterface $c) {
+        \Mariusz\LogViewer\Middleware\SetupMiddleware::class => function ($c) {
             return new \Mariusz\LogViewer\Middleware\SetupMiddleware(
                 $c->get(ConfigManager::class)
             );
