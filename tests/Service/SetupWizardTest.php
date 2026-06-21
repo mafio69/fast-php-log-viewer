@@ -88,6 +88,7 @@ class SetupWizardTest extends TestCase
         $this->assertStringContainsString('Backup konfiguracji nie będzie szyfrowany', $this->wizard->getSkipWarning('generate_keys'));
         $this->assertStringContainsString('Funkcja SSH jest wyłączona', $this->wizard->getSkipWarning('ssh_config'));
         $this->assertStringContainsString('Brak skonfigurowanych katalogów lokalnych', $this->wizard->getSkipWarning('local_directories'));
+        $this->assertStringContainsString('/home/mariusz/PhpstormProjects/fast-php-log-viewer/logs', $this->wizard->getSkipWarning('local_directories'));
         $this->assertStringContainsString('Finalizacja setupu zostanie pominięta', $this->wizard->getSkipWarning('finalize'));
     }
 

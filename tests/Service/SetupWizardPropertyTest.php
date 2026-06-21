@@ -57,12 +57,17 @@ class SetupWizardPropertyTest extends TestCase
             ->then(function ($data) use ($step) {
                 $result = $this->wizard->processStep($step, $data, true);
 
-                $this->assertArrayHasKey('warning', $result, 
+                $this->assertArrayHasKey('warning', $result,
                     "Step $step with skip=true should return warning");
-                $this->assertNotEmpty($result['warning'], 
+                $this->assertNotEmpty($result['warning'],
                     "Warning for step $step should not be empty");
-                $this->assertIsString($result['warning'], 
+                $this->assertIsString($result['warning'],
                     "Warning for step $step should be a string");
+
+                // Dla local_directories sprawdź czy zawiera ścieżkę do logs
+                if ($step === 'local_directories') {
+                    $this->assertStringContainsString('/home/mariusz/PhpstormProjects/fast-php-log-viewer/logs', $result['warning']);
+                }
             });
         }
     }
