@@ -12,10 +12,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class SSHController
 {
-    public function __construct(
-        private readonly LogParser $logParser,
-        private readonly RemoteLogFinder $remoteLogFinder
-    ) {
+    public function __construct() {
     }
 
     public function testConnection(Request $request, Response $response): Response
@@ -55,10 +52,10 @@ class SSHController
         try {
             $ssh = new SSH($data);
             $ssh->connect();
-            
+
             $finder = new RemoteLogFinder($ssh);
             $files = $finder->findAll($path);
-            
+
             $ssh->disconnect();
             
             $response->getBody()->write(json_encode(['success' => true, 'files' => $files]));
@@ -88,7 +85,8 @@ class SSHController
             $ssh->connect();
             
             $content = $ssh->readFile($path);
-            $entries = $this->logParser->parseString($content);
+            $parser = new LogParser();
+            $entries = $parser->parseString($content);
             
             $ssh->disconnect();
             

@@ -1,0 +1,98 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Mariusz\LogViewer\Tests\Controller;
+
+use Mariusz\LogViewer\Controller\SSHController;
+use PHPUnit\Framework\TestCase;
+use Slim\Psr7\Factory\RequestFactory;
+use Slim\Psr7\Factory\ResponseFactory;
+
+class SSHControllerTest extends TestCase
+{
+    private SSHController $controller;
+
+    protected function setUp(): void
+    {
+        $this->controller = new SSHController();
+    }
+
+    public function testTestConnectionWithInvalidJson(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/test-connection');
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->testConnection($request, $response);
+
+        $this->assertEquals(400, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('invalid_json', $body['error']);
+    }
+
+    public function testListFilesWithMissingPath(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/list-files');
+        $data = [];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->listFiles($request, $response);
+
+        $this->assertEquals(400, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('missing_path', $body['error']);
+    }
+
+    public function testReadFileWithMissingPath(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
+        $data = [];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->readFile($request, $response);
+
+        $this->assertEquals(400, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('missing_path', $body['error']);
+    }
+
+    public function testDownloadFileWithMissingPath(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/download-file');
+        $data = [];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->downloadFile($request, $response);
+
+        $this->assertEquals(400, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('missing_path', $body['error']);
+    }
+
+    public function testTestConnectionWithInvalidData(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/test-connection');
+        $data = ['ssh_host' => '', 'ssh_user' => '']; // Brak hosta
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->testConnection($request, $response);
+
+        $this->assertEquals(500, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('error', $body);
+    }
+}

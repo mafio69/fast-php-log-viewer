@@ -73,12 +73,9 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // SSHController - brak zależności lub wstrzykuje LogParser, RemoteLogFinder
+        // SSHController - brak zależności
         \Mariusz\LogViewer\Controller\SSHController::class => function (ContainerInterface $c) {
-            return new \Mariusz\LogViewer\Controller\SSHController(
-                $c->get(\Mariusz\LogViewer\Service\LogParser::class),
-                $c->get(\Mariusz\LogViewer\Service\RemoteLogFinder::class)
-            );
+            return new \Mariusz\LogViewer\Controller\SSHController();
         },
 
         // SetupMiddleware - wstrzykuje ConfigManager
