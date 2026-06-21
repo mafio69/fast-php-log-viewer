@@ -192,4 +192,84 @@ class SSHControllerTest extends TestCase
         $body = json_decode((string)$result->getBody(), true);
         $this->assertArrayHasKey('error', $body);
     }
+
+    public function testListFilesWithRealFrogConnection(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/list-files');
+        $data = [
+            'ssh_host' => 'frog01.mikr.us',
+            'ssh_user' => 'frog',
+            'ssh_port' => 10137,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'GxCdTbACI7',
+            'path' => '/home/frog/test'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->listFiles($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('success', $body);
+        $this->assertTrue($body['success']);
+        $this->assertArrayHasKey('files', $body);
+        $this->assertIsArray($body['files']);
+        $this->assertGreaterThanOrEqual(2, count($body['files'])); // php_errors.log i nginx_error.log
+    }
+
+    public function testReadFileWithRealFrogConnection(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
+        $data = [
+            'ssh_host' => 'frog01.mikr.us',
+            'ssh_user' => 'frog',
+            'ssh_port' => 10137,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'GxCdTbACI7',
+            'path' => '/home/frog/test/php_errors.log'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->readFile($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('success', $body);
+        $this->assertTrue($body['success']);
+        $this->assertArrayHasKey('entries', $body);
+        $this->assertIsArray($body['entries']);
+        $this->assertGreaterThanOrEqual(1, count($body['entries']));
+    }
+
+    public function testReadFileWithNginxFormat(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
+        $data = [
+            'ssh_host' => 'frog01.mikr.us',
+            'ssh_user' => 'frog',
+            'ssh_port' => 10137,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'GxCdTbACI7',
+            'path' => '/home/frog/test/nginx_error.log'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->readFile($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('success', $body);
+        $this->assertTrue($body['success']);
+        $this->assertArrayHasKey('entries', $body);
+        $this->assertIsArray($body['entries']);
+    }
 }
