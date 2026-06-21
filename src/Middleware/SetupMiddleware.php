@@ -28,7 +28,8 @@ class SetupMiddleware implements MiddlewareInterface
         $path = $request->getUri()->getPath();
 
         if (in_array($path, self::PROTECTED_ROUTES, true) && !$this->configManager->isSetupComplete()) {
-            $response = $handler->handle($request);
+            $responseFactory = new \Slim\Psr7\Factory\ResponseFactory();
+            $response = $responseFactory->createResponse();
             $response->getBody()->write(json_encode(['error' => 'setup_required']));
             return $response->withStatus(503)->withHeader('Content-Type', 'application/json');
         }
