@@ -25,6 +25,7 @@ return function (App $app): void {
     $app->put('/api/config/directories/{id}', [\Mariusz\LogViewer\Controller\DirectoryController::class, 'update']);
     $app->delete('/api/config/directories/{id}', [\Mariusz\LogViewer\Controller\DirectoryController::class, 'delete']);
     $app->post('/api/config/cleanup-duplicates', [\Mariusz\LogViewer\Controller\DirectoryController::class, 'cleanupDuplicates']);
+    $app->post('/api/config/cleanup-allowed', [\Mariusz\LogViewer\Controller\DirectoryController::class, 'cleanupAllowed']);
 
     // Scan
     $app->get('/api/scan/directories', [\Mariusz\LogViewer\Controller\DirectoryController::class, 'scanDirectories']);

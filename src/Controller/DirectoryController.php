@@ -70,4 +70,20 @@ class DirectoryController
         $response->getBody()->write(json_encode($dirs));
         return $response->withHeader('Content-Type', 'application/json');
     }
+
+    public function cleanupAllowed(Request $request, Response $response): Response
+    {
+        $dirs = $this->logConfig->getDirectories();
+        $removed = 0;
+
+        foreach ($dirs as $dir) {
+            if (str_starts_with($dir['name'], 'allowed_')) {
+                $this->logConfig->deleteDirectory($dir['id']);
+                $removed++;
+            }
+        }
+
+        $response->getBody()->write(json_encode(['success' => true, 'removed' => $removed]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
 }

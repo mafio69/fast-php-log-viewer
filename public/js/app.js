@@ -204,7 +204,7 @@ createApp({
                 return;
             }
             const dirParam = selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : '';
-            files.value = await fetchJson('?action=files' + dirParam);
+            files.value = await fetchJson('/api/files' + dirParam);
             if (files.value.length) {
                 selectedFile.value = files.value[0].file;
                 await loadEntries();
@@ -225,7 +225,7 @@ createApp({
 
             try {
                 loading.value = true;
-                const url = '?action=entries&file=' + encodeURIComponent(path);
+                const url = '/api/entries?file=' + encodeURIComponent(path);
                 console.log('Loading file from:', url);
                 entries.value = await fetchJson(url);
                 filtered.value = entries.value;
@@ -239,7 +239,7 @@ createApp({
                         await addAllowedDir();
                         // Try loading again after adding directory
                         try {
-                            entries.value = await fetchJson('?action=entries&file=' + encodeURIComponent(path));
+                            entries.value = await fetchJson('/api/entries?file=' + encodeURIComponent(path));
                             filtered.value = entries.value;
                             applyFilters();
                             return;
@@ -274,7 +274,7 @@ createApp({
 
             try {
                 loading.value = true;
-                const res = await fetch('?action=config-add-dir', {
+                const res = await fetch('/api/config/directories', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({name: name, path: dir, type: 'local'})
@@ -299,7 +299,7 @@ createApp({
         async function cleanupDuplicates() {
             try {
                 loading.value = true;
-                const res = await fetch('?action=config-cleanup-duplicates', {method: 'POST'});
+                const res = await fetch('/api/config/cleanup-duplicates', {method: 'POST'});
                 const data = await res.json();
                 if (data.success) {
                     alert('Usunięto duplikaty: ' + data.removed);
@@ -317,7 +317,7 @@ createApp({
         async function cleanupAllowed() {
             try {
                 loading.value = true;
-                const res = await fetch('?action=config-cleanup-allowed', {method: 'POST'});
+                const res = await fetch('/api/config/cleanup-allowed', {method: 'POST'});
                 const data = await res.json();
                 if (data.success) {
                     alert('Usunięto nazwy allowed_*: ' + data.removed);
@@ -349,7 +349,7 @@ createApp({
             loading.value = true;
             Object.keys(expanded).forEach(k => delete expanded[k]);
             try {
-                entries.value = await fetchJson('?action=entries&file=' + encodeURIComponent(selectedFile.value));
+                entries.value = await fetchJson('/api/entries?file=' + encodeURIComponent(selectedFile.value));
                 applyFilters();
             } finally {
                 loading.value = false;
@@ -474,7 +474,7 @@ createApp({
         async function goToBookmark(bm) {
             showBookmarks.value = false;
             try {
-                const res = await fetch('?action=files' + (selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : ''));
+                const res = await fetch('/api/files' + (selectedDir.value ? '?dir=' + encodeURIComponent(selectedDir.value) : ''));
                 const allFiles = await res.json();
                 if (!allFiles.some(f => f.file === bm.file)) {
                     alert('Plik już nie istnieje: ' + bm.file.split('/').pop());
@@ -500,7 +500,7 @@ createApp({
 
         async function validateBookmarks() {
             try {
-                const res = await fetch('?action=files' + (selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : ''));
+                const res = await fetch('/api/files' + (selectedDir.value ? '?dir=' + encodeURIComponent(selectedDir.value) : ''));
                 const allFiles = await res.json();
                 const validPaths = new Set(allFiles.map(f => f.file));
                 const valid = bookmarks.value.filter(b => validPaths.has(b.file));
@@ -527,12 +527,13 @@ createApp({
 
         async function loadDirectories() {
             try {
-                directories.value = await fetchJson('?action=directories');
+                directories.value = await fetchJson('/api/directories');
                 syncSSHDirs();
                 if (directories.value.length) {
                     selectedDir.value = directories.value[0].key;
                 }
             } catch (e) {
+                console.error('Failed to load directories:', e);
             }
         }
 
@@ -551,7 +552,7 @@ createApp({
                     ssh_key_passphrase: sshForm.authMethod === 'key' ? sshForm.keyPassphrase : undefined,
                 };
 
-                const res = await fetch('?action=ssh-test-connection', {
+                const res = await fetch('/api/ssh/test-connection', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
@@ -677,7 +678,7 @@ createApp({
                     allFiles: conn.allFiles || false,
                 };
 
-                const res = await fetch('?action=ssh-list-files', {
+                const res = await fetch('/api/ssh/list-files', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
@@ -752,7 +753,7 @@ createApp({
                     localName: filePath.split('/').pop()
                 };
 
-                const downloadRes = await fetch('?action=ssh-download-file', {
+                const downloadRes = await fetch('/api/ssh/download-file', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)

@@ -118,4 +118,25 @@ class DirectoryControllerTest extends TestCase
         $body = json_decode((string)$result->getBody(), true);
         $this->assertIsArray($body);
     }
+
+    public function testCleanupAllowedSuccess(): void
+    {
+        $this->logConfig->method('getDirectories')->willReturn([
+            ['id' => 1, 'name' => 'allowed_test', 'path' => '/var/log'],
+            ['id' => 2, 'name' => 'normal_dir', 'path' => '/var/log/nginx']
+        ]);
+        $this->logConfig->method('deleteDirectory')->willReturn(true);
+
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/config/cleanup-allowed');
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->cleanupAllowed($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertTrue($body['success']);
+        $this->assertEquals(1, $body['removed']);
+    }
 }
