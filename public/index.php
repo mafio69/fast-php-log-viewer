@@ -5,21 +5,23 @@ if (!defined('LOG_DIR')) {
 if (!defined('EDITOR_URL')) {
     define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
 }
-if (isset($_GET['action'])) {
+
+// Check if this is an API request
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$path = parse_url($requestUri, PHP_URL_PATH);
+
+// Run Slim for all /api routes
+if (str_starts_with($path, '/api')) {
     require_once __DIR__ . '/../vendor/autoload.php';
     $app = \Mariusz\LogViewer\Bootstrap\AppBootstrap::create();
-    
-    // Check if we have a matching route in Slim, otherwise fall back to old controller
     $request = \Slim\Psr7\Factory\ServerRequestFactory::createFromGlobals();
-    $routeContext = \Slim\Routing\RouteContext::fromRequest($request);
-    
-    // We can't easily check for route existence without running the app or doing more complex stuff
-    // For now, let's just use Slim for /api routes and fallback to old controller for everything else
-    if (str_starts_with($request->getUri()->getPath(), '/api')) {
-        $app->run();
-        exit;
-    }
+    $app->run($request);
+    exit;
+}
 
+// Legacy action handling
+if (isset($_GET['action'])) {
+    require_once __DIR__ . '/../vendor/autoload.php';
     require_once __DIR__ . '/../src/Controller/LogController.php';
     exit;
 }
