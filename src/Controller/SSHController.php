@@ -50,14 +50,25 @@ class SSHController
         }
 
         try {
-            $ssh = new SSH($data);
+            // Przygotuj dane SSH z payload
+            $sshData = [
+                'ssh_host' => $data['ssh_host'] ?? '',
+                'ssh_user' => $data['ssh_user'] ?? '',
+                'ssh_port' => $data['ssh_port'] ?? 22,
+                'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
+                'ssh_password' => $data['ssh_password'] ?? null,
+                'ssh_key_path' => $data['ssh_key_path'] ?? null,
+                'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
+            ];
+
+            $ssh = new SSH($sshData);
             $ssh->connect();
 
             $finder = new RemoteLogFinder($ssh);
             $files = $finder->findAll($path);
 
             $ssh->disconnect();
-            
+
             $response->getBody()->write(json_encode(['success' => true, 'files' => $files]));
             return $response->withHeader('Content-Type', 'application/json');
         } catch (\Exception $e) {
@@ -81,15 +92,26 @@ class SSHController
         }
 
         try {
-            $ssh = new SSH($data);
+            // Przygotuj dane SSH z payload
+            $sshData = [
+                'ssh_host' => $data['ssh_host'] ?? '',
+                'ssh_user' => $data['ssh_user'] ?? '',
+                'ssh_port' => $data['ssh_port'] ?? 22,
+                'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
+                'ssh_password' => $data['ssh_password'] ?? null,
+                'ssh_key_path' => $data['ssh_key_path'] ?? null,
+                'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
+            ];
+
+            $ssh = new SSH($sshData);
             $ssh->connect();
-            
+
             $content = $ssh->readFile($path);
             $parser = new LogParser();
             $entries = $parser->parseString($content);
-            
+
             $ssh->disconnect();
-            
+
             $response->getBody()->write(json_encode(['success' => true, 'entries' => $entries]));
             return $response->withHeader('Content-Type', 'application/json');
         } catch (\Exception $e) {
@@ -113,9 +135,20 @@ class SSHController
         }
 
         try {
-            $ssh = new SSH($data);
+            // Przygotuj dane SSH z payload
+            $sshData = [
+                'ssh_host' => $data['ssh_host'] ?? '',
+                'ssh_user' => $data['ssh_user'] ?? '',
+                'ssh_port' => $data['ssh_port'] ?? 22,
+                'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
+                'ssh_password' => $data['ssh_password'] ?? null,
+                'ssh_key_path' => $data['ssh_key_path'] ?? null,
+                'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
+            ];
+
+            $ssh = new SSH($sshData);
             $ssh->connect();
-            
+
             // Walidacja bezpieczeństwa - rozmiar pliku
             $fileSize = $ssh->fileSize($path);
             if ($fileSize > 10 * 1024 * 1024) { // 10MB limit
@@ -123,30 +156,30 @@ class SSHController
                 $response->getBody()->write(json_encode(['error' => 'file_too_large']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
             }
-            
+
             // Pobierz zawartość
             $content = $ssh->readFile($path);
-            
+
             // Walidacja bezpieczeństwa - zawartość binarna
             if (\Mariusz\LogViewer\Service\SecurityService::isBinaryContent($content)) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'binary_content_not_allowed']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
             }
-            
+
             // Walidacja bezpieczeństwa - suspicious content
             if (\Mariusz\LogViewer\Service\SecurityService::containsSuspiciousContent($content)) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'suspicious_content_detected']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
             }
-            
+
             $ssh->disconnect();
-            
+
             // Zapisz lokalnie
             $localPath = DATA_DIR . '/downloaded_' . bin2hex(random_bytes(8)) . '.log';
             file_put_contents($localPath, $content);
-            
+
             $response->getBody()->write(json_encode([
                 'success' => true,
                 'localPath' => $localPath,
