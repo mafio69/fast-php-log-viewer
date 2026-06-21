@@ -51,6 +51,9 @@ class SetupController
         } catch (\InvalidArgumentException $e) {
             $response->getBody()->write(json_encode(['error' => 'unknown_step', 'step' => $step]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        } catch (\Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'internal_error', 'message' => $e->getMessage()]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
     }
 

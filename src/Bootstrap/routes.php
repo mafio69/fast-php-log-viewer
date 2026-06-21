@@ -16,9 +16,9 @@ return function (App $app): void {
     $app->post('/api/app-config', [\Mariusz\LogViewer\Controller\AppConfigController::class, 'patchConfig']);
 
     // Log API (chronione przez SetupMiddleware)
-    $app->get('/api/directories', [\Mariusz\LogViewer\Controller\LogControllerSlim::class, 'getDirectories']);
-    $app->get('/api/files', [\Mariusz\LogViewer\Controller\LogControllerSlim::class, 'getFiles']);
-    $app->get('/api/entries', [\Mariusz\LogViewer\Controller\LogControllerSlim::class, 'getEntries']);
+    $app->get('/api/directories', [\Mariusz\LogViewer\Controller\LogController::class, 'getDirectories']);
+    $app->get('/api/files', [\Mariusz\LogViewer\Controller\LogController::class, 'getFiles']);
+    $app->get('/api/entries', [\Mariusz\LogViewer\Controller\LogController::class, 'getEntries']);
 
     // Directory Config
     $app->post('/api/config/directories', [\Mariusz\LogViewer\Controller\DirectoryController::class, 'add']);

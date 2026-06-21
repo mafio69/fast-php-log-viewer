@@ -58,9 +58,9 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogControllerSlim (nowy Slim) - wstrzykuje LogConfig i ConfigManager
-        \Mariusz\LogViewer\Controller\LogControllerSlim::class => function (ContainerInterface $c) {
-            return new \Mariusz\LogViewer\Controller\LogControllerSlim(
+        // LogController (nowy Slim) - wstrzykuje LogConfig i ConfigManager
+        \Mariusz\LogViewer\Controller\LogController::class => function (ContainerInterface $c) {
+            return new \Mariusz\LogViewer\Controller\LogController(
                 $c->get(LogConfig::class),
                 $c->get(ConfigManager::class)
             );
