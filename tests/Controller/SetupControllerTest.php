@@ -118,4 +118,26 @@ class SetupControllerTest extends TestCase
         $this->assertArrayHasKey('migrated', $body);
         $this->assertArrayHasKey('warnings', $body);
     }
+
+    public function testPostStepWithUnknownFieldsIgnoresThem(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/setup/step');
+        $data = [
+            'step' => 'generate_keys',
+            'data' => [],
+            'skip' => true,
+            'unknown_field' => 'should_be_ignored',
+            'another_unknown' => 123
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->postStep($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertTrue($body['success']);
+    }
 }
