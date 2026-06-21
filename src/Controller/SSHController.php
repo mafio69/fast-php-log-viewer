@@ -177,7 +177,8 @@ class SSHController
             $ssh->disconnect();
 
             // Zapisz lokalnie
-            $localPath = DATA_DIR . '/downloaded_' . bin2hex(random_bytes(8)) . '.log';
+            $dataDir = defined('DATA_DIR') ? DATA_DIR : dirname(__DIR__, 2) . '/data';
+            $localPath = $dataDir . '/downloaded_' . bin2hex(random_bytes(8)) . '.log';
             file_put_contents($localPath, $content);
 
             $response->getBody()->write(json_encode([

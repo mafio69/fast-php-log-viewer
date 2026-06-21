@@ -95,4 +95,101 @@ class SSHControllerTest extends TestCase
         $body = json_decode((string)$result->getBody(), true);
         $this->assertArrayHasKey('error', $body);
     }
+
+    public function testTestConnectionWithValidData(): void
+    {
+        // Test z mockowanym SSH - w rzeczywistości SSH wymaga poprawnych danych
+        // Ten test sprawdza tylko czy controller obsługuje poprawny format danych
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/test-connection');
+        $data = [
+            'ssh_host' => 'test.example.com',
+            'ssh_user' => 'testuser',
+            'ssh_port' => 22,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'testpass'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->testConnection($request, $response);
+
+        // Oczekujemy błędu 500 ponieważ nie mamy rzeczywistego połączenia SSH
+        $this->assertEquals(500, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('error', $body);
+    }
+
+    public function testListFilesWithValidData(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/list-files');
+        $data = [
+            'ssh_host' => 'test.example.com',
+            'ssh_user' => 'testuser',
+            'ssh_port' => 22,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'testpass',
+            'path' => '/var/log'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->listFiles($request, $response);
+
+        // Oczekujemy błędu 500 ponieważ nie mamy rzeczywistego połączenia SSH
+        $this->assertEquals(500, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('error', $body);
+    }
+
+    public function testReadFileWithValidData(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
+        $data = [
+            'ssh_host' => 'test.example.com',
+            'ssh_user' => 'testuser',
+            'ssh_port' => 22,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'testpass',
+            'path' => '/var/log/test.log'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->readFile($request, $response);
+
+        // Oczekujemy błędu 500 ponieważ nie mamy rzeczywistego połączenia SSH
+        $this->assertEquals(500, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('error', $body);
+    }
+
+    public function testDownloadFileWithValidData(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/download-file');
+        $data = [
+            'ssh_host' => 'test.example.com',
+            'ssh_user' => 'testuser',
+            'ssh_port' => 22,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'testpass',
+            'path' => '/var/log/test.log'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->downloadFile($request, $response);
+
+        // Oczekujemy błędu 500 ponieważ nie mamy rzeczywistego połączenia SSH
+        $this->assertEquals(500, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('error', $body);
+    }
 }
