@@ -203,7 +203,7 @@ createApp({
                 }
                 return;
             }
-            const dirParam = selectedDir.value ? '&dir=' + encodeURIComponent(selectedDir.value) : '';
+            const dirParam = selectedDir.value ? '?dir=' + encodeURIComponent(selectedDir.value) : '';
             files.value = await fetchJson('/api/files' + dirParam);
             if (files.value.length) {
                 selectedFile.value = files.value[0].file;

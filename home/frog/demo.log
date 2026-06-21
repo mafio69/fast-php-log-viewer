@@ -1,0 +1,31 @@
+[2026-06-09 18:00:00] [INFO] [app/index.php:12] Application started
+[2026-06-09 18:00:01] [DEBUG] [app/config.php:45] Loading configuration from /etc/app/config.ini
+[2026-06-09 18:00:02] [INFO] [app/database.php:23] Database connection established
+[2026-06-09 18:00:03] [WARNING] [app/auth.php:67] Failed login attempt for user admin from 192.168.1.100
+[2026-06-09 18:00:04] [INFO] [app/user.php:89] User john.doe logged in successfully
+[2026-06-09 18:00:05] [ERROR] [app/payment.php:156] Payment processing failed: Transaction declined
+[2026-06-09 18:00:06] [INFO] [app/payment.php:157] Payment retry attempt #1 for order #12345
+[2026-06-09 18:00:07] [INFO] [app/payment.php:158] Payment retry attempt #2 for order #12345
+[2026-06-09 18:00:08] [INFO] [app/payment.php:159] Payment retry attempt #3 for order #12345
+[2026-06-09 18:00:09] [ERROR] [app/payment.php:160] Payment failed after 3 attempts: Insufficient funds
+[2026-06-09 18:00:10] [CRITICAL] [app/alert.php:23] Payment alert sent to admin: Order #12345 failed
+[2026-06-09 18:00:11] [INFO] [app/email.php:45] Notification email sent to customer: Order payment failed
+[2026-06-09 18:00:12] [DEBUG] [app/cache.php:34] Cache cleared for product catalog
+[2026-06-09 18:00:13] [INFO] [app/api.php:78] API request: GET /api/products from 192.168.1.50
+[2026-06-09 18:00:14] [INFO] [app/api.php:89] API response: 200 OK - 156 products returned
+[2026-06-09 18:00:15] [WARNING] [app/memory.php:12] Memory usage high: 85% (128MB used out of 150MB)
+[2026-06-09 18:00:16] [INFO] [app/garbage.php:23] Garbage collection started
+[2026-06-09 18:00:17] [DEBUG] [app/garbage.php:34] Cleaned up 45 temporary files
+[2026-06-09 18:00:18] [INFO] [app/garbage.php:45] Garbage collection completed in 1.2 seconds
+[2026-06-09 18:00:19] [INFO] [app/scheduler.php:56] Scheduled task: daily backup started
+[2026-06-09 18:00:20] [DEBUG] [app/backup.php:78] Backup progress: 25% complete
+[2026-06-09 18:00:21] [DEBUG] [app/backup.php:89] Backup progress: 50% complete
+[2026-06-09 18:00:22] [DEBUG] [app/backup.php:90] Backup progress: 75% complete
+[2026-06-09 18:00:23] [INFO] [app/backup.php:91] Daily backup completed successfully: backup_2026-06-09.tar.gz
+[2026-06-09 18:00:24] [INFO] [app/index.php:45] Request processed in 1.5 seconds
+[2026-06-09 18:00:25] [DEBUG] [app/performance.php:23] Performance metrics: avg response time 0.8s, peak 2.3s
+[2026-06-09 18:00:26] [WARNING] [app/security.php:67] Suspicious activity detected: Multiple failed logins from 192.168.1.200
+[2026-06-09 18:00:27] [ERROR] [app/security.php:78] IP 192.168.1.200 blocked due to too many failed attempts
+[2026-06-09 18:00:28] [INFO] [app/security.php:89] Security alert sent to admin: IP blocked
+[2026-06-09 18:00:29] [DEBUG] [app/session.php:34] Session cleanup: 15 expired sessions removed
+[2026-06-09 18:00:30] [INFO] [app/index.php:56] Application shutdown normal

@@ -6,7 +6,7 @@ namespace Mariusz\LogViewer\Controller;
 
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
-use Mariusz\LogViewer\Service\LogFinder;
+use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -15,7 +15,8 @@ class LogController
 {
     public function __construct(
         private readonly LogConfig $logConfig,
-        private readonly ConfigManager $configManager
+        private readonly ConfigManager $configManager,
+        private readonly LogFinderInterface $logFinder
     ) {
     }
 
@@ -61,8 +62,7 @@ class LogController
             return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
         }
 
-        $finder = new LogFinder();
-        $files = $finder->findAll($dir['path']);
+        $files = $this->logFinder->findAll($dir['path']);
 
         $result = array_map(function ($file) {
             return [

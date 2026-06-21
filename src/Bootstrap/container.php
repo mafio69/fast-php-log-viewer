@@ -7,6 +7,8 @@ namespace Mariusz\LogViewer\Bootstrap;
 use DI\ContainerBuilder;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\GlobLogFinder;
+use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\SetupWizard;
 
 return function (ContainerBuilder $containerBuilder): void {
@@ -22,6 +24,9 @@ return function (ContainerBuilder $containerBuilder): void {
         // Parameters
         'root_dir' => ROOT_DIR,
         'data_dir' => DATA_DIR,
+
+        // Service Bindings
+        LogFinderInterface::class => \DI\autowire(GlobLogFinder::class),
 
         // ConfigManager - singleton
         ConfigManager::class => function () {
@@ -58,11 +63,12 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogController (nowy Slim) - wstrzykuje LogConfig i ConfigManager
+        // LogController (nowy Slim) - wstrzykuje LogConfig, ConfigManager i LogFinderInterface
         \Mariusz\LogViewer\Controller\LogController::class => function ($c) {
             return new \Mariusz\LogViewer\Controller\LogController(
                 $c->get(LogConfig::class),
-                $c->get(ConfigManager::class)
+                $c->get(ConfigManager::class),
+                $c->get(LogFinderInterface::class)
             );
         },
 
