@@ -107,6 +107,21 @@ class LogControllerTest extends TestCase
         $this->assertEquals('missing_dir', $body['error']);
     }
 
+    public function testGetFilesReturnsErrorWhenMissingDirWithoutQueryParams(): void
+    {
+        // Test bez żadnych query params - powinien zwrócić missing_dir
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('GET', '/api/files');
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->getFiles($request, $response);
+
+        $this->assertEquals(400, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('missing_dir', $body['error']);
+    }
+
     public function testGetFilesReturnsErrorWhenDirectoryNotFound(): void
     {
         $this->logConfig->method('getDirectories')->willReturn([
