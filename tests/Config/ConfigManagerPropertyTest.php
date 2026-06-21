@@ -186,4 +186,58 @@ class ConfigManagerPropertyTest extends TestCase
             $this->assertEquals($expected, $this->configManager->isSetupComplete(), "Failed for input: " . json_encode($input));
         });
     }
+
+    /**
+     * Property 8: Setup is complete for any complete/skipped combination
+     */
+    public function testSetupIsCompleteForAnyCompleteSkippedCombination(): void
+    {
+        $this->forAll(
+            \Eris\Generator\associative([
+                'generate_keys' => \Eris\Generator\oneOf(
+                    \Eris\Generator\constant('complete'),
+                    \Eris\Generator\constant('skipped'),
+                    \Eris\Generator\constant('pending')
+                ),
+                'ssh_config' => \Eris\Generator\oneOf(
+                    \Eris\Generator\constant('complete'),
+                    \Eris\Generator\constant('skipped'),
+                    \Eris\Generator\constant('pending')
+                ),
+                'local_directories' => \Eris\Generator\oneOf(
+                    \Eris\Generator\constant('complete'),
+                    \Eris\Generator\constant('skipped'),
+                    \Eris\Generator\constant('pending')
+                ),
+                'finalize' => \Eris\Generator\oneOf(
+                    \Eris\Generator\constant('complete'),
+                    \Eris\Generator\constant('skipped'),
+                    \Eris\Generator\constant('pending')
+                )
+            ])
+        )
+        ->then(function ($setupSteps) {
+            // Sprawdź czy setup jest kompletny tylko gdy wszystkie kroki są complete lub skipped
+            $allCompleteOrSkipped = true;
+            foreach ($setupSteps as $step => $status) {
+                if ($status === 'pending') {
+                    $allCompleteOrSkipped = false;
+                    break;
+                }
+            }
+            
+            // Ustaw setup_complete zgodnie z logiką kroków
+            $config = [
+                'setup_steps' => $setupSteps,
+                'setup_complete' => $allCompleteOrSkipped
+            ];
+            
+            $this->configManager->saveConfig($config);
+            
+            // Sprawdź czy isSetupComplete zwraca poprawną wartość
+            $this->assertEquals($allCompleteOrSkipped, $this->configManager->isSetupComplete(), 
+                "isSetupComplete() should return " . ($allCompleteOrSkipped ? 'true' : 'false') . 
+                " for steps: " . json_encode($setupSteps));
+        });
+    }
 }
