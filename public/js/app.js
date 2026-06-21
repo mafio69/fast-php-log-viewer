@@ -674,6 +674,7 @@ createApp({
                     ssh_auth_method: conn.authMethod,
                     ssh_password: password || undefined,
                     ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
+                    ssh_key_passphrase: conn.keyPassphrase || undefined,
                     path: conn.remotePath,
                     allFiles: conn.allFiles || false,
                 };
@@ -749,8 +750,9 @@ createApp({
                     ssh_auth_method: conn.authMethod,
                     ssh_password: password || undefined,
                     ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
-                    remotePath: filePath,
-                    localName: filePath.split('/').pop()
+                    ssh_key_passphrase: conn.keyPassphrase || undefined,
+                    path: filePath,
+                    allFiles: conn.allFiles || false
                 };
 
                 const downloadRes = await fetch('/api/ssh/download-file', {
