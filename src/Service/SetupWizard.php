@@ -61,7 +61,7 @@ class SetupWizard
         return match ($step) {
             'generate_keys' => 'Backup konfiguracji nie będzie szyfrowany. Dane w pliku backup będą przechowywane w postaci jawnej.',
             'ssh_config' => 'Funkcja SSH jest wyłączona. Aby przeglądać logi zdalne, musisz skonfigurować połączenia SSH.',
-            'local_directories' => 'Brak skonfigurowanych katalogów lokalnych. Możesz dodać katalogi później w ustawieniach.',
+            'local_directories' => 'Brak skonfigurowanych katalogów lokalnych. Możesz dodać katalogi później w ustawieniach. Aplikacja będzie szukać logów w katalogu /home/mariusz/PhpstormProjects/fast-php-log-viewer/logs.',
             'finalize' => 'Finalizacja setupu zostanie pominięta. Konfiguracja może być niekompletna.',
             default => 'Ten krok zostanie pominięty.',
         };
