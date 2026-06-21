@@ -328,4 +328,14 @@ class SetupWizardTest extends TestCase
         $this->assertArrayHasKey('warning', $result);
         $this->assertStringContainsString('nie będzie szyfrowany', $result['warning']);
     }
+
+    public function testFinalizeMarksSetsupComplete(): void
+    {
+        $result = $this->wizard->processStep('finalize', [], false);
+
+        $this->assertTrue($result['success']);
+        $this->assertTrue($result['setup_complete']);
+        $this->assertNull($result['next_step']);
+        $this->assertTrue($this->configManager->isSetupComplete());
+    }
 }
