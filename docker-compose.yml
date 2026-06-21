@@ -8,11 +8,11 @@ services:
     env_file:
       - .env
       - .config
-    ports: # map host:container
+    ports:
       - "9123:80"
-    volumes: # map host:container
+    volumes:
       - .:/var/www/html
       - ./docker-logs/nginx:/var/log/nginx
-      - /var/log:/host/var/log
-      - ~/.ssh:/var/www/.ssh
-      - .${LOG_DIR}:/var/www/html/logs
+      - ~/.ssh:/home/www-data/.ssh
+      - ./.logs:/var/www/html/logs
+      - ./data:/var/www/html/data

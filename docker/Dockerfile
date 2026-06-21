@@ -4,7 +4,9 @@ FROM ${BASE_IMAGE}
 WORKDIR /var/www/html
 
 RUN mkdir -p /var/www/html/data \
-    && chown -R www-data:www-data /var/www/html/data
+    && chown -R www-data:www-data /var/www/html/data \
+    && mkdir -p /var/log/nginx /run/nginx /var/lib/nginx/logs \
+    && chown -R www-data:www-data /var/log/nginx /run/nginx /var/lib/nginx/logs
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/start.sh /usr/local/bin/start.sh

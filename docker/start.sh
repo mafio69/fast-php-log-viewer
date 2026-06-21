@@ -1,18 +1,19 @@
 #!/bin/sh
 set -eu
 
-mkdir -p /var/log/nginx /run/nginx
-
-touch /var/log/nginx/access.log /var/log/nginx/error.log
-chown -R nginx:nginx /var/log/nginx /run/nginx || true
+# Create log files with proper ownership
+touch /var/log/nginx/access.log /var/log/nginx/error.log 2>/dev/null || true
+chmod 666 /var/log/nginx/access.log /var/log/nginx/error.log 2>/dev/null || true
 
 # Add www-data to adm group for log access
 addgroup www-data adm 2>/dev/null || true
 
 # Ensure .ssh directory exists and has correct owner (if not a read-only mount)
-mkdir -p /var/www/.ssh
-chown -R www-data:www-data /var/www/.ssh || true
-chmod 700 /var/www/.ssh || true
+# Skip this if we don't have access to the host .ssh directory
+if [ -d "/var/www/.ssh" ]; then
+    chown -R www-data:www-data /var/www/.ssh || true
+    chmod 700 /var/www/.ssh || true
+fi
 
 echo "[start] Testing nginx configuration..."
 nginx -t

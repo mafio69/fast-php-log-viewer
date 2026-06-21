@@ -12,3 +12,4 @@ docker-compose.yml
 .env.example
 .env.local
 phpunit.xml
+.ssh
