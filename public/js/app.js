@@ -521,6 +521,38 @@ createApp({
             }
         }
 
+        async function proceedStep(skip) {
+            try {
+                const body = {
+                    step: currentSetupStep.value,
+                    data: {...setupStepData},
+                    skip: skip
+                };
+                const res = await fetch('/api/setup/step', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.warning) {
+                    setupWarning.value = data.warning;
+                } else {
+                    setupWarning.value = '';
+                }
+                if (data.next_step) {
+                    currentSetupStep.value = data.next_step;
+                    Object.keys(setupStepData).forEach(k => delete setupStepData[k]);
+                }
+                setupSkipConfirm.value = false;
+                if (data.setup_complete) {
+                    showSetupWizard.value = false;
+                    init();
+                }
+            } catch (e) {
+                alert('Błąd: ' + e.message);
+            }
+        }
+
         async function init() {
             try {
                 const status = await fetchJson('/api/setup/status');
@@ -947,6 +979,7 @@ createApp({
             cleanupAllowed,
             loadDirectories,
             refreshSSHDir,
+            proceedStep,
         };
     }
 }).mount('#app');
