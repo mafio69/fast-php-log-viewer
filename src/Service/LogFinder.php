@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Service;
 
-/**
- * Finds log files produced by fast-php-logger (default structure: logDir/Y/m/Y-m-d.log).
- */
 class LogFinder
 {
     private string $logDir;
@@ -25,11 +22,6 @@ class LogFinder
         return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
     }
 
-    /**
-     * Returns all log files sorted newest first.
-     *
-     * @return array<int, array{path: string, date: string, size: int}>
-     */
     public function findAll(): array
     {
         $dir   = self::normalizePath($this->logDir);
@@ -64,7 +56,6 @@ class LogFinder
     public static function normalizePath(string $path): string
     {
         $path = str_replace('\\', '/', $path);
-        // Remove double slashes and trailing slash
         $path = preg_replace('/\/+/', '/', $path);
         return rtrim($path, '/');
     }
