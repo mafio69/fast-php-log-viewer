@@ -514,7 +514,7 @@ createApp({
 
         async function init() {
             try {
-                directories.value = await fetchJson('?action=directories');
+                directories.value = await fetchJson('/api/directories');
                 syncSSHDirs();
                 if (directories.value.length) {
                     selectedDir.value = directories.value[0].key;
