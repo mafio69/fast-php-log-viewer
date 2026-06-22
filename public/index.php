@@ -6,25 +6,36 @@ if (!defined('EDITOR_URL')) {
     define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
 }
 
-// Check if this is an API request
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = parse_url($requestUri, PHP_URL_PATH);
 
-// Run Slim for all /api routes
-if (str_starts_with($path, '/api')) {
+// Bootstrap Slim once
+$bootstrapSlim = function (): void {
     require_once __DIR__ . '/../vendor/autoload.php';
     $app = \Mariusz\LogViewer\Bootstrap\AppBootstrap::create();
     $request = \Slim\Psr7\Factory\ServerRequestFactory::createFromGlobals();
     $app->run($request);
     exit;
+};
+
+use Mariusz\LogViewer\Routing\LegacyRouter;
+
+// Handle ?action= legacy requests (kompatybilność wsteczna)
+if (isset($_GET['action'])) {
+    $action = $_GET['action'];
+    if (LegacyRouter::hasAction($action)) {
+        $_SERVER['REQUEST_URI'] = LegacyRouter::rewriteRequestUri($action, $_GET);
+        $bootstrapSlim();
+    }
+    // Unknown action — let Slim handle it (will 404)
+    $bootstrapSlim();
 }
 
-// Legacy action handling
-if (isset($_GET['action'])) {
-    require_once __DIR__ . '/../vendor/autoload.php';
-    require_once __DIR__ . '/../src/Controller/LogController.php';
-    exit;
+// Run Slim for all /api routes
+if (str_starts_with($path, '/api')) {
+    $bootstrapSlim();
 }
+
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');

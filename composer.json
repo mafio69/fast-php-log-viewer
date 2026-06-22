@@ -27,7 +27,8 @@
             "Mariusz\\LogViewer\\Repository\\": "src/Repository/",
             "Mariusz\\LogViewer\\Config\\": "src/Config/",
             "Mariusz\\LogViewer\\Middleware\\": "src/Middleware/",
-            "Mariusz\\LogViewer\\Bootstrap\\": "src/Bootstrap/"
+            "Mariusz\\LogViewer\\Bootstrap\\": "src/Bootstrap/",
+            "Mariusz\\LogViewer\\Routing\\": "src/Routing/"
         }
     },
     "autoload-dev": {
