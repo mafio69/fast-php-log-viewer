@@ -476,7 +476,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 ### 11. Frontend — migracja URL-i i logika wizarda w `app.js`
 
-- [ ] 11.1 Zaktualizuj URL-e API w `public/js/app.js` z `?action=X` na `/api/X`
+- [x] 11.1 Zaktualizuj URL-e API w `public/js/app.js` z `?action=X` na `/api/X`
     - Plik: `public/js/app.js`
     - Zamień wszystkie wywołania `fetch('?action=files', ...)` → `fetch('/api/files', ...)`
     - Zamień `?action=entries` → `/api/entries`
@@ -490,7 +490,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Zamień `?action=ssh-download-file` → `/api/ssh/download-file`
     - _Wymagania: 6.5_
 - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
-- [ ] 11.2 Dodaj stan Vue dla wizarda i logikę sprawdzenia setupu w `init()`
+- [x] 11.2 Dodaj stan Vue dla wizarda i logikę sprawdzenia setupu w `init()`
     - Plik: `public/js/app.js`
     - Dodaj reaktywne zmienne w `setup()`:
       ```javascript
@@ -510,7 +510,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - Zastąp `fetchJson('?action=directories')` → `fetchJson('/api/directories')`
     - _Wymagania: 1.1, 1.2, 1.3, 6.5_
 - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
-- [ ] 11.3 Dodaj funkcje wizarda i jednorazową migrację SSH w `app.js`
+- [x] 11.3 Dodaj funkcje wizarda i jednorazową migrację SSH w `app.js`
     - Plik: `public/js/app.js`
     - Dodaj funkcję `migrateSSHIfNeeded()`:
         - Sprawdź `localStorage.getItem('fplv_ssh_connections')`
@@ -525,7 +525,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Wywołaj `migrateSSHIfNeeded()` przed pierwszym ładowaniem katalogów w `init()`
     - _Wymagania: 7.1, 7.4, 8.3, 8.4_
 - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
-- [ ] 11.4 Dodaj HTML wizarda konfiguracji do `public/index.php` (SPA template)
+- [x] 11.4 Dodaj HTML wizarda konfiguracji do `public/index.php` (SPA template)
     - Plik: `public/index.php` — sekcja HTML Vue app
     - Dodaj div wizarda `v-if="showSetupWizard"` przed głównym layoutem:
         - Krok `generate_keys`: przycisk "Generuj klucze" i "Pomiń" z potwierdzeniem

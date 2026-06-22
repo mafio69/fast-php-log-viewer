@@ -235,7 +235,6 @@ createApp({
             try {
                 loading.value = true;
                 const url = '/api/entries?file=' + encodeURIComponent(path);
-                console.log('Loading file from:', url);
                 entries.value = await fetchJson(url);
                 filtered.value = entries.value;
                 applyFilters();
@@ -558,8 +557,11 @@ createApp({
                 const status = await fetchJson('/api/setup/status');
                 if (status.setup_required) {
                     showSetupWizard.value = true;
-                    if (status.steps) {
+                    if (status.steps && status.steps.length > 0) {
                         setupSteps.value = status.steps;
+                        currentSetupStep.value = status.steps[0].name;
+                    } else {
+                        currentSetupStep.value = 'generate_keys';
                     }
                     return;
                 }
