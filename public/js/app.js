@@ -60,6 +60,15 @@ createApp({
         const tablePageSize = ref(100);
         const TABLE_PAGE_SIZES = [50, 100, 250, 500, 1000];
 
+        // Setup Wizard State
+        const showSetupWizard = ref(false);
+        const setupSteps = ref([]);
+        const currentSetupStep = ref('');
+        const setupSkipConfirm = ref(false);
+        const setupStepData = reactive({});
+        const setupWarning = ref('');
+        const sshEnabled = ref(true);
+
         // SSH State
         const showSSHModal = ref(false);
         const showPasswordModal = ref(false);
@@ -514,6 +523,24 @@ createApp({
 
         async function init() {
             try {
+                const status = await fetchJson('/api/setup/status');
+                if (status.setup_required) {
+                    showSetupWizard.value = true;
+                    if (status.steps) {
+                        setupSteps.value = status.steps;
+                    }
+                    return;
+                }
+            } catch (e) {
+            }
+
+            try {
+                const config = await fetchJson('/api/app-config');
+                sshEnabled.value = config.ssh_enabled ?? true;
+            } catch (e) {
+            }
+
+            try {
                 directories.value = await fetchJson('/api/directories');
                 syncSSHDirs();
                 if (directories.value.length) {
@@ -869,6 +896,13 @@ createApp({
             setTablePageSize,
             tablePrevPage,
             tableNextPage,
+            showSetupWizard,
+            setupSteps,
+            currentSetupStep,
+            setupSkipConfirm,
+            setupStepData,
+            setupWarning,
+            sshEnabled,
             showSSHModal,
             showPasswordModal,
             showManualFileModal,
