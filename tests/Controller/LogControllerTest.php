@@ -7,6 +7,7 @@ namespace Mariusz\LogViewer\Tests\Controller;
 use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\LogFinderInterface;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -15,7 +16,8 @@ class LogControllerTest extends TestCase
 {
     private LogController $controller;
     private ConfigManager $configManager;
-    private LogConfig $logConfig;
+    private $logConfig; // Mock
+    private $logFinder; // Mock
     private string $tempConfig;
     private string $tempEnv;
     private string $tempDb;
@@ -28,7 +30,13 @@ class LogControllerTest extends TestCase
 
         $this->configManager = new ConfigManager($this->tempConfig, $this->tempEnv);
         $this->logConfig = $this->createMock(LogConfig::class);
-        $this->controller = new LogController($this->logConfig, $this->configManager);
+        $this->logFinder = $this->createMock(LogFinderInterface::class);
+        
+        $this->controller = new LogController(
+            $this->logConfig,
+            $this->configManager,
+            $this->logFinder
+        );
     }
 
     protected function tearDown(): void

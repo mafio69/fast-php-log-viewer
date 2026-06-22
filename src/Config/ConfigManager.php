@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Config;
 
+use InvalidArgumentException;
+use JsonException;
+use RuntimeException;
+use Throwable;
+
 class ConfigManager
 {
     private bool $loggingEnabled = true;
@@ -37,7 +42,7 @@ class ConfigManager
         try {
             $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
             return isset($data['setup_complete']) && $data['setup_complete'] === true;
-        } catch (\JsonException) {
+        } catch (JsonException) {
             return false;
         }
     }
@@ -135,9 +140,9 @@ class ConfigManager
 
         try {
             return json_decode($content, true, 512, JSON_THROW_ON_ERROR) ?: [];
-        } catch (\JsonException $e) {
+        } catch (JsonException $e) {
             if ($this->loggingEnabled) {
-                error_log("Invalid JSON in config file: {$this->configPath}. Error: " . $e->getMessage());
+                error_log("Invalid JSON in config file: {$this->configPath}. Error: ".$e->getMessage());
             }
             return [];
         }
@@ -181,8 +186,11 @@ class ConfigManager
         $perms = fileperms($this->configPath) & 0777;
         if ($perms > 0640) {
             if ($this->loggingEnabled) {
-                $errorLogPath = DATA_DIR . '/php_errors.log';
-                $message = "[" . date('Y-m-d H:i:s') . "] WARNING: Config file permissions are too open: " . sprintf('%o', $perms) . ". Recommended: 0600\n";
+                $errorLogPath = DATA_DIR.'/php_errors.log';
+                $message = "[".date('Y-m-d H:i:s')."] WARNING: Config file permissions are too open: ".sprintf(
+                        '%o',
+                        $perms
+                    ).". Recommended: 0600\n";
                 @file_put_contents($errorLogPath, $message, FILE_APPEND);
             }
         }
@@ -199,7 +207,7 @@ class ConfigManager
             $json = json_encode($data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
             
             if (file_put_contents($tmpPath, $json) === false) {
-                throw new \RuntimeException("Failed to write temporary config file: $tmpPath");
+                throw new RuntimeException("Failed to write temporary config file: $tmpPath");
             }
 
             // Weryfikacja zapisanego pliku
@@ -207,16 +215,16 @@ class ConfigManager
             json_decode($verifyContent, true, 512, JSON_THROW_ON_ERROR);
 
             if (!rename($tmpPath, $path)) {
-                throw new \RuntimeException("Failed to rename temporary config file to: $path");
+                throw new RuntimeException("Failed to rename temporary config file to: $path");
             }
 
             chmod($path, 0600);
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             if (file_exists($tmpPath)) {
                 @unlink($tmpPath);
             }
-            throw new \RuntimeException("Atomic JSON write failed for $path: " . $e->getMessage());
+            throw new RuntimeException("Atomic JSON write failed for $path: " . $e->getMessage());
         }
     }
 
@@ -275,7 +283,7 @@ class ConfigManager
     public function saveEncryptionKeyToEnv(string $hexKey): bool
     {
         if (!preg_match('/^[0-9a-f]{64}$/i', $hexKey)) {
-            throw new \InvalidArgumentException("Invalid encryption key format. Expected 64-char hex.");
+            throw new InvalidArgumentException("Invalid encryption key format. Expected 64-char hex.");
         }
 
         $content = '';

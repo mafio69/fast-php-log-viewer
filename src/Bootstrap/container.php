@@ -7,9 +7,16 @@ namespace Mariusz\LogViewer\Bootstrap;
 use DI\ContainerBuilder;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Controller\AppConfigController;
+use Mariusz\LogViewer\Controller\DirectoryController;
+use Mariusz\LogViewer\Controller\LogController;
+use Mariusz\LogViewer\Controller\SetupController;
+use Mariusz\LogViewer\Controller\SSHController;
+use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\SetupWizard;
+use function DI\autowire;
 
 return function (ContainerBuilder $containerBuilder): void {
     // Define constants as container parameters
@@ -26,7 +33,7 @@ return function (ContainerBuilder $containerBuilder): void {
         'data_dir' => DATA_DIR,
 
         // Service Bindings
-        LogFinderInterface::class => \DI\autowire(GlobLogFinder::class),
+        LogFinderInterface::class => autowire(GlobLogFinder::class),
 
         // ConfigManager - singleton
         ConfigManager::class => function () {
@@ -50,22 +57,22 @@ return function (ContainerBuilder $containerBuilder): void {
         },
 
         // SetupController - wstrzykuje SetupWizard
-        \Mariusz\LogViewer\Controller\SetupController::class => function ($c) {
-            return new \Mariusz\LogViewer\Controller\SetupController(
+        SetupController::class => function ($c) {
+            return new SetupController(
                 $c->get(SetupWizard::class)
             );
         },
 
         // AppConfigController - wstrzykuje ConfigManager
-        \Mariusz\LogViewer\Controller\AppConfigController::class => function ($c) {
-            return new \Mariusz\LogViewer\Controller\AppConfigController(
+        AppConfigController::class => function ($c) {
+            return new AppConfigController(
                 $c->get(ConfigManager::class)
             );
         },
 
         // LogController (nowy Slim) - wstrzykuje LogConfig, ConfigManager i LogFinderInterface
-        \Mariusz\LogViewer\Controller\LogController::class => function ($c) {
-            return new \Mariusz\LogViewer\Controller\LogController(
+        LogController::class => function ($c) {
+            return new LogController(
                 $c->get(LogConfig::class),
                 $c->get(ConfigManager::class),
                 $c->get(LogFinderInterface::class)
@@ -73,20 +80,20 @@ return function (ContainerBuilder $containerBuilder): void {
         },
 
         // DirectoryController - wstrzykuje LogConfig
-        \Mariusz\LogViewer\Controller\DirectoryController::class => function ($c) {
-            return new \Mariusz\LogViewer\Controller\DirectoryController(
+        DirectoryController::class => function ($c) {
+            return new DirectoryController(
                 $c->get(LogConfig::class)
             );
         },
 
         // SSHController - brak zależności
-        \Mariusz\LogViewer\Controller\SSHController::class => function ($c) {
-            return new \Mariusz\LogViewer\Controller\SSHController();
+        SSHController::class => function ($c) {
+            return new SSHController();
         },
 
         // SetupMiddleware - wstrzykuje ConfigManager
-        \Mariusz\LogViewer\Middleware\SetupMiddleware::class => function ($c) {
-            return new \Mariusz\LogViewer\Middleware\SetupMiddleware(
+        SetupMiddleware::class => function ($c) {
+            return new SetupMiddleware(
                 $c->get(ConfigManager::class)
             );
         },

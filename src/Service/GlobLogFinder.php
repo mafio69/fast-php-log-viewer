@@ -14,8 +14,8 @@ class GlobLogFinder implements LogFinderInterface
 
         // Używamy glob do znalezienia plików .log i .php
         $allFilePaths = array_merge(
-            glob($path . '/*.log') ?: [],
-            glob($path . '/*.php') ?: []
+            glob($path.'/*.log') ?: [],
+            glob($path.'/*.php') ?: []
         );
 
         $files = [];
