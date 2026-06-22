@@ -10,13 +10,7 @@
 /logs/php_errors.log
 /docker-logs/
 *.backup
-/config.yaml.yml
-/.kiro/
-/.devin/
-/.junie/
 /.ai/
-/AIREADME.md
 /TODO.md
 /TODO_JUTRO.md
 /docs/TODO-*.md
-/docs/przykazaniaAi.txt
