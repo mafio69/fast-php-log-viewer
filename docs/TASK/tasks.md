@@ -12,7 +12,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 
 ### 1. Infrastruktura — zależności i autoloading
 
-- [ ] 1.1 Zaktualizuj `composer.json` o nowe zależności
+- [x] 1.1 Zaktualizuj `composer.json` o nowe zależności
     - Dodaj do sekcji `require`: `"slim/slim": "^4.12"`, `"slim/psr7": "^1.7"`, `"php-di/php-di": "^7.0"`,
       `"giorgiosironi/eris": "^0.14"` (w `require-dev`)
     - Dodaj namespace `"Mariusz\\LogViewer\\Middleware\\"` → `"src/Middleware/"` do `autoload.psr-4`
@@ -20,7 +20,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Uruchom `composer install` (lub zaktualizuj `composer.lock`)
     - _Wymagania: wszystkie wymagania (prerequisite)_
 
-- [ ] 1.2 Utwórz katalogi struktury projektu
+- [x ] 1.2 Utwórz katalogi struktury projektu
     - Utwórz katalog `src/Middleware/` (plik `.gitkeep` jeśli pusty)
     - Utwórz katalog `src/Bootstrap/`
     - Utwórz katalog `tests/Config/`
@@ -31,7 +31,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 
 ### 2. Backend — ConfigManager
 
-- [ ] 2.1 Zaimplementuj klasę `src/Config/ConfigManager.php`
+- [x ] 2.1 Zaimplementuj klasę `src/Config/ConfigManager.php`
     - Plik: `src/Config/ConfigManager.php`, namespace `Mariusz\LogViewer\Config`
     - Konstruktor: `__construct(private readonly string $configPath, private readonly string $envPath)`
       gdzie `$configPath = DATA_DIR . '/app_config.json'`, `$envPath = ROOT_DIR . '/.env'`
@@ -44,14 +44,14 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 1.1, 1.2, 1.3, 1.4_
     - Napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 2.2 Zaimplementuj generatory kluczy w `ConfigManager`
+- [x ] 2.2 Zaimplementuj generatory kluczy w `ConfigManager`
     - Metoda `generateInstallationId(): string` — UUID v4 przez `random_bytes(16)` z formatowaniem
       `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` (wersja 4 z bitem variant `[89ab]`)
     - Metoda `generateEncryptionKey(): string` — `bin2hex(random_bytes(32))` → 64 znaki lowercase hex
     - _Wymagania: 2.1, 2.2_
    - Napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 2.3 Napisz testy property-based dla generatorów kluczy
+- [x ]* 2.3 Napisz testy property-based dla generatorów kluczy
 
 - Plik: `tests/Config/ConfigManagerPropertyTest.php`, użyj `Eris\TestTrait`
 - **Property 2: Generated InstallationIds are valid UUID v4**
@@ -68,7 +68,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 
-- [ ] 2.4 Zaimplementuj odczyt/zapis konfiguracji w `ConfigManager`
+- [x ] 2.4 Zaimplementuj odczyt/zapis konfiguracji w `ConfigManager`
     - Metoda `getConfig(): array` — wczytuje `app_config.json`; jeśli plik nie istnieje lub JSON
       uszkodzony, zwraca pustą tablicę domyślną i loguje błąd (nie rzuca wyjątku)
     - Metoda `getPublicConfig(): array` — wywołuje `getConfig()` a następnie `filterSensitiveFields()`
@@ -84,7 +84,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 6.1, 6.2, 6.3, 9.1, 9.2, 9.3, 9.5_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 2.5 Napisz testy property-based dla round-trip serializacji i uprawnień
+- [x ]* 2.5 Napisz testy property-based dla round-trip serializacji i uprawnień
 
 - Plik: `tests/Config/ConfigManagerPropertyTest.php`
 - **Property 4: Config serialization is reversible**
@@ -106,7 +106,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - **Validates: Requirements 2.6, 9.1**
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 2.6 Napisz testy property-based dla detekcji stanu setupu
+- [x ]* 2.6 Napisz testy property-based dla detekcji stanu setupu
 
 - Plik: `tests/Config/ConfigManagerPropertyTest.php`
 - **Property 1: Setup detection is always correct**
@@ -118,7 +118,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
 
-- [ ] 2.7 Zaimplementuj obsługę SSH Profiles i klucza szyfrowania w `ConfigManager`
+- [x ] 2.7 Zaimplementuj obsługę SSH Profiles i klucza szyfrowania w `ConfigManager`
     - Metoda `saveSSHProfile(array $profileData): void` — wywołuje `filterSensitiveFields()` przed
       zapisem; zapisuje profil w tablicy `ssh_profiles` w `app_config.json` z ID `profile_N`
     - Metoda `getSSHProfiles(): array` — zwraca `ssh_profiles` bez pól wrażliwych
@@ -130,7 +130,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 4.3, 5.1, 5.2, 5.3, 5.4, 6.4, 9.2_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 2.8 Napisz testy jednostkowe dla `ConfigManager` (edge cases)
+- [X]* 2.8 Napisz testy jednostkowe dla `ConfigManager` (edge cases)
 
 - Plik: `tests/Config/ConfigManagerTest.php`
 - `testIsSetupCompleteReturnsFalseWhenFileDoesNotExist()`
@@ -144,7 +144,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - _Wymagania: 2.5, 2.6, 4.3, 6.2, 9.1, 9.2, 9.5_
 - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 
+- [X] 
     3. Checkpoint — testy ConfigManager
 
     - Upewnij się, że wszystkie testy `ConfigManagerTest` i `ConfigManagerPropertyTest` przechodzą.
@@ -153,7 +153,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 
 ### 4. Backend — SetupWizard
 
-- [ ] 4.1 Zaimplementuj klasę `src/Service/SetupWizard.php`
+- [x ] 4.1 Zaimplementuj klasę `src/Service/SetupWizard.php`
     - Plik: `src/Service/SetupWizard.php`, namespace `Mariusz\LogViewer\Service`
     - Konstruktor: `__construct(private readonly ConfigManager $configManager, private readonly LogConfig $logConfig)`
     - Stała: `public const STEPS = ['generate_keys', 'ssh_config', 'local_directories', 'finalize']`
@@ -169,7 +169,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 3.1, 3.2, 3.4, 8.1, 8.2_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 4.2 Zaimplementuj logikę kroków wizarda w `SetupWizard`
+- [x ] 4.2 Zaimplementuj logikę kroków wizarda w `SetupWizard`
     - Metoda `processStep(string $step, array $data, bool $skip): array` — dispatcher do prywatnych
       metod `processGenerateKeys()`, `processSSHConfig()`, `processLocalDirectories()`,
       `processFinalize()`; dla nieznanego kroku rzuca `\InvalidArgumentException`
@@ -194,7 +194,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 3.2, 3.3, 3.5, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.5, 8.1_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 4.3 Zaimplementuj migrację SSH w `SetupWizard`
+- [ x] 4.3 Zaimplementuj migrację SSH w `SetupWizard`
     - Metoda `migrateSSHFromLocalStorage(array $connections): array` — iteruje po połączeniach,
       dla każdego: sprawdza pola `keyPath` (mapuje na `ssh_key_path_original`, `ssh_key_path_warning`),
       wywołuje `configManager->saveSSHProfile()`; zwraca `{migrated: <int>, warnings: [...]}`
@@ -202,7 +202,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 7.1, 7.2, 7.3, 7.5_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 2.9 Napisz testy property-based dla kroków wizarda
+- [x]* 2.9 Napisz testy property-based dla kroków wizarda
 
 - Plik: `tests/Config/ConfigManagerPropertyTest.php`
 - **Property 7: Every skipped step produces a warning**
@@ -217,7 +217,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - **Validates: Requirements 3.4, 3.5**
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 4.4 Napisz testy property-based dla walidacji SSH i filtrowania katalogów
+- [x ]* 4.4 Napisz testy property-based dla walidacji SSH i filtrowania katalogów
 
 - Plik: `tests/Config/ConfigManagerPropertyTest.php`
 - **Property 9: SSH validation rejects data without required fields**
@@ -236,7 +236,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - **Validates: Requirements 4.5**
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 4.5 Napisz testy jednostkowe dla `SetupWizard`
+- [x]* 4.5 Napisz testy jednostkowe dla `SetupWizard`
 
 - Plik: `tests/Service/SetupWizardTest.php`
 - `testProcessGenerateKeysReturnsEncryptionKeyDisplay()`
@@ -251,7 +251,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - _Wymagania: 3.2, 3.3, 4.1, 4.4, 5.1, 5.5, 7.3, 7.5, 8.2_
 - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 
+- [x ] 
     5. Checkpoint — testy SetupWizard
 
     - Upewnij się, że wszystkie testy `SetupWizardTest` przechodzą.
@@ -260,7 +260,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 
 ### 6. Backend — Bootstrap Slim Framework 4
 
-- [ ] 6.1 Utwórz plik `src/Bootstrap/container.php` z definicjami PHP-DI
+- [x ] 6.1 Utwórz plik `src/Bootstrap/container.php` z definicjami PHP-DI
     - Plik: `src/Bootstrap/container.php`
     - Zdefiniuj bindingi dla:
         - `ConfigManager::class` — singleton z `configPath = DATA_DIR . '/app_config.json'`
@@ -277,7 +277,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: prerequisite dla wszystkich kontrolerów_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 6.2 Utwórz plik `src/Bootstrap/routes.php` z routingiem
+- [x ] 6.2 Utwórz plik `src/Bootstrap/routes.php` z routingiem
     - Plik: `src/Bootstrap/routes.php`
     - Zarejestruj wszystkie trasy zgodnie z mapą z design.md:
         - `GET  /api/setup/status` → `[SetupController::class, 'getStatus']`
@@ -300,7 +300,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: wszystkie wymagania dot. API_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 6.3 Utwórz plik `src/Bootstrap/app.php` z bootstrapem Slim App
+- [x ] 6.3 Utwórz plik `src/Bootstrap/app.php` z bootstrapem Slim App
     - Plik: `src/Bootstrap/app.php`
     - Zbuduj kontener: `ContainerBuilder` → `addDefinitions(container.php)` → `build()`
     - `AppFactory::setContainer($container); $app = AppFactory::create()`
@@ -312,7 +312,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 
 ### 7. Backend — SetupMiddleware
 
-- [ ] 7.1 Zaimplementuj `src/Middleware/SetupMiddleware.php`
+- [x ] 7.1 Zaimplementuj `src/Middleware/SetupMiddleware.php`
     - Plik: `src/Middleware/SetupMiddleware.php`, namespace `Mariusz\LogViewer\Middleware`
     - Implementuje `Psr\Http\Server\MiddlewareInterface`
     - Konstruktor: `__construct(private readonly ConfigManager $configManager)`
@@ -325,7 +325,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 1.4_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ]* 7.2 Napisz testy jednostkowe dla `SetupMiddleware`
+- [x]* 7.2 Napisz testy jednostkowe dla `SetupMiddleware`
 
 - Plik: `tests/Middleware/SetupMiddlewareTest.php`
 - Użyj PSR-7 mock requests (Slim\Psr7 lub PHPUnit mocks)
@@ -337,7 +337,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 
 ### 8. Backend — Kontrolery Slim
 
-- [ ] 8.1 Zaimplementuj `src/Controller/SetupController.php`
+- [x] 8.1 Zaimplementuj `src/Controller/SetupController.php`
     - Plik: `src/Controller/SetupController.php`, namespace `Mariusz\LogViewer\Controller`
     - Konstruktor: `__construct(private readonly SetupWizard $wizard)`
     - Metoda `getStatus(Request $request, Response $response): Response`:
@@ -358,7 +358,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 7.1, 7.2, 7.3_
     - napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 
-- [ ] 8.2 Zaimplementuj `src/Controller/AppConfigController.php`
+- [x] 8.2 Zaimplementuj `src/Controller/AppConfigController.php`
     - Plik: `src/Controller/AppConfigController.php`, namespace `Mariusz\LogViewer\Controller`
     - Konstruktor: `__construct(private readonly ConfigManager $configManager)`
     - Metoda `getConfig(Request $request, Response $response): Response`:
@@ -369,7 +369,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - Zwróć JSON 200 `{"success":true}`
     - _Wymagania: 6.2, 6.5, 6.6_
 
-- [ ] 8.3 Zaimplementuj nowy `src/Controller/LogController.php` (Slim class)
+- [x] 8.3 Zaimplementuj nowy `src/Controller/LogController.php` (Slim class)
     - Zastąp obecny plik `src/Controller/LogController.php` (globalny `match()`) klasą Slim
     - Konstruktor: `__construct(private readonly LogConfig $logConfig, private readonly ConfigManager $configManager)`
     - Metoda `getDirectories(Request $request, Response $response): Response`:
@@ -390,7 +390,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - _Wymagania: 1.4, 4.5, 9.4_
 
 
-- [ ] 8.4 Zaimplementuj `src/Controller/DirectoryController.php`
+- [x] 8.4 Zaimplementuj `src/Controller/DirectoryController.php`
     - Plik: `src/Controller/DirectoryController.php`, namespace `Mariusz\LogViewer\Controller`
     - Konstruktor: `__construct(private readonly LogConfig $logConfig)`
     - Metoda `add(Request $request, Response $response): Response`:
@@ -411,7 +411,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - Użyj `LogScanner::scanCommonDirectories()`; zwróć JSON
     - _Wymagania: 6.4_
 
-- [ ] 8.5 Zaimplementuj `src/Controller/SSHController.php`
+- [x] 8.5 Zaimplementuj `src/Controller/SSHController.php`
     - Plik: `src/Controller/SSHController.php`, namespace `Mariusz\LogViewer\Controller`
     - Konstruktor bez wymaganych zależności (tworzy `SSH` on-demand lub wstrzykuje factory)
     - Metoda `testConnection(Request $request, Response $response): Response`:
@@ -429,7 +429,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - Zwróć `{success:true, localPath, size}`
     - _Wymagania: nie jest bezpośrednio nowym wymaganiem, ale wymagane do zachowania funkcjonalności_
 
-- [ ]* 8.6 Napisz testy jednostkowe dla kontrolerów
+- [x]* 8.6 Napisz testy jednostkowe dla kontrolerów
 
 - Plik: `tests/Controller/SetupControllerTest.php`
 - Użyj PSR-7 ServerRequest z Slim\Psr7 lub PHPUnit mock
@@ -439,7 +439,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
 - `testPostMigrateSSHAcceptsConnections()`
 - _Wymagania: 3.1, 3.2, 3.6, 7.1_
 
-- [ ] 
+- [x] 
     9. Checkpoint — kontrolery i middleware
 
     - Upewnij się, że wszystkie testy `SetupMiddlewareTest` i `SetupControllerTest` przechodzą.
@@ -473,7 +473,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Gdy brak `?action` lub URL zaczyna się od `/api/`: uruchom Slim i `$app->run()`; `exit`
     - Resztę pliku (HTML SPA) wyświetl tylko dla żądań bez `?action` i bez `/api/`
     - _Wymagania: wszystkie (prerequisite do działania aplikacji)_
-
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 ### 11. Frontend — migracja URL-i i logika wizarda w `app.js`
 
 - [ ] 11.1 Zaktualizuj URL-e API w `public/js/app.js` z `?action=X` na `/api/X`
@@ -489,7 +489,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Zamień `?action=ssh-read-file` → `/api/ssh/read-file`
     - Zamień `?action=ssh-download-file` → `/api/ssh/download-file`
     - _Wymagania: 6.5_
-
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - [ ] 11.2 Dodaj stan Vue dla wizarda i logikę sprawdzenia setupu w `init()`
     - Plik: `public/js/app.js`
     - Dodaj reaktywne zmienne w `setup()`:
@@ -509,7 +509,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
           i `sshEnabled.value = config.ssh_enabled ?? true`
         - Zastąp `fetchJson('?action=directories')` → `fetchJson('/api/directories')`
     - _Wymagania: 1.1, 1.2, 1.3, 6.5_
-
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - [ ] 11.3 Dodaj funkcje wizarda i jednorazową migrację SSH w `app.js`
     - Plik: `public/js/app.js`
     - Dodaj funkcję `migrateSSHIfNeeded()`:
@@ -524,7 +524,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
         - Jeśli `warning` — pokaż w `setupWarning.value` przed przejściem
     - Wywołaj `migrateSSHIfNeeded()` przed pierwszym ładowaniem katalogów w `init()`
     - _Wymagania: 7.1, 7.4, 8.3, 8.4_
-
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - [ ] 11.4 Dodaj HTML wizarda konfiguracji do `public/index.php` (SPA template)
     - Plik: `public/index.php` — sekcja HTML Vue app
     - Dodaj div wizarda `v-if="showSetupWizard"` przed głównym layoutem:
@@ -536,7 +536,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
     - Przycisk "Pomiń" musi wymagać dwukrotnego kliknięcia: `setupSkipConfirm` → "Rozumiem, pomiń"
       (zgodnie z wymaganiem 8.4)
     - _Wymagania: 8.3, 8.4_
-
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 - [ ] 
     12. Checkpoint — integracja Slim + Frontend
 
@@ -545,7 +545,7 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
       Zapytaj użytkownika w razie wątpliwości co do kompatybilności wstecznej `?action=`.
 
 ---
-
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)
 ## Notes
 
 - Zadania oznaczone `*` są opcjonalne — można je pominąć przy implementacji MVP
@@ -585,3 +585,4 @@ Architektura zastępuje globalny `match()` w `LogController.php` czystymi kontro
   ]
 }
 ```
+- napisz testy jeśli potrzeba (2.5), Uruchom wszystkie testy i wykonaj commit (jeśli przejdą)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Bootstrap;
 
+use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use Slim\App;
 use Slim\Factory\AppFactory;
 use DI\ContainerBuilder;
@@ -21,7 +22,7 @@ return function (): App {
     $app = AppFactory::create();
 
     // Load routes FIRST
-    $routes = require __DIR__ . '/routes.php';
+    $routes = require __DIR__.'/routes.php';
     $routes($app);
 
     // Add middleware AFTER routing (reverse order of execution)
@@ -30,7 +31,7 @@ return function (): App {
     $app->addErrorMiddleware(true, true, true);
 
     // Add SetupMiddleware LAST (executes FIRST)
-    $app->add(\Mariusz\LogViewer\Middleware\SetupMiddleware::class);
+    $app->add(SetupMiddleware::class);
 
     return $app;
 };

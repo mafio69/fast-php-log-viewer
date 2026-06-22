@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Config;
 
+use InvalidArgumentException;
 use Mariusz\LogViewer\Config\ConfigManager;
 use PHPUnit\Framework\TestCase;
 
@@ -134,7 +135,7 @@ class ConfigManagerTest extends TestCase
 
     public function testSaveEncryptionKeyToEnvThrowsExceptionOnInvalidKey(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->configManager->saveEncryptionKeyToEnv('too-short');
     }
 
