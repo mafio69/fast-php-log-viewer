@@ -189,10 +189,10 @@ header('Expires: 0');
                 DODAJ
             </button>
             <button @click="cleanupDuplicates" class="w-full rounded crt-button crt-dim" style="padding:6px 10px;font-size:12px;margin-bottom:6px;">
-                Czesc duplikaty
+                Czysc duplikaty
             </button>
             <button @click="cleanupAllowed" class="w-full rounded crt-button crt-dim" style="padding:6px 10px;font-size:12px;">
-                Czesc nazwy allowed_*
+                Czysc nazwy allowed_*
             </button>
         </div>
 

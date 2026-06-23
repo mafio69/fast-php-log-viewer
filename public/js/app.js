@@ -543,8 +543,17 @@ createApp({
 
         async function wizardProcessStep() {
             wizardError.value = '';
-            wizardResult.value = null;
             const step = wizardCurrentStep.value;
+
+            // If generate_keys was already processed (key is displayed), advance to next step
+            if (step === 'generate_keys' && wizardResult.value && wizardResult.value.encryption_key_display) {
+                wizardResult.value = null;
+                wizardStepIndex.value++;
+                await checkSetupStatus();
+                return;
+            }
+
+            wizardResult.value = null;
             let stepData = {};
 
             if (step === 'ssh_config') {
@@ -580,6 +589,12 @@ createApp({
                     return;
                 }
                 wizardResult.value = result;
+                // After generate_keys, show the encryption key before advancing
+                if (step === 'generate_keys' && result.encryption_key_display) {
+                    // Stay on this step so user can see and copy the key
+                    await checkSetupStatus();
+                    return;
+                }
                 if (result.next_step) {
                     wizardStepIndex.value++;
                     await checkSetupStatus();
