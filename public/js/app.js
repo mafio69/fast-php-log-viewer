@@ -60,6 +60,19 @@ createApp({
         const tablePageSize = ref(100);
         const TABLE_PAGE_SIZES = [50, 100, 250, 500, 1000];
 
+        // Setup Wizard State
+        const setupRequired = ref(false);
+        const wizardSteps = ref(['generate_keys', 'ssh_config', 'local_directories', 'finalize']);
+        const wizardStepIndex = ref(0);
+        const wizardCurrentStep = computed(() => wizardSteps.value[wizardStepIndex.value] || 'generate_keys');
+        const wizardStepsStatus = ref([]);
+        const wizardResult = ref(null);
+        const wizardError = ref('');
+        const wizardSSH = reactive({
+            name: '', host: '', user: '', port: '22', remotePath: '/var/log'
+        });
+        const wizardLocalDirs = ref([{name: 'logs', path: '/var/log'}]);
+
         // SSH State
         const showSSHModal = ref(false);
         const showPasswordModal = ref(false);
@@ -512,17 +525,133 @@ createApp({
             }
         }
 
-        async function init() {
+        async function checkSetupStatus() {
             try {
-                directories.value = await fetchJson('?action=directories');
+                const status = await fetchJson('/api/setup/status');
+                if (status.setup_required) {
+                    setupRequired.value = true;
+                    wizardStepsStatus.value = status.steps || [];
+                    return true;
+                }
+                setupRequired.value = false;
+                return false;
+            } catch (e) {
+                console.error('Failed to check setup status:', e);
+                return false;
+            }
+        }
+
+        async function wizardProcessStep() {
+            wizardError.value = '';
+            const step = wizardCurrentStep.value;
+
+            // If generate_keys was already processed (key is displayed), advance to next step
+            if (step === 'generate_keys' && wizardResult.value && wizardResult.value.encryption_key_display) {
+                wizardResult.value = null;
+                wizardStepIndex.value++;
+                await checkSetupStatus();
+                return;
+            }
+
+            wizardResult.value = null;
+            let stepData = {};
+
+            if (step === 'ssh_config') {
+                if (wizardSSH.host && wizardSSH.user) {
+                    stepData = {
+                        name: wizardSSH.name || 'SSH Profile',
+                        ssh_host: wizardSSH.host,
+                        ssh_user: wizardSSH.user,
+                        ssh_port: parseInt(wizardSSH.port) || 22,
+                        remote_path: wizardSSH.remotePath || '/var/log',
+                    };
+                } else {
+                    return wizardSkipStep();
+                }
+            } else if (step === 'local_directories') {
+                const dirs = wizardLocalDirs.value.filter(d => d.path.trim());
+                if (dirs.length > 0) {
+                    stepData = { directories: dirs };
+                } else {
+                    return wizardSkipStep();
+                }
+            }
+
+            try {
+                const res = await fetch('/api/setup/step', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ step, data: stepData, skip: false })
+                });
+                const result = await res.json();
+                if (!result.success) {
+                    wizardError.value = result.error || 'Blad przetwarzania kroku';
+                    return;
+                }
+                wizardResult.value = result;
+                // After generate_keys, show the encryption key before advancing
+                if (step === 'generate_keys' && result.encryption_key_display) {
+                    // Stay on this step so user can see and copy the key
+                    await checkSetupStatus();
+                    return;
+                }
+                if (result.next_step) {
+                    wizardStepIndex.value++;
+                    await checkSetupStatus();
+                } else {
+                    setupRequired.value = false;
+                    await initApp();
+                }
+            } catch (e) {
+                wizardError.value = 'Blad polaczenia: ' + e.message;
+            }
+        }
+
+        async function wizardSkipStep() {
+            wizardError.value = '';
+            const step = wizardCurrentStep.value;
+            try {
+                const res = await fetch('/api/setup/step', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ step, data: {}, skip: true })
+                });
+                const result = await res.json();
+                if (!result.success) {
+                    wizardError.value = result.error || 'Blad pomijania kroku';
+                    return;
+                }
+                if (result.next_step) {
+                    wizardStepIndex.value++;
+                    await checkSetupStatus();
+                } else {
+                    setupRequired.value = false;
+                    await initApp();
+                }
+            } catch (e) {
+                wizardError.value = 'Blad polaczenia: ' + e.message;
+            }
+        }
+
+        async function initApp() {
+            try {
+                directories.value = await fetchJson('/api/directories');
                 syncSSHDirs();
                 if (directories.value.length) {
                     selectedDir.value = directories.value[0].key;
                 }
             } catch (e) {
+                console.error('Failed to load directories:', e);
             }
             await loadFiles();
             validateBookmarks();
+        }
+
+        async function init() {
+            const needsSetup = await checkSetupStatus();
+            if (!needsSetup) {
+                await initApp();
+            }
         }
 
         async function loadDirectories() {
@@ -899,6 +1028,7 @@ createApp({
             testSSHConnection,
             addSSHConnection,
             deleteSSHConnection,
+            editingIndex,
             editSSHConnection,
             cancelEdit,
             connectSSH,
@@ -913,6 +1043,18 @@ createApp({
             cleanupAllowed,
             loadDirectories,
             refreshSSHDir,
+            // Wizard
+            setupRequired,
+            wizardSteps,
+            wizardStepIndex,
+            wizardCurrentStep,
+            wizardStepsStatus,
+            wizardResult,
+            wizardError,
+            wizardSSH,
+            wizardLocalDirs,
+            wizardProcessStep,
+            wizardSkipStep,
         };
     }
 }).mount('#app');
