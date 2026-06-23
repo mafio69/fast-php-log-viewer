@@ -48,6 +48,81 @@ header('Expires: 0');
 
 <div id="app" v-cloak class="flex h-screen" :style="{ fontSize: fontSize + 'px' }">
 
+    <!-- Setup Wizard Overlay -->
+    <div v-if="setupRequired" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,10,0,0.95);">
+        <div class="rounded" style="background:#000;border:2px solid #00ff00;width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+            <div style="padding:24px 28px 20px;border-bottom:1px solid #002200;">
+                <h2 class="text-lg font-bold crt-glow" style="margin-bottom:4px;">Setup Wizard</h2>
+                <p class="text-xs crt-dim">Konfiguracja Log Viewer &mdash; krok {{ wizardStepIndex + 1 }} z {{ wizardSteps.length }}</p>
+            </div>
+
+            <div style="padding:24px 28px;">
+                <!-- Step: generate_keys -->
+                <div v-if="wizardCurrentStep === 'generate_keys'">
+                    <h3 class="text-sm font-bold crt-text" style="margin-bottom:12px;">Generowanie kluczy szyfrowania</h3>
+                    <p class="text-xs crt-dim" style="margin-bottom:16px;line-height:1.6;">Klucz szyfrowania zabezpieczy backup konfiguracji. Mozesz pominac ten krok &mdash; backup bedzie nieszyfrowany.</p>
+                    <div v-if="wizardResult && wizardResult.encryption_key_display" style="padding:12px;background:#001100;border:1px solid #00ff00;border-radius:4px;margin-bottom:16px;">
+                        <div class="text-xs crt-dim" style="margin-bottom:4px;">Twoj klucz (zapisz go!):</div>
+                        <code class="text-xs crt-glow" style="word-break:break-all;">{{ wizardResult.encryption_key_display }}</code>
+                    </div>
+                </div>
+
+                <!-- Step: ssh_config -->
+                <div v-if="wizardCurrentStep === 'ssh_config'">
+                    <h3 class="text-sm font-bold crt-text" style="margin-bottom:12px;">Konfiguracja SSH</h3>
+                    <p class="text-xs crt-dim" style="margin-bottom:16px;line-height:1.6;">Dodaj polaczenie SSH do zdalnego serwera. Mozesz pominac &mdash; SSH skonfigurujesz pozniej.</p>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <input v-model="wizardSSH.name" placeholder="Nazwa polaczenia" class="crt-input rounded" style="padding:8px 12px;font-size:12px;">
+                        <input v-model="wizardSSH.host" placeholder="Host SSH" class="crt-input rounded" style="padding:8px 12px;font-size:12px;">
+                        <input v-model="wizardSSH.user" placeholder="Uzytkownik SSH" class="crt-input rounded" style="padding:8px 12px;font-size:12px;">
+                        <input v-model="wizardSSH.port" placeholder="Port SSH (domyslnie: 22)" class="crt-input rounded" style="padding:8px 12px;font-size:12px;">
+                        <input v-model="wizardSSH.remotePath" placeholder="Zdalna sciezka logow (np. /var/log)" class="crt-input rounded" style="padding:8px 12px;font-size:12px;">
+                    </div>
+                </div>
+
+                <!-- Step: local_directories -->
+                <div v-if="wizardCurrentStep === 'local_directories'">
+                    <h3 class="text-sm font-bold crt-text" style="margin-bottom:12px;">Katalogi lokalne</h3>
+                    <p class="text-xs crt-dim" style="margin-bottom:16px;line-height:1.6;">Dodaj katalogi lokalne z plikami logow. Mozesz pominac &mdash; dodasz je pozniej.</p>
+                    <div v-for="(dir, i) in wizardLocalDirs" :key="i" style="display:flex;gap:8px;margin-bottom:8px;">
+                        <input v-model="dir.name" placeholder="Nazwa" class="crt-input rounded" style="padding:8px 12px;font-size:12px;flex:1;">
+                        <input v-model="dir.path" placeholder="Sciezka (np. /var/log)" class="crt-input rounded" style="padding:8px 12px;font-size:12px;flex:2;">
+                        <button @click="wizardLocalDirs.splice(i, 1)" class="crt-button rounded" style="padding:8px 12px;font-size:12px;border-color:#ff0000;color:#ff0000;">X</button>
+                    </div>
+                    <button @click="wizardLocalDirs.push({name: '', path: ''})" class="crt-button rounded" style="padding:8px 16px;font-size:12px;margin-top:4px;">+ Dodaj katalog</button>
+                </div>
+
+                <!-- Step: finalize -->
+                <div v-if="wizardCurrentStep === 'finalize'">
+                    <h3 class="text-sm font-bold crt-text" style="margin-bottom:12px;">Finalizacja</h3>
+                    <p class="text-xs crt-dim" style="margin-bottom:16px;line-height:1.6;">Konfiguracja zostanie zapisana. Mozesz ja zmienic pozniej w ustawieniach.</p>
+                    <div style="padding:12px;background:#001100;border:1px solid #002200;border-radius:4px;">
+                        <div class="text-xs crt-text" style="margin-bottom:8px;">Podsumowanie:</div>
+                        <div v-for="s in wizardStepsStatus" :key="s.name" class="text-xs" style="margin-bottom:4px;">
+                            <span :style="s.status === 'complete' ? 'color:#00ff00;' : s.status === 'skipped' ? 'color:#ffff00;' : 'color:#006600;'">{{ s.status === 'complete' ? '[OK]' : s.status === 'skipped' ? '[SKIP]' : '[...]' }}</span>
+                            <span class="crt-dim" style="margin-left:8px;">{{ s.name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wizard Actions -->
+            <div style="padding:16px 28px 24px;border-top:1px solid #002200;display:flex;gap:12px;justify-content:flex-end;">
+                <button v-if="wizardCurrentStep !== 'finalize'" @click="wizardSkipStep" class="crt-button rounded" style="padding:8px 20px;font-size:12px;border-color:#ffff00;color:#ffff00;">
+                    Pomin
+                </button>
+                <button @click="wizardProcessStep" class="crt-button rounded" style="padding:8px 24px;font-size:12px;font-weight:bold;">
+                    {{ wizardCurrentStep === 'finalize' ? 'Zakoncz setup' : 'Dalej' }}
+                </button>
+            </div>
+
+            <!-- Wizard Error -->
+            <div v-if="wizardError" style="padding:8px 28px 16px;">
+                <div class="text-xs" style="color:#ff0000;">{{ wizardError }}</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside style="width:350px;min-width:350px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
         <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
@@ -96,35 +171,35 @@ header('Expires: 0');
         </div>
 
         <!-- Direct file path -->
-        <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
-            <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
+        <div style="padding:12px 14px;border-bottom:1px solid #00ff00;background:#001100;">
+            <div class="text-xs font-bold crt-text" style="margin-bottom:8px;">SCIEZKA DO PLIKU</div>
             <input type="text" v-model="directFilePath" placeholder="/var/log/php/php_errors.log"
-                class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
-            <button @click="loadDirectFile" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">
-                ⚡ ZAŁADUJ
+                class="w-full rounded crt-input" style="padding:6px 10px;font-size:12px;margin-bottom:8px;">
+            <button @click="loadDirectFile" class="w-full rounded crt-button font-bold" style="padding:8px 10px;font-size:12px;">
+                ZALADUJ
             </button>
         </div>
 
         <!-- Add allowed directory -->
-        <div class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
-            <div class="text-xs font-semibold mb-1 crt-dim">➕ DODAJ KATALOG DOZWOLONY</div>
+        <div style="padding:12px 14px;border-bottom:1px solid #00ff00;">
+            <div class="text-xs font-semibold crt-dim" style="margin-bottom:8px;">DODAJ KATALOG DOZWOLONY</div>
             <input type="text" v-model="allowedDirPath" placeholder="/var/log"
-                class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
-            <button @click="addAllowedDir" class="w-full rounded px-2 py-1 text-xs crt-button mb-2">
+                class="w-full rounded crt-input" style="padding:6px 10px;font-size:12px;margin-bottom:8px;">
+            <button @click="addAllowedDir" class="w-full rounded crt-button" style="padding:8px 10px;font-size:12px;margin-bottom:8px;">
                 DODAJ
             </button>
-            <button @click="cleanupDuplicates" class="w-full rounded px-2 py-1 text-xs crt-button crt-dim mb-1">
-                🧹 Czyść duplikaty
+            <button @click="cleanupDuplicates" class="w-full rounded crt-button crt-dim" style="padding:6px 10px;font-size:12px;margin-bottom:6px;">
+                Czesc duplikaty
             </button>
-            <button @click="cleanupAllowed" class="w-full rounded px-2 py-1 text-xs crt-button crt-dim">
-                🧹 Czyść nazwy allowed_*
+            <button @click="cleanupAllowed" class="w-full rounded crt-button crt-dim" style="padding:6px 10px;font-size:12px;">
+                Czesc nazwy allowed_*
             </button>
         </div>
 
         <!-- SSH Connection Button -->
-        <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
-            <button @click="showSSHModal = true; cancelEdit()" class="w-full rounded py-1 text-xs crt-button">
-                🔗 SSH Connections
+        <div style="padding:12px 14px;border-top:1px solid #00ff00;">
+            <button @click="showSSHModal = true; cancelEdit()" class="w-full rounded crt-button" style="padding:8px 10px;font-size:12px;">
+                SSH Connections
             </button>
         </div>
     </aside>
