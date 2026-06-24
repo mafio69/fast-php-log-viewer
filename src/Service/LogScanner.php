@@ -165,13 +165,11 @@ class LogScanner
     {
         $dockerPaths = [];
 
-        // Check if running in Docker
         if (file_exists('/.dockerenv')) {
             $dockerPaths[] = '/var/log/supervisor';
             $dockerPaths[] = '/var/log/php-fpm';
         }
 
-        // Check for common Docker log mount points
         $dockerMounts = [
             '/var/log/docker',
             '/docker/logs',
@@ -186,4 +184,5 @@ class LogScanner
 
         return $dockerPaths;
     }
+
 }

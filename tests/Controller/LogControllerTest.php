@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Controller;
 
-use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
@@ -15,152 +15,83 @@ use Slim\Psr7\Factory\ResponseFactory;
 class LogControllerTest extends TestCase
 {
     private LogController $controller;
-    private ConfigManager $configManager;
-    private $logConfig; // Mock
-    private $logFinder; // Mock
-    private string $tempConfig;
-    private string $tempEnv;
-    private string $tempDb;
+    private LogFinderInterface $logFinder;
 
     protected function setUp(): void
     {
-        $this->tempConfig = sys_get_temp_dir() . '/config_' . bin2hex(random_bytes(8)) . '.json';
-        $this->tempEnv = sys_get_temp_dir() . '/env_' . bin2hex(random_bytes(8));
-        $this->tempDb = sys_get_temp_dir() . '/db_' . bin2hex(random_bytes(8)) . '.db';
-
-        $this->configManager = new ConfigManager($this->tempConfig, $this->tempEnv);
-        $this->logConfig = $this->createMock(LogConfig::class);
         $this->logFinder = $this->createMock(LogFinderInterface::class);
-        
-        $this->controller = new LogController(
-            $this->logConfig,
-            $this->configManager,
-            $this->logFinder
-        );
+        $logConfig = $this->createMock(LogConfig::class);
+        $configManager = $this->createMock(ConfigManager::class);
+
+        $this->controller = new LogController($logConfig, $configManager, $this->logFinder);
     }
 
-    protected function tearDown(): void
+    public function testGetFilesWithAbsolutePath(): void
     {
-        if (file_exists($this->tempConfig)) {
-            @unlink($this->tempConfig);
-        }
-        if (file_exists($this->tempEnv)) {
-            @unlink($this->tempEnv);
-        }
-        if (file_exists($this->tempDb)) {
-            @unlink($this->tempDb);
-        }
-    }
-
-    public function testGetDirectoriesReturnsEmptyArrayWhenNoDirectories(): void
-    {
-        $this->logConfig->method('getDirectories')->willReturn([]);
+        $this->logFinder->method('findAll')
+            ->with('/var/log')
+            ->willReturn([
+                ['file' => 'syslog', 'date' => '2024-01-01', 'size' => 1024],
+            ]);
 
         $requestFactory = new RequestFactory();
-        $request = $requestFactory->createRequest('GET', '/api/directories');
+        $request = $requestFactory->createRequest('GET', '/api/files?path=/var/log');
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
 
-        $result = $this->controller->getDirectories($request, $response);
-
-        $this->assertEquals(200, $result->getStatusCode());
-        $body = json_decode((string)$result->getBody(), true);
-        $this->assertIsArray($body);
-        $this->assertEmpty($body);
-    }
-
-    public function testGetDirectoriesFiltersSshWhenDisabled(): void
-    {
-        $this->logConfig->method('getDirectories')->willReturn([
-            [
-                'name' => 'local_logs',
-                'path' => '/var/log',
-                'type' => 'local'
-            ],
-            [
-                'name' => 'remote_logs',
-                'path' => '/remote/logs',
-                'type' => 'ssh'
-            ]
-        ]);
-
-        $this->configManager->saveConfig(['ssh_enabled' => false]);
-
-        $requestFactory = new RequestFactory();
-        $request = $requestFactory->createRequest('GET', '/api/directories');
-        $responseFactory = new ResponseFactory();
-        $response = $responseFactory->createResponse();
-
-        $result = $this->controller->getDirectories($request, $response);
+        $result = $this->controller->getFiles($request, $response);
 
         $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
         $this->assertCount(1, $body);
-        $this->assertEquals('local_logs', $body[0]['key']);
+        $this->assertEquals('syslog', $body[0]['file']);
     }
 
-    public function testGetFilesReturnsErrorWhenMissingDir(): void
+    public function testGetFilesWithRelativePath(): void
     {
-        $this->logConfig->method('getDirectories')->willReturn([]);
+        $appRoot = dirname(__DIR__, 2);
+        $expectedPath = $appRoot . '/logs/';
+
+        $this->logFinder->method('findAll')
+            ->with($expectedPath)
+            ->willReturn([
+                ['file' => 'app.log', 'date' => '2024-01-01', 'size' => 512],
+            ]);
 
         $requestFactory = new RequestFactory();
-        $request = $requestFactory->createRequest('GET', '/api/files');
+        $request = $requestFactory->createRequest('GET', '/api/files?path=logs/');
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
 
         $result = $this->controller->getFiles($request, $response);
 
-        $this->assertEquals(400, $result->getStatusCode());
+        $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('missing_dir', $body['error']);
+        $this->assertCount(1, $body);
+        $this->assertEquals('app.log', $body[0]['file']);
     }
 
-    public function testGetFilesReturnsErrorWhenMissingDirWithoutQueryParams(): void
+    public function testGetFilesWithHomeRelativePath(): void
     {
-        // Test bez żadnych query params - powinien zwrócić missing_dir
+        $home = $_SERVER['HOME'] ?? '/root';
+        $expectedPath = $home . '/logs';
+
+        $this->logFinder->method('findAll')
+            ->with($expectedPath)
+            ->willReturn([
+                ['file' => 'user.log', 'date' => '2024-01-01', 'size' => 256],
+            ]);
+
         $requestFactory = new RequestFactory();
-        $request = $requestFactory->createRequest('GET', '/api/files');
+        $request = $requestFactory->createRequest('GET', '/api/files?path=~/logs');
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
 
         $result = $this->controller->getFiles($request, $response);
 
-        $this->assertEquals(400, $result->getStatusCode());
+        $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('missing_dir', $body['error']);
-    }
-
-    public function testGetFilesReturnsErrorWhenDirectoryNotFound(): void
-    {
-        $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'other_dir', 'path' => '/other/path']
-        ]);
-
-        $requestFactory = new RequestFactory();
-        $request = $requestFactory->createRequest('GET', '/api/files?dir=nonexistent');
-        $responseFactory = new ResponseFactory();
-        $response = $responseFactory->createResponse();
-
-        $result = $this->controller->getFiles($request, $response);
-
-        $this->assertEquals(404, $result->getStatusCode());
-        $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('directory_not_found', $body['error']);
-    }
-
-    public function testGetEntriesReturnsErrorWhenMissingFile(): void
-    {
-        $this->logConfig->method('getDirectories')->willReturn([]);
-
-        $requestFactory = new RequestFactory();
-        $request = $requestFactory->createRequest('GET', '/api/entries');
-        $responseFactory = new ResponseFactory();
-        $response = $responseFactory->createResponse();
-
-        $result = $this->controller->getEntries($request, $response);
-
-        $this->assertEquals(400, $result->getStatusCode());
-        $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('missing_file', $body['error']);
+        $this->assertCount(1, $body);
+        $this->assertEquals('user.log', $body[0]['file']);
     }
 }

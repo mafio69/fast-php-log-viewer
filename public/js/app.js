@@ -36,6 +36,13 @@ createApp({
         const selectedDir = ref('');
         const directories = ref([]);
         const directFilePath = ref('');
+
+        const defaultDirectories = [
+            {key: 'docker:/var/log', path: '/var/log', type: 'docker', name: 'Kontener (Docker)'},
+            {key: 'host:/var/log', path: '/var/log', type: 'host', name: 'Host (Ubuntu)'},
+            {key: 'home:~/logs', path: '~/logs', type: 'home', name: 'Użytkownik (~/logs)'},
+            {key: 'repository:/logs', path: 'logs/', type: 'repository', name: 'Aplikacja (logs/)'},
+        ];
         const allowedDirPath = ref('/var/log');
         const filterText = ref('');
         const loading = ref(false);
@@ -93,6 +100,19 @@ createApp({
         });
 
         watch(fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
+
+        const mergedDirectories = computed(() => {
+            const sshItems = directories.value.filter(d => d.key.startsWith('ssh:'));
+            const savedItems = directories.value.filter(d => !d.key.startsWith('ssh:'));
+            const groups = {
+                defaults: {label: 'Domyślne', items: defaultDirectories},
+                saved: {label: 'Zapisane', items: savedItems},
+            };
+            if (sshItems.length) {
+                groups.ssh = {label: 'SSH', items: sshItems};
+            }
+            return groups;
+        });
 
         const levelCounts = computed(() => {
             const c = {};
@@ -212,8 +232,7 @@ createApp({
                 }
                 return;
             }
-            const dirParam = selectedDir.value ? '?dir=' + encodeURIComponent(selectedDir.value) : '';
-            files.value = await fetchJson('/api/files' + dirParam);
+            files.value = await fetchJson('/api/files' + filesApiUrl());
             if (files.value.length) {
                 selectedFile.value = files.value[0].file;
                 await loadEntries();
@@ -299,42 +318,6 @@ createApp({
                 }
             } catch (e) {
                 alert('Błąd dodawania katalogu: ' + e.message);
-            } finally {
-                loading.value = false;
-            }
-        }
-
-        async function cleanupDuplicates() {
-            try {
-                loading.value = true;
-                const res = await fetch('/api/config/cleanup-duplicates', {method: 'POST'});
-                const data = await res.json();
-                if (data.success) {
-                    alert('Usunięto duplikaty: ' + data.removed);
-                    await loadDirectories();
-                } else {
-                    alert('Błąd: ' + (data.error || 'Unknown error'));
-                }
-            } catch (e) {
-                alert('Błąd czyszczenia: ' + e.message);
-            } finally {
-                loading.value = false;
-            }
-        }
-
-        async function cleanupAllowed() {
-            try {
-                loading.value = true;
-                const res = await fetch('/api/config/cleanup-allowed', {method: 'POST'});
-                const data = await res.json();
-                if (data.success) {
-                    alert('Usunięto nazwy allowed_*: ' + data.removed);
-                    await loadDirectories();
-                } else {
-                    alert('Błąd: ' + (data.error || 'Unknown error'));
-                }
-            } catch (e) {
-                alert('Błąd czyszczenia: ' + e.message);
             } finally {
                 loading.value = false;
             }
@@ -479,10 +462,17 @@ createApp({
             localStorage.setItem('fplv_bookmarks', JSON.stringify(bookmarks.value));
         }
 
+        function filesApiUrl() {
+            const def = defaultDirectories.find(d => d.key === selectedDir.value);
+            if (def) return '?path=' + encodeURIComponent(def.path);
+            if (selectedDir.value) return '?dir=' + encodeURIComponent(selectedDir.value);
+            return '';
+        }
+
         async function goToBookmark(bm) {
             showBookmarks.value = false;
             try {
-                const res = await fetch('/api/files' + (selectedDir.value ? '?dir=' + encodeURIComponent(selectedDir.value) : ''));
+                const res = await fetch('/api/files' + filesApiUrl());
                 const allFiles = await res.json();
                 if (!allFiles.some(f => f.file === bm.file)) {
                     alert('Plik już nie istnieje: ' + bm.file.split('/').pop());
@@ -508,7 +498,7 @@ createApp({
 
         async function validateBookmarks() {
             try {
-                const res = await fetch('/api/files' + (selectedDir.value ? '?dir=' + encodeURIComponent(selectedDir.value) : ''));
+                const res = await fetch('/api/files' + filesApiUrl());
                 const allFiles = await res.json();
                 const validPaths = new Set(allFiles.map(f => f.file));
                 const valid = bookmarks.value.filter(b => validPaths.has(b.file));
@@ -521,10 +511,29 @@ createApp({
         }
 
         async function proceedStep(skip) {
+            const step = currentSetupStep.value;
+
+            if (!skip && step === 'ssh_config') {
+                const data = setupStepData;
+                if (!data.ssh_host || !data.ssh_user) {
+                    alert('Wypełnij pole Host i Użytkownik SSH lub kliknij "Pomiń".');
+                    return;
+                }
+            }
+
+            let stepData = {...setupStepData};
+            if (step === 'local_directories' && !skip && stepData.path) {
+                stepData = {
+                    directories: [{path: stepData.path, name: stepData.name || 'Local Directory'}]
+                };
+            }
+
+            setupWarning.value = '';
+
             try {
                 const body = {
-                    step: currentSetupStep.value,
-                    data: {...setupStepData},
+                    step: step,
+                    data: stepData,
                     skip: skip
                 };
                 const res = await fetch('/api/setup/step', {
@@ -533,6 +542,16 @@ createApp({
                     body: JSON.stringify(body)
                 });
                 const data = await res.json();
+
+                if (data.error) {
+                    if (data.fields) {
+                        alert('Brakujące pola: ' + data.fields.join(', '));
+                    } else {
+                        alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+                    }
+                    return;
+                }
+
                 if (data.warning) {
                     setupWarning.value = data.warning;
                 } else {
@@ -557,6 +576,8 @@ createApp({
                 const status = await fetchJson('/api/setup/status');
                 if (status.setup_required) {
                     showSetupWizard.value = true;
+                    setupSkipConfirm.value = false;
+                    Object.keys(setupStepData).forEach(k => delete setupStepData[k]);
                     if (status.steps && status.steps.length > 0) {
                         setupSteps.value = status.steps;
                         currentSetupStep.value = status.steps[0].name;
@@ -574,14 +595,7 @@ createApp({
             } catch (e) {
             }
 
-            try {
-                directories.value = await fetchJson('/api/directories');
-                syncSSHDirs();
-                if (directories.value.length) {
-                    selectedDir.value = directories.value[0].key;
-                }
-            } catch (e) {
-            }
+            await loadDirectories();
             await loadFiles();
             validateBookmarks();
         }
@@ -977,9 +991,9 @@ createApp({
             cancelManualFileModal,
             loadDirectFile,
             addAllowedDir,
-            cleanupDuplicates,
-            cleanupAllowed,
             loadDirectories,
+            defaultDirectories,
+            mergedDirectories,
             refreshSSHDir,
             proceedStep,
         };

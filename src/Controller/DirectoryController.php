@@ -56,34 +56,11 @@ class DirectoryController
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-    public function cleanupDuplicates(Request $request, Response $response): Response
-    {
-        $removed = $this->logConfig->removeDuplicates();
-        $response->getBody()->write(json_encode(['success' => true, 'removed' => $removed]));
-        return $response->withHeader('Content-Type', 'application/json');
-    }
-
     public function scanDirectories(Request $request, Response $response): Response
     {
         $scanner = new LogScanner();
         $dirs = $scanner->scanCommonDirectories();
         $response->getBody()->write(json_encode($dirs));
-        return $response->withHeader('Content-Type', 'application/json');
-    }
-
-    public function cleanupAllowed(Request $request, Response $response): Response
-    {
-        $dirs = $this->logConfig->getDirectories();
-        $removed = 0;
-
-        foreach ($dirs as $dir) {
-            if (str_starts_with($dir['name'], 'allowed_')) {
-                $this->logConfig->deleteDirectory($dir['id']);
-                $removed++;
-            }
-        }
-
-        $response->getBody()->write(json_encode(['success' => true, 'removed' => $removed]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 }
