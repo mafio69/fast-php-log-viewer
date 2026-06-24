@@ -20,12 +20,6 @@
         "slim/psr7": "^1.7",
         "php-di/php-di": "^7.0"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/mafio69/php-logger"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "Mariusz\\LogViewer\\Controller\\": "src/Controller/",
