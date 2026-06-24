@@ -44,7 +44,7 @@ class LogControllerTest extends TestCase
         $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
         $this->assertCount(1, $body);
-        $this->assertEquals('syslog', $body[0]['file']);
+        $this->assertEquals('/var/log/syslog', $body[0]['file']);
     }
 
     public function testGetFilesWithRelativePath(): void
@@ -68,7 +68,7 @@ class LogControllerTest extends TestCase
         $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
         $this->assertCount(1, $body);
-        $this->assertEquals('app.log', $body[0]['file']);
+        $this->assertEquals(rtrim($expectedPath, '/') . '/app.log', $body[0]['file']);
     }
 
     public function testGetFilesWithHomeRelativePath(): void
@@ -92,6 +92,6 @@ class LogControllerTest extends TestCase
         $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
         $this->assertCount(1, $body);
-        $this->assertEquals('user.log', $body[0]['file']);
+        $this->assertEquals($expectedPath . '/user.log', $body[0]['file']);
     }
 }

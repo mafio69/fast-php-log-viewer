@@ -41,17 +41,13 @@ class LogController
 
         // Default directories bypass DB lookup — scan path directly
         if ($path) {
-            if (str_starts_with($path, '~/')) {
-                $absPath = ($_SERVER['HOME'] ?? '/root') . '/' . substr($path, 2);
-            } elseif (!str_starts_with($path, '/')) {
-                // Relative path — resolve against application root
-                $absPath = dirname(__DIR__, 2) . '/' . $path;
-            } else {
-                $absPath = $path;
-            }
+            $absPath = $this->resolvePath($path);
             $files = $this->logFinder->findAll($absPath);
+            $basePath = rtrim($absPath, '/');
             $result = array_map(fn($f) => [
-                'file' => $f['file'], 'date' => $f['date'], 'size' => $f['size'],
+                'file' => $basePath . '/' . $f['file'],
+                'date' => $f['date'],
+                'size' => $f['size'],
             ], $files);
             $response->getBody()->write(json_encode($result));
             return $response->withHeader('Content-Type', 'application/json');
@@ -78,16 +74,54 @@ class LogController
 
         $files = $this->logFinder->findAll($dir['path']);
 
-        $result = array_map(function ($file) {
-            return [
-                'file' => $file['file'],
-                'date' => $file['date'],
-                'size' => $file['size']
-            ];
-        }, $files);
+        $basePath = rtrim($dir['path'], '/');
+        $result = array_map(fn($f) => [
+            'file' => $basePath . '/' . $f['file'],
+            'date' => $f['date'],
+            'size' => $f['size'],
+        ], $files);
 
         $response->getBody()->write(json_encode($result));
         return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * Resolve a directory key (docker:/var/log, host:/var/log, etc.) to an absolute path.
+     * Returns null if the key is unknown and not found in DB.
+     */
+    private function resolveDirPath(string $key): ?string
+    {
+        // SSH directories — not validated against local paths
+        if (str_starts_with($key, 'ssh:')) {
+            return null;
+        }
+
+        // Default directories with colon prefix (docker:/var/log, host:/var/log, etc.)
+        if (str_contains($key, ':')) {
+            $path = substr($key, strpos($key, ':') + 1);
+            return $this->resolvePath($path);
+        }
+
+        // DB-saved directory — look up by name
+        $dirs = $this->logConfig->getDirectories();
+        foreach ($dirs as $dir) {
+            if ($dir['name'] === $key) {
+                return $dir['path'];
+            }
+        }
+
+        return null;
+    }
+
+    private function resolvePath(string $path): string
+    {
+        if (str_starts_with($path, '~/')) {
+            return ($_SERVER['HOME'] ?? '/root') . '/' . substr($path, 2);
+        }
+        if (!str_starts_with($path, '/')) {
+            return dirname(__DIR__, 2) . '/' . $path;
+        }
+        return $path;
     }
 
     public function getEntries(Request $request, Response $response): Response
@@ -98,16 +132,33 @@ class LogController
             return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
         }
 
-        // Walidacja ścieżki - sprawdź czy plik jest w dozwolonych katalogach
-        $dirs = $this->logConfig->getDirectories();
-        $allowed = false;
+        // Walidacja ścieżki
         $realPath = realpath($filePath);
+        $allowed = false;
 
-        foreach ($dirs as $dir) {
-            $dirPath = realpath($dir['path']);
-            if ($realPath && $dirPath && str_starts_with($realPath, $dirPath)) {
-                $allowed = true;
-                break;
+        $dirKey = $request->getQueryParams()['dir'] ?? null;
+
+        // SSH — pliki już zweryfikowane przy pobieraniu
+        if ($dirKey && str_starts_with($dirKey, 'ssh:')) {
+            $allowed = $realPath !== false;
+        } else {
+            $dirPath = $dirKey ? $this->resolveDirPath($dirKey) : null;
+
+            if ($dirPath) {
+                $resolved = realpath($dirPath);
+                if ($realPath && $resolved && str_starts_with($realPath, $resolved)) {
+                    $allowed = true;
+                }
+            } else {
+                // Fallback: sprawdź czy plik jest w zapisanych katalogach
+                $dirs = $this->logConfig->getDirectories();
+                foreach ($dirs as $dir) {
+                    $resolved = realpath($dir['path']);
+                    if ($realPath && $resolved && str_starts_with($realPath, $resolved)) {
+                        $allowed = true;
+                        break;
+                    }
+                }
             }
         }
 

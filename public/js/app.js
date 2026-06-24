@@ -340,7 +340,9 @@ createApp({
             loading.value = true;
             Object.keys(expanded).forEach(k => delete expanded[k]);
             try {
-                entries.value = await fetchJson('/api/entries?file=' + encodeURIComponent(selectedFile.value));
+                const url = '/api/entries?file=' + encodeURIComponent(selectedFile.value)
+                    + '&dir=' + encodeURIComponent(selectedDir.value);
+                entries.value = await fetchJson(url);
                 applyFilters();
             } finally {
                 loading.value = false;
