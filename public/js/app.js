@@ -37,12 +37,7 @@ createApp({
         const directories = ref([]);
         const directFilePath = ref('');
 
-        const defaultDirectories = [
-            {key: 'docker:/var/log', path: '/var/log', type: 'docker', name: 'Kontener (Docker)'},
-            {key: 'host:/var/log', path: '/host/var/log', type: 'host', name: 'Host (Ubuntu)'},
-            {key: 'host-home:~/logs', path: '~/logs', type: 'home', name: 'Host (~/logs)'},
-            {key: 'repository:logs', path: 'logs/', type: 'repository', name: 'Aplikacja (logs/)'},
-        ];
+        const defaultDirectories = ref([]);
         const allowedDirPath = ref('/var/log');
         const filterText = ref('');
         const loading = ref(false);
@@ -105,7 +100,7 @@ createApp({
             const sshItems = directories.value.filter(d => d.key.startsWith('ssh:'));
             const savedItems = directories.value.filter(d => !d.key.startsWith('ssh:'));
             const groups = {
-                defaults: {label: 'Domyślne', items: defaultDirectories},
+                defaults: {label: 'Domyślne', items: defaultDirectories.value},
                 saved: {label: 'Zapisane', items: savedItems},
             };
             if (sshItems.length) {
@@ -340,7 +335,7 @@ createApp({
             loading.value = true;
             Object.keys(expanded).forEach(k => delete expanded[k]);
             try {
-                const def = defaultDirectories.find(d => d.key === selectedDir.value);
+                const def = defaultDirectories.value.find(d => d.key === selectedDir.value);
                 const dirParam = def ? def.path : selectedDir.value;
                 const url = '/api/entries?file=' + encodeURIComponent(selectedFile.value)
                     + '&dir=' + encodeURIComponent(dirParam);
@@ -467,7 +462,7 @@ createApp({
         }
 
         function filesApiUrl() {
-            const def = defaultDirectories.find(d => d.key === selectedDir.value);
+            const def = defaultDirectories.value.find(d => d.key === selectedDir.value);
             if (def) return '?path=' + encodeURIComponent(def.path);
             if (selectedDir.value) return '?dir=' + encodeURIComponent(selectedDir.value);
             return '';
@@ -596,20 +591,44 @@ createApp({
             try {
                 const config = await fetchJson('/api/app-config');
                 sshEnabled.value = config.ssh_enabled ?? true;
+                if (config.ssh_profiles && config.ssh_profiles.length) {
+                    const profiles = config.ssh_profiles.map(p => ({
+                        name: p.name,
+                        host: p.ssh_host,
+                        user: p.ssh_user,
+                        port: p.ssh_port || 22,
+                        authMethod: p.ssh_auth_method || 'password',
+                        keyPath: p.ssh_key_path || '',
+                        remotePath: p.remote_path || '/var/log',
+                        allFiles: p.all_files || false,
+                    }));
+                    localStorage.setItem('fplv_ssh_connections', JSON.stringify(profiles));
+                    sshConnections.value = profiles;
+                }
             } catch (e) {
             }
 
+            await loadDefaultDirectories();
             await loadDirectories();
             await loadFiles();
             validateBookmarks();
+        }
+
+        async function loadDefaultDirectories() {
+            try {
+                defaultDirectories.value = await fetchJson('/api/config/default-directories');
+            } catch (e) {
+                console.error('Failed to load default directories:', e);
+                defaultDirectories.value = [];
+            }
         }
 
         async function loadDirectories() {
             try {
                 directories.value = await fetchJson('/api/directories');
                 syncSSHDirs();
-                // Domyślnie wybierz docker:/var/log (najpewniejszy przy starcie w kontenerze)
-                selectedDir.value = 'docker:/var/log';
+                const firstDefault = defaultDirectories.value[0];
+                selectedDir.value = firstDefault ? firstDefault.key : '';
             } catch (e) {
                 console.error('Failed to load directories:', e);
             }

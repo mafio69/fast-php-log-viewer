@@ -13,7 +13,7 @@ do serwera.
 ## Słownik
 
 - **ConfigManager**: Klasa PHP odpowiedzialna za odczyt, zapis i walidację `app_config.json`.
-- **SetupWizard**: Kontroler PHP obsługujący endpoint API wizarda pierwszego uruchomienia.
+- **SetupWizard**: Serwis PHP (`src/Service/SetupWizard.php`) obsługujący logikę wizarda pierwszego uruchomienia.
 - **AppConfig**: Obiekt konfiguracyjny przechowywany w `data/app_config.json`.
 - **InstallationId**: Unikalny identyfikator instalacji generowany jednorazowo podczas pierwszego uruchomienia.
 - **EncryptionKey**: Klucz AES-256 generowany automatycznie, używany do szyfrowania backupu.
@@ -40,7 +40,7 @@ konfiguracji, żeby nie musieć ręcznie szukać pliku konfiguracyjnego.
    `{"setup_required": true}`.
 3. WHEN plik `data/app_config.json` istnieje lecz nie zawiera pola `setup_complete: true`, THE SetupWizard SHALL zwrócić
    flagę `{"setup_required": true, "setup_state": "in_progress"}`.
-4. THE ConfigManager SHALL zablokować dostęp do endpointów logów (action=directories, action=files, action=entries)
+4. THE ConfigManager SHALL zablokować dostęp do endpointów logów (`/api/directories`, `/api/files`, `/api/entries`)
    dopóki `setup_complete` nie wynosi `true`, zwracając HTTP 503 z treścią `{"error": "setup_required"}`.
 5. WHERE aplikacja jest uruchamiana w trybie Docker, THE ConfigManager SHALL wczytać zmienne środowiskowe z pliku `.env`
    przed sprawdzeniem konfiguracji.
@@ -76,9 +76,9 @@ webowym, żebym wiedział co konfiguruję i mógł pominąć elementy których n
 
 #### Kryteria akceptacji
 
-1. THE SetupWizard SHALL udostępniać endpoint `?action=setup-status` (GET) zwracający aktualny `SetupState` oraz listę
+1. THE SetupWizard SHALL udostępniać endpoint `GET /api/setup/status` zwracający aktualny `SetupState` oraz listę
    kroków z ich statusem (`pending`, `complete`, `skipped`).
-2. THE SetupWizard SHALL udostępniać endpoint `?action=setup-step` (POST) przyjmujący
+2. THE SetupWizard SHALL udostępniać endpoint `POST /api/setup/step` przyjmujący
    `{"step": "<nazwa_kroku>", "data": {...}, "skip": false}` i zwracający `{"success": true, "next_step": "<nazwa>"}`.
 3. WHEN krok zawiera `"skip": true`, THE SetupWizard SHALL zapisać krok jako `skipped` i zwrócić komunikat ostrzeżenia
    opisujący co użytkownik traci.
@@ -86,7 +86,7 @@ webowym, żebym wiedział co konfiguruję i mógł pominąć elementy których n
    `finalize`.
 5. WHEN wszystkie kroki mają status `complete` lub `skipped`, THE SetupWizard SHALL ustawić `setup_complete: true` w
    `AppConfig` i zwrócić `{"setup_complete": true}`.
-6. IF żądanie do `?action=setup-step` zawiera nieznane pole w `data`, THEN THE SetupWizard SHALL zignorować nieznane
+6. IF żądanie do `POST /api/setup/step` zawiera nieznane pole w `data`, THEN THE SetupWizard SHALL zignorować nieznane
    pole i przetworzyć pozostałe znane pola.
 
 ---
@@ -108,7 +108,7 @@ mogła je zapisać po stronie serwera zamiast trzymać w localStorage przegląda
 4. WHEN krok `ssh_config` jest przesyłany z `"skip": true`, THE SetupWizard SHALL zapisać `{"ssh_enabled": false}` w
    `AppConfig` i zwrócić
    `{"warning": "ssh_disabled", "message": "Funkcja SSH jest wyłączona. Dostępne są tylko lokalne logi."}`.
-5. WHERE `ssh_enabled` wynosi `false`, THE LogController SHALL wykluczyć z odpowiedzi endpointu `?action=directories`
+5. WHERE `ssh_enabled` wynosi `false`, THE LogController SHALL wykluczyć z odpowiedzi endpointu `GET /api/directories`
    wszystkie katalogi z typem `ssh`.
 
 ---
@@ -142,15 +142,15 @@ mogła je zapisać po stronie serwera zamiast trzymać w localStorage przegląda
 
 1. THE ConfigManager SHALL przechowywać całą konfigurację aplikacji w pliku `data/app_config.json` w formacie JSON z
    wcięciami (JSON_PRETTY_PRINT).
-2. THE ConfigManager SHALL udostępniać endpoint `?action=app-config` (GET) zwracający bieżącą konfigurację z
+2. THE ConfigManager SHALL udostępniać endpoint `GET /api/app-config` zwracający bieżącą konfigurację z
    wykluczeniem pól wrażliwych (`ssh_password`, `ssh_key_passphrase`, `encryption_key_raw`).
 3. WHEN ConfigManager zapisuje `data/app_config.json`, THE ConfigManager SHALL walidować wynikowy JSON i wycofać zapis (
    zachować poprzednią wersję) jeśli JSON jest nieprawidłowy.
 4. THE ConfigManager SHALL przechowywać `SSHProfile` (bez hasła) w `data/app_config.json`, tak by konfiguracja SSH
    przetrwała restart kontenera.
-5. WHEN frontend Vue.js ładuje stronę, THE Frontend SHALL pobrać konfigurację z `?action=app-config` i wypełnić stan
+5. WHEN frontend Vue.js ładuje stronę, THE Frontend SHALL pobrać konfigurację z `GET /api/app-config` i wypełnić stan
    aplikacji danymi z serwera zamiast z localStorage.
-6. THE ConfigManager SHALL udostępniać endpoint `?action=app-config` (POST) przyjmujący częściową aktualizację
+6. THE ConfigManager SHALL udostępniać endpoint `POST /api/app-config` przyjmujący częściową aktualizację
    konfiguracji i zwracający `{"success": true}`.
 
 ---
@@ -163,9 +163,9 @@ przeglądarki, chcę aby aplikacja automatycznie zaproponowała ich migrację do
 
 #### Kryteria akceptacji
 
-1. THE SetupWizard SHALL udostępniać endpoint `?action=setup-migrate-ssh` (POST) przyjmujący tablicę połączeń SSH z
+1. THE SetupWizard SHALL udostępniać endpoint `POST /api/setup/migrate-ssh` przyjmujący tablicę połączeń SSH z
    localStorage i zapisujący je jako `SSHProfile` w `AppConfig`.
-2. WHEN `?action=setup-migrate-ssh` przetwarza połączenie zawierające `keyPath` wskazujące na ścieżkę hosta (np.
+2. WHEN `POST /api/setup/migrate-ssh` przetwarza połączenie zawierające `keyPath` wskazujące na ścieżkę hosta (np.
    `/home/user/.ssh/id_rsa`), THE SetupWizard SHALL zapisać oryginalne pole jako `ssh_key_path_original` i ustawić pole
    `ssh_key_path_warning: true` sygnalizując że ścieżka może być nieprawidłowa w kontenerze.
 3. WHEN migracja SSH zakończy się powodzeniem, THE SetupWizard SHALL zwrócić `{"migrated": <liczba>, "warnings": [...]}`
@@ -214,4 +214,37 @@ zabezpieczony, żeby nieautoryzowane osoby nie miały dostępu do danych SSH.
    poza skonfigurowane katalogi logów, niezależnie od stanu konfiguracji.
 5. IF plik `data/app_config.json` ma uprawnienia szersze niż `0640`, THEN THE ConfigManager SHALL zalogować ostrzeżenie
    do `data/php_errors.log` przy każdym wczytaniu konfiguracji.
+
+---
+
+### Wymaganie 10: Domyślne katalogi logów
+
+**User Story:** Jako użytkownik, chcę mieć wstępnie skonfigurowane katalogi logów (docker, host, repository),
+żeby od razu widzieć pliki logów bez ręcznej konfiguracji.
+
+#### Kryteria akceptacji
+
+1. THE LogConfig SHALL udostępniać statyczną metodę `getDefaultDirectories()` zwracającą 4 wbudowane wpisy:
+   `docker:/var/log`, `host:/var/log`, `host-home:~/logs`, `repository:logs`.
+2. THE DirectoryController SHALL udostępniać endpoint `GET /api/config/default-directories` zwracający listę
+   domyślnych katalogów w formacie `[{key, path, type, name}]`.
+3. THE Frontend SHALL pobrać domyślne katalogi przez `GET /api/config/default-directories` podczas `init()`.
+4. THE Frontend SHALL scalić domyślne katalogi z zapisanymi w dropdownie jako grupy optgroup:
+   "Domyślne", "Zapisane", "SSH".
+5. THE Frontend SHALL przy starcie wybrać pierwszy dostępny domyślny katalog zamiast hardcodowanej wartości.
+6. WHEN użytkownik wybierze domyślny katalog (np. `docker:/var/log`), THE LogController SHALL sparsować klucz
+   z dwukropkiem i użyć ścieżki po dwukropku do rozwiązania fizycznej lokalizacji.
+
+### Wymaganie 11: Synchronizacja SSH z serwera do frontendu
+
+**User Story:** Jako użytkownik, chcę aby profile SSH zapisane po stronie serwera były automatycznie
+dostępne w interfejsie, bez konieczności ponownego ich konfigurowania w przeglądarce.
+
+#### Kryteria akceptacji
+
+1. WHEN frontend ładuje konfigurację z `GET /api/app-config`, THE Frontend SHALL zmapować `ssh_profiles`
+   z formatu serwerowego na format localStorage i zapisać je pod kluczem `fplv_ssh_connections`.
+2. THE Frontend SHALL aktualizować `sshConnections` ref po pobraniu profili z serwera.
+3. THE Frontend SHALL zachować istniejącą funkcję `syncSSHDirs()` do wyświetlania SSH w dropdownie
+   (odczyt z localStorage).
 

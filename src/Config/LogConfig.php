@@ -7,7 +7,6 @@ namespace Mariusz\LogViewer\Config;
 use Exception;
 use PDO;
 use PDOException;
-use Mariusz\LogViewer\Service\LogScanner;
 use RuntimeException;
 
 /**
@@ -178,31 +177,6 @@ class LogConfig
     }
 
     /**
-     * Remove duplicate directories (keep first occurrence)
-     */
-    public function removeDuplicates(): int
-    {
-        $this->db->exec("
-            DELETE FROM log_directories
-            WHERE id NOT IN (
-                SELECT MIN(id) FROM log_directories GROUP BY path
-            )
-        ");
-        return $this->db->exec("DELETE FROM log_directories WHERE path IN (SELECT path FROM log_directories GROUP BY path HAVING COUNT(*) > 1) AND id NOT IN (SELECT MIN(id) FROM log_directories GROUP BY path)");
-    }
-
-    /**
-     * Remove entries with auto-generated allowed_* names
-     */
-    public function removeAllowedEntries(): int
-    {
-        $stmt = $this->db->prepare("DELETE FROM log_directories WHERE name LIKE 'allowed_%'");
-        $stmt->execute();
-
-        return $stmt->rowCount();
-    }
-
-    /**
      * Get a specific directory by ID
      */
     public function getDirectory(int $id): ?array
@@ -298,45 +272,20 @@ class LogConfig
     }
 
     /**
-     * Add default local directories for first run
+     * Default directories — source of truth for the 4 built-in entries.
+     * Each entry has: key (user-friendly label), path (for backend resolution),
+     * type (logical group), name (display name).
+     *
+     * @return array<int, array{key: string, path: string, type: string, name: string}>
      */
-    public function addDefaultDirectories(): void
+    public static function getDefaultDirectories(): array
     {
-        if ($this->hasConfigurations()) {
-            return;
-        }
-
-        $scanner = new LogScanner();
-        $foundDirs = $scanner->scanCommonDirectories();
-
-        foreach ($foundDirs as $path => $info) {
-            try {
-                $this->addDirectory([
-                    'name' => $info['name'],
-                    'path' => $path,
-                    'type' => 'local',
-                ]);
-            } catch (Exception $e) {
-                // Skip if directory cannot be added
-            }
-        }
-
-        // If no directories found, add basic defaults
-        if (empty($foundDirs)) {
-            $basicDefaults = [
-                ['name' => 'Local Logs', 'path' => __DIR__ . '/../logs', 'type' => 'local'],
-            ];
-
-            foreach ($basicDefaults as $config) {
-                if (is_dir($config['path'])) {
-                    try {
-                        $this->addDirectory($config);
-                    } catch (Exception $e) {
-                        // Skip if directory cannot be added
-                    }
-                }
-            }
-        }
+        return [
+            ['key' => 'docker:/var/log',   'path' => '/var/log',       'type' => 'docker',     'name' => 'Kontener (Docker)'],
+            ['key' => 'host:/var/log',     'path' => '/host/var/log',   'type' => 'host',       'name' => 'Host (Ubuntu)'],
+            ['key' => 'host-home:~/logs',  'path' => '/host/home/logs', 'type' => 'home',       'name' => 'Host (~/logs)'],
+            ['key' => 'repository:logs',   'path' => 'logs/',           'type' => 'repository', 'name' => 'Aplikacja (logs/)'],
+        ];
     }
 
     /**
