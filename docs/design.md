@@ -358,20 +358,22 @@ $app->get('/api/directories',         [LogController::class, 'getDirectories']);
 $app->get('/api/files',               [LogController::class, 'getFiles']);
 $app->get('/api/entries',             [LogController::class, 'getEntries']);
 
+// Default directories (źródło prawdy, bez DB)
+$app->get('/api/config/default-directories',  [DirectoryController::class, 'getDefaultDirectories']);
+
 // Directory Config
 $app->post('/api/config/directories',          [DirectoryController::class, 'add']);
 $app->put('/api/config/directories/{id}',      [DirectoryController::class, 'update']);
 $app->delete('/api/config/directories/{id}',   [DirectoryController::class, 'delete']);
-$app->post('/api/config/cleanup-duplicates',   [DirectoryController::class, 'cleanupDuplicates']);
+
+// Scan
+$app->get('/api/scan/directories',    [DirectoryController::class, 'scanDirectories']);
 
 // SSH
 $app->post('/api/ssh/test-connection', [SSHController::class, 'testConnection']);
 $app->post('/api/ssh/list-files',      [SSHController::class, 'listFiles']);
 $app->post('/api/ssh/read-file',       [SSHController::class, 'readFile']);
 $app->post('/api/ssh/download-file',   [SSHController::class, 'downloadFile']);
-
-// Scan
-$app->get('/api/scan/directories',    [DirectoryController::class, 'scanDirectories']);
 ```
 
 ### Kompatybilność wsteczna
@@ -557,8 +559,23 @@ async function init() {
     const config = await fetchJson('/api/app-config');
     sshEnabled.value = config.ssh_enabled ?? true;
 
+    // Zsynchronizuj profile SSH z serwera do localStorage
+    if (config.ssh_profiles && config.ssh_profiles.length) {
+        const profiles = config.ssh_profiles.map(p => ({
+            name: p.name, host: p.ssh_host, user: p.ssh_user,
+            port: p.ssh_port || 22, authMethod: p.ssh_auth_method || 'password',
+            keyPath: p.ssh_key_path || '', remotePath: p.remote_path || '/var/log',
+            allFiles: p.all_files || false,
+        }));
+        localStorage.setItem('fplv_ssh_connections', JSON.stringify(profiles));
+        sshConnections.value = profiles;
+    }
+
+    // Załaduj katalogi domyślne (z API, nie hardcodowane)
+    await loadDefaultDirectories();
+
     // Załaduj katalogi (teraz z serwera, nie localStorage)
-    directories.value = await fetchJson('/api/directories');
+    await loadDirectories();
     // ...
 }
 ```
@@ -649,6 +666,53 @@ Kompatybilność wsteczna przez serwer (mapa aliasów) zapewnia płynne przejśc
     </div>
 </div>
 ```
+
+---
+
+## Domyślne katalogi (Default Directories)
+
+### Źródło prawdy: `LogConfig::getDefaultDirectories()`
+
+Statyczna metoda w `src/Config/LogConfig.php` zwraca 4 wbudowane wpisy:
+
+| `key` | `path` | `type` | `name` | Opis |
+|---|---|---|---|---|
+| `docker:/var/log` | `/var/log` | `docker` | `Kontener (Docker)` | Logi w kontenerze |
+| `host:/var/log` | `/host/var/log` | `host` | `Host (Ubuntu)` | Logi na hoście |
+| `host-home:~/logs` | `/host/home/logs` | `home` | `Host (~/logs)` | Logi w ~/logs na hoście |
+| `repository:logs` | `logs/` | `repository` | `Aplikacja (logs/)` | Logi w katalogu aplikacji |
+
+### Przepływ w dropdownie
+
+1. Frontend ładuje defaults przez `GET /api/config/default-directories` → `DirectoryController::getDefaultDirectories()`
+2. Frontend ładuje zapisane katalogi przez `GET /api/directories` → `LogController::getDirectories()` → `LogConfig::getValidDirectories()`
+3. `mergedDirectories` (Vue computed) grupuje je: **"Domyślne"**, **"Zapisane"**, **"SSH"**
+4. Przy wyborze defaulta (`docker:/var/log`): frontend wysyła `dir=<key>`, backend parsuje klucz przez `LogController::resolveDirPath()`:
+   - Klucze z `:` → wyciąga ścieżkę po dwukropku
+   - Klucze absolutne (`/`) → używa bezpośrednio
+   - Klucze zwykłe → szuka w SQLite po `name`
+
+### Domyślny wybór
+
+Przy starcie `loadDirectories()` wybiera pierwszy dostępny katalog z grupy "Domyślne" (zamiast hardcodowanego `docker:/var/log`).
+
+---
+
+## Audyt i oczyszczenie kodu (2026-06-24)
+
+### Usunięty martwy kod z `LogConfig`
+
+- `addDefaultDirectories()` — nigdy nie wywoływana, używała `LogScanner` do auto-populacji SQLite
+- `removeDuplicates()` — nigdy nie wywoływana, zawierała zduplikowane zapytanie SQL
+- `removeAllowedEntries()` — nigdy nie wywoływana, logika częściowo w `cleanupAuto()`
+- Import `LogScanner` — nieużywany po usunięciu `addDefaultDirectories()`
+
+### Poprawki
+
+- `SetupWizard::processLocalDirectories()` — usunięte martwe przypisanie `$config['local_directories']`
+- Frontend: `loadDirectories()` wybiera pierwszy default zamiast hardcodowanego `docker:/var/log`
+- Frontend: `init()` synchronizuje `ssh_profiles` z API `/api/app-config` do localStorage
+- Testy SSH z frog (`frog01.mikr.us`) — oznaczone jako `markTestSkipped` (serwer niedostępny)
 
 ---
 

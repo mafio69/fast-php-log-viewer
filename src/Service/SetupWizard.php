@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Service;
 
+use Exception;
+use InvalidArgumentException;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 
@@ -77,7 +79,7 @@ class SetupWizard
             'ssh_config' => $this->processSSHConfig($data, $skip),
             'local_directories' => $this->processLocalDirectories($data, $skip),
             'finalize' => $this->processFinalize($data, $skip),
-            default => throw new \InvalidArgumentException("Unknown step: $step"),
+            default => throw new InvalidArgumentException("Unknown step: $step"),
         };
     }
 
@@ -120,7 +122,7 @@ class SetupWizard
                 // Zapisz profil (bez hasła)
                 $this->configManager->saveSSHProfile($profile);
                 $migrated++;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $warnings[] = "Błąd migracji połączenia " . ($conn['name'] ?? 'unnamed') . ": " . $e->getMessage();
             }
         }
@@ -284,13 +286,11 @@ class SetupWizard
                     'type' => 'local',
                 ]);
                 $added++;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Kontynuuj z kolejnym katalogiem
             }
         }
 
-        // Zapisz lokalne katalogi w konfiguracji
-        $config['local_directories'] = $localDirs;
         $setupSteps['local_directories'] = 'complete';
         $this->configManager->updateConfig([
             'setup_steps' => $setupSteps,
