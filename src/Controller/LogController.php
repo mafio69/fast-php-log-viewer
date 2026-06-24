@@ -22,27 +22,41 @@ class LogController
 
     public function getDirectories(Request $request, Response $response): Response
     {
-        $dirs = $this->logConfig->getDirectories();
+        $this->logConfig->cleanupAuto();
+        $dirs = $this->logConfig->getValidDirectories();
 
         if (!$this->configManager->isSshEnabled()) {
             $dirs = array_filter($dirs, fn($d) => ($d['type'] ?? 'local') !== 'ssh');
         }
 
-        $result = array_map(function ($dir) {
-            return [
-                'key' => $dir['name'],
-                'path' => $dir['path'],
-                'type' => $dir['type'] ?? 'local'
-            ];
-        }, $dirs);
-
-        $response->getBody()->write(json_encode(array_values($result)));
+        $response->getBody()->write(json_encode(array_values($dirs)));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
     public function getFiles(Request $request, Response $response): Response
     {
-        $dirKey = $request->getQueryParams()['dir'] ?? null;
+        $params = $request->getQueryParams();
+        $path = $params['path'] ?? null;
+        $dirKey = $params['dir'] ?? null;
+
+        // Default directories bypass DB lookup — scan path directly
+        if ($path) {
+            if (str_starts_with($path, '~/')) {
+                $absPath = ($_SERVER['HOME'] ?? '/root') . '/' . substr($path, 2);
+            } elseif (!str_starts_with($path, '/')) {
+                // Relative path — resolve against application root
+                $absPath = dirname(__DIR__, 2) . '/' . $path;
+            } else {
+                $absPath = $path;
+            }
+            $files = $this->logFinder->findAll($absPath);
+            $result = array_map(fn($f) => [
+                'file' => $f['file'], 'date' => $f['date'], 'size' => $f['size'],
+            ], $files);
+            $response->getBody()->write(json_encode($result));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+
         if (!$dirKey) {
             $response->getBody()->write(json_encode(['error' => 'missing_dir']));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(400);

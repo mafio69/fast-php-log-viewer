@@ -131,6 +131,53 @@ class LogConfig
     }
 
     /**
+     * Returns directories with a 'valid' flag.
+     * Local: checks if path exists and is readable.
+     * SSH: checks if the SSH profile still exists in ConfigManager.
+     */
+    public function getValidDirectories(): array
+    {
+        $dirs = $this->getDirectories();
+        $result = [];
+
+        foreach ($dirs as $dir) {
+            $valid = (($dir['type'] ?? 'local') === 'ssh')
+                ? !empty($dir['ssh_host'])
+                : (is_dir($dir['path']) && is_readable($dir['path']));
+
+            $key = $dir['name'];
+
+            $result[] = [
+                'id' => $dir['id'],
+                'key' => $key,
+                'name' => $dir['name'],
+                'path' => $dir['path'],
+                'type' => $dir['type'] ?? 'local',
+                'valid' => $valid,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Auto-cleanup on every page load:
+     * - removes allowed_* auto-generated names
+     * - removes duplicate paths (keeps lowest id)
+     */
+    public function cleanupAuto(): void
+    {
+        $this->db->exec("DELETE FROM log_directories WHERE name LIKE 'allowed_%'");
+
+        $this->db->exec("
+            DELETE FROM log_directories
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM log_directories GROUP BY path
+            )
+        ");
+    }
+
+    /**
      * Remove duplicate directories (keep first occurrence)
      */
     public function removeDuplicates(): int
