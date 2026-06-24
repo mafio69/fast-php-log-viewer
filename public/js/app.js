@@ -40,8 +40,8 @@ createApp({
         const defaultDirectories = [
             {key: 'docker:/var/log', path: '/var/log', type: 'docker', name: 'Kontener (Docker)'},
             {key: 'host:/var/log', path: '/host/var/log', type: 'host', name: 'Host (Ubuntu)'},
-            {key: 'home:~/logs', path: '~/logs', type: 'home', name: 'Użytkownik (~/logs)'},
-            {key: 'repository:/logs', path: 'logs/', type: 'repository', name: 'Aplikacja (logs/)'},
+            {key: 'host-home:~/logs', path: '~/logs', type: 'home', name: 'Host (~/logs)'},
+            {key: 'repository:logs', path: 'logs/', type: 'repository', name: 'Aplikacja (logs/)'},
         ];
         const allowedDirPath = ref('/var/log');
         const filterText = ref('');

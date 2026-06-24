@@ -94,4 +94,90 @@ class LogControllerTest extends TestCase
         $this->assertCount(1, $body);
         $this->assertEquals($expectedPath . '/user.log', $body[0]['file']);
     }
+
+    public function testGetEntriesWithRelativeDirResolvesViaFallback(): void
+    {
+        $appRoot = dirname(__DIR__, 2);
+        $testDir = $appRoot.'/logs';
+
+        if (!is_dir($testDir)) {
+            mkdir($testDir, 0755, true);
+        }
+
+        $testFile = $testDir.'/test-relative-entries.log';
+        $content = "[2024-01-01 10:00:00] [INFO] [test.php:1] test message\n";
+        file_put_contents($testFile, $content);
+
+        try {
+            $request = (new RequestFactory())->createRequest(
+                'GET',
+                '/api/entries?'.http_build_query([
+                    'file' => $testFile,
+                    'dir' => 'logs/',
+                ])
+            );
+            $response = (new ResponseFactory())->createResponse();
+
+            $result = $this->controller->getEntries($request, $response);
+
+            $this->assertEquals(200, $result->getStatusCode());
+            $body = json_decode((string)$result->getBody(), true);
+            $this->assertCount(1, $body);
+            $this->assertEquals('INFO', $body[0]['level']);
+        } finally {
+            if (file_exists($testFile)) {
+                unlink($testFile);
+            }
+        }
+    }
+
+    public function testGetEntriesWithTildeDirResolvesViaFallback(): void
+    {
+        $originalHome = $_SERVER['HOME'] ?? null;
+        $tmpHome = sys_get_temp_dir().'/log-viewer-home-test-'.uniqid();
+        $testDir = $tmpHome.'/logs';
+
+        if (!is_dir($testDir)) {
+            mkdir($testDir, 0755, true);
+        }
+
+        $testFile = $testDir.'/test-tilde-entries.log';
+        $content = "[2024-01-01 10:00:00] [WARNING] [app.php:5] warning message\n";
+        file_put_contents($testFile, $content);
+
+        $_SERVER['HOME'] = $tmpHome;
+
+        try {
+            $request = (new RequestFactory())->createRequest(
+                'GET',
+                '/api/entries?'.http_build_query([
+                    'file' => $testFile,
+                    'dir' => '~/logs',
+                ])
+            );
+            $response = (new ResponseFactory())->createResponse();
+
+            $result = $this->controller->getEntries($request, $response);
+
+            $this->assertEquals(200, $result->getStatusCode());
+            $body = json_decode((string)$result->getBody(), true);
+            $this->assertCount(1, $body);
+            $this->assertEquals('WARNING', $body[0]['level']);
+        } finally {
+            if (file_exists($testFile)) {
+                unlink($testFile);
+            }
+            if (is_dir($testDir)) {
+                rmdir($testDir);
+            }
+            if (is_dir($tmpHome)) {
+                rmdir($tmpHome);
+            }
+            if ($originalHome !== null) {
+                $_SERVER['HOME'] = $originalHome;
+            } else {
+                unset($_SERVER['HOME']);
+            }
+        }
+    }
 }

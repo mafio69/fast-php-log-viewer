@@ -115,7 +115,8 @@ class LogController
             }
         }
 
-        return null;
+        // Fallback: treat key as direct path (for defaultDirectories from frontend)
+        return $this->resolvePath($key);
     }
 
     private function resolvePath(string $path): string

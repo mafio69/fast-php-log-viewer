@@ -47,37 +47,35 @@ LOG_DIR=/var/www/html/logs php -S localhost:8080 log-viewer.php
 
 Best for: new projects, Docker environments, when you already use Composer.
 
-**Step 1.**
-
 ```sh
 composer require mafio69/log-viewer
 ```
 
-**Step 2.** Create a single entry point file (e.g. `log-viewer.php` in your webroot):
+Create a single entry point file (e.g. `log-viewer.php` in your webroot):
 
 ```php
 <?php
-define('LOG_DIR', __DIR__ . '/logs');   // ← adjust path to your logs
+define('LOG_DIR', __DIR__ . '/logs');
 require_once __DIR__ . '/vendor/autoload.php';
 
-if (isset($_GET['action'])) {
-    require_once __DIR__ . '/vendor/mafio69/log-viewer/src/api.php';
-    exit;
-}
-
-require_once __DIR__ . '/vendor/mafio69/log-viewer/index.php';
+$app = \Mariusz\LogViewer\Bootstrap\AppBootstrap::create();
+$request = \Slim\Psr7\Factory\ServerRequestFactory::createFromGlobals();
+$app->run($request);
 ```
-
-**Step 3.** Open `http://yourproject.local/log-viewer.php` — done.
 
 A ready-to-use example file is included at [`example/viewer.php`](example/viewer.php).
 
 ---
 
-## Usage in Docker (fast-php-logger suite)
+## Usage in Docker
 
-If you use [docker-fast-logger](https://github.com/mafio69/docker-fast-logger), the viewer is pre-configured.
-Just open `http://localhost:8080/logs` — no setup needed.
+```sh
+docker compose up -d
+```
+
+Open `http://localhost:9123` — no setup needed.
+
+The container mounts `/var/log` to `/host/var/log` and serves logs on port 9123.
 
 ---
 
@@ -88,8 +86,13 @@ Just open `http://localhost:8080/logs` — no setup needed.
 - Filter by log level (DEBUG / INFO / NOTICE / WARNING / ERROR / CRITICAL / ALERT / EMERGENCY)
 - Full-text search across message and location
 - Expandable JSON context per entry
-- Color-coded levels
-- Vue 3 + Tailwind — no build step, no node_modules
+- Color-coded levels with retro terminal UI (CRT style)
+- Vue 3 + Tailwind CSS — no build step, no node_modules
+- **Directory selector** — choose from 4 default directories (docker, host, home, repository) or add your own
+- **SSH support** — browse and read log files on remote servers via SSH
+- **Setup wizard** — first-run configuration wizard for encryption keys, SSH, and directories
+- **Bookmarks** — bookmark important log entries for quick access
+- **Pagination** — large log files are paginated with sortable columns
 
 ## Log format
 
@@ -106,26 +109,100 @@ Compatible with all `fast-php-logger` directory structures:
 | `Y/m/d` | `logs/2026/05/03/2026-05-03.log` |
 | `""` (flat) | `logs/2026-05-03.log` |
 
+## API Endpoints
+
+All API routes are prefixed with `/api/`. Legacy `?action=X` parameters are still supported via backward compatibility.
+
+| Endpoint                       | Method | Description                 |
+|--------------------------------|--------|-----------------------------|
+| `/api/setup/status`            | GET    | Check setup wizard status   |
+| `/api/setup/step`              | POST   | Execute setup step          |
+| `/api/setup/migrate-ssh`       | POST   | Migrate SSH config          |
+| `/api/app-config`              | GET    | Get application config      |
+| `/api/app-config`              | POST   | Update application config   |
+| `/api/directories`             | GET    | List configured directories |
+| `/api/files`                   | GET    | List log files              |
+| `/api/entries`                 | GET    | Get log entries             |
+| `/api/config/directories`      | POST   | Add allowed directory       |
+| `/api/config/directories/{id}` | PUT    | Update directory config     |
+| `/api/config/directories/{id}` | DELETE | Remove directory config     |
+| `/api/scan/directories`        | GET    | Scan for directories        |
+| `/api/ssh/test-connection`     | POST   | Test SSH connection         |
+| `/api/ssh/list-files`          | POST   | List files via SSH          |
+| `/api/ssh/read-file`           | POST   | Read file via SSH           |
+| `/api/ssh/download-file`       | POST   | Download file via SSH       |
+
 ## Structure
 
 ```
 fast-php-log-viewer/
+├── public/
+│   ├── index.php          ← Entry point (Slim + Vue UI)
+│   ├── css/style.css      ← Styles
+│   └── js/app.js          ← Vue 3 application
 ├── src/
-│   ├── LogParser.php   ← parses log lines to arrays
-│   ├── LogFinder.php   ← finds log files by directory structure
-│   └── api.php         ← JSON endpoint (?action=files / ?action=entries)
+│   ├── Bootstrap/
+│   │   ├── AppBootstrap.php  ← App factory
+│   │   ├── app.php           ← Slim app setup
+│   │   ├── container.php     ← DI container definitions
+│   │   └── routes.php        ← Route definitions
+│   ├── Config/
+│   │   ├── ConfigManager.php ← App configuration manager
+│   │   └── LogConfig.php     ← Log-specific configuration
+│   ├── Controller/
+│   │   ├── AppConfigController.php
+│   │   ├── DirectoryController.php
+│   │   ├── LogController.php
+│   │   ├── SetupController.php
+│   │   └── SSHController.php
+│   ├── Middleware/
+│   │   └── SetupMiddleware.php
+│   ├── Repository/
+│   │   ├── LogEntry.php
+│   │   ├── LogFile.php
+│   │   └── SSHConnection.php
+│   ├── Routing/
+│   │   └── LegacyRouter.php ← Backward compat for ?action=X
+│   └── Service/
+│       ├── GlobLogFinder.php
+│       ├── LogFinder.php
+│       ├── LogFinderInterface.php
+│       ├── LogParser.php
+│       ├── LogScanner.php
+│       ├── RemoteLogFinder.php
+│       ├── SecurityService.php
+│       ├── SetupWizard.php
+│       └── SSH.php
 ├── dist/
-│   └── fast-php-log-viewer.php  ← single-file drop-in (no Composer)
+│   └── fast-php-log-viewer.php  ← Single-file drop-in (no Composer)
 ├── example/
-│   └── viewer.php      ← ready-to-use Composer entry point
+│   └── viewer.php           ← Ready-to-use Composer entry point
 ├── tests/
+│   ├── Config/
+│   ├── Controller/
+│   ├── Middleware/
+│   ├── Routing/
+│   ├── Service/
 │   ├── LogParserTest.php
-│   └── LogFinderTest.php
-├── index.php           ← Vue 3 + Tailwind UI entry point
+│   ├── LogFinderTest.php
+│   └── LogScannerTest.php
+├── data/                    ← App data (config, database)
+├── docker/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── start.sh
+├── docker-compose.yml
+├── index.php                ← Legacy entry point (redirects to public/)
 └── composer.json
 ```
 
-## fast-php-* suite
+## Requirements
+
+- PHP >= 8.1
+- `ext-pdo`, `ext-pdo_sqlite`, `ext-ssh2`
+- Composer (for full installation)
+
+## fast-php-\* suite
 
 | Package | Description |
 |---|---|
