@@ -340,8 +340,10 @@ createApp({
             loading.value = true;
             Object.keys(expanded).forEach(k => delete expanded[k]);
             try {
+                const def = defaultDirectories.find(d => d.key === selectedDir.value);
+                const dirParam = def ? def.path : selectedDir.value;
                 const url = '/api/entries?file=' + encodeURIComponent(selectedFile.value)
-                    + '&dir=' + encodeURIComponent(selectedDir.value);
+                    + '&dir=' + encodeURIComponent(dirParam);
                 entries.value = await fetchJson(url);
                 applyFilters();
             } finally {
