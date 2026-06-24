@@ -12,6 +12,7 @@ services:
       - "9123:80"
     volumes:
       - .:/var/www/html
+      - ./logs:/var/www/html/logs
       - ./docker-logs/nginx:/var/log/nginx
       - ~/.ssh:/home/www-data/.ssh
       - ./data:/var/www/html/data
