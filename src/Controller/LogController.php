@@ -96,6 +96,11 @@ class LogController
             return null;
         }
 
+        // Direct filesystem path — use as-is
+        if (str_starts_with($key, '/')) {
+            return $this->resolvePath($key);
+        }
+
         // Default directories with colon prefix (docker:/var/log, host:/var/log, etc.)
         if (str_contains($key, ':')) {
             $path = substr($key, strpos($key, ':') + 1);
