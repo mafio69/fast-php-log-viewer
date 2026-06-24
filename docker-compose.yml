@@ -16,3 +16,4 @@ services:
       - ~/.ssh:/home/www-data/.ssh
       - ./.logs:/var/www/html/logs
       - ./data:/var/www/html/data
+      - /var/log:/host/var/log
