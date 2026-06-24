@@ -24,4 +24,10 @@ sposoby mapowanie katalogu ~/.ssh lub hasła oba warianty logowania , używała 
 czarna z buałymi napisami. Była czarna z zielonymi napisami jak w dawnych monitorach CRT 
 
 Tak był komunikat żę znalazł jeden plik log ale go nie wywietlił nie wiem gdzie powinna być lista? Dodatkowo dodaj pole tekstowe do wpisania path do kat. logów chyba lepiej konkretnie do pliku log . I albo zrobimy upload dowolnego pliku ja jestem za path chyba że damy mozliwoć wyboru pliku jakie wyklikane
+
 jakis explorer do wyboru pliku ? Przeanalizuj zrób taski . Ale kolejnoć wywietlić jak najszybciej plik logów najprociej ta scieżka "\\wsl.localhost\Ubuntu-24.04\var\log\php\php_errors.log"
+Posłuchaj ma być tak masz docker:/var/log wskazuje katalog na kontenerze o adresie /var/log, host:/var/log wskazuje na
+komputerze z systemem na hoscie katalog /var/log, te są zrobione i dziłąją nie ruszasz. Teraz trzeba naprawić home:~
+/logs który wskazuje                                               
+┃ katalog na hoście systmie ~/logs i tylko ten katalog wyświetlanie naprawiasz teraz nic więcej żadnych rewolucji
+prostota !  
