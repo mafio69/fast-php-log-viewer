@@ -172,7 +172,7 @@ header('Expires: 0');
                 <select v-model="selectedDir" @change="changeDir"
                         class="flex-1 rounded px-2 py-1 text-xs crt-input">
                     <optgroup v-for="(group, gkey) in mergedDirectories" :key="gkey" :label="group.label">
-                        <option v-for="d in group.items" :key="d.key" :value="d.key">{{ d.path || d.key }}</option>
+                        <option v-for="d in group.items" :key="d.key" :value="d.key">{{ d.key }}</option>
                     </optgroup>
                 </select>
                 <button v-if="selectedDir && selectedDir.startsWith('ssh:')" @click="refreshSSHDir(selectedDir)"
