@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Service;
 
+use RuntimeException;
+
 /**
  * Scans directories for log files automatically.
  */
@@ -113,12 +115,12 @@ class LogScanner
     {
         $size = @filesize($path);
         if ($size === false) {
-            throw new \RuntimeException("(@filesize(\$path) === false) Failed to get filesize for: $path (path: $path)" . $this->getLastErrorMessage());
+            throw new RuntimeException("(@filesize(\$path) === false) Failed to get filesize for: $path (path: $path)" . $this->getLastErrorMessage());
         }
 
         $mtime = @filemtime($path);
         if ($mtime === false) {
-            throw new \RuntimeException("(@filemtime(\$path) === false) Failed to get mtime for: $path (path: $path)" . $this->getLastErrorMessage());
+            throw new RuntimeException("(@filemtime(\$path) === false) Failed to get mtime for: $path (path: $path)" . $this->getLastErrorMessage());
         }
 
         return [

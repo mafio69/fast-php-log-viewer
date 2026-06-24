@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Controller;
 
+use Exception;
+use InvalidArgumentException;
 use Mariusz\LogViewer\Service\SetupWizard;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -48,10 +50,10 @@ class SetupController
             $result = $this->wizard->processStep($step, $stepData, $skip);
             $response->getBody()->write(json_encode($result));
             return $response->withHeader('Content-Type', 'application/json');
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $response->getBody()->write(json_encode(['error' => 'unknown_step', 'step' => $step]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => 'internal_error', 'message' => $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }

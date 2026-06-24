@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Controller;
 
+use Exception;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\RemoteLogFinder;
+use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SSH;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -29,7 +31,7 @@ class SSHController
             $ssh->disconnect();
             $response->getBody()->write(json_encode(['success' => true]));
             return $response->withHeader('Content-Type', 'application/json');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
@@ -71,7 +73,7 @@ class SSHController
 
             $response->getBody()->write(json_encode(['success' => true, 'files' => $files]));
             return $response->withHeader('Content-Type', 'application/json');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
@@ -114,7 +116,7 @@ class SSHController
 
             $response->getBody()->write(json_encode(['success' => true, 'entries' => $entries]));
             return $response->withHeader('Content-Type', 'application/json');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
@@ -161,14 +163,14 @@ class SSHController
             $content = $ssh->readFile($path);
 
             // Walidacja bezpieczeństwa - zawartość binarna
-            if (\Mariusz\LogViewer\Service\SecurityService::isBinaryContent($content)) {
+            if (SecurityService::isBinaryContent($content)) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'binary_content_not_allowed']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
             }
 
             // Walidacja bezpieczeństwa - suspicious content
-            if (\Mariusz\LogViewer\Service\SecurityService::containsSuspiciousContent($content)) {
+            if (SecurityService::containsSuspiciousContent($content)) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'suspicious_content_detected']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
@@ -187,7 +189,7 @@ class SSHController
                 'size' => strlen($content)
             ]));
             return $response->withHeader('Content-Type', 'application/json');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }

@@ -9,6 +9,11 @@ use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\SetupWizard;
 use PHPUnit\Framework\TestCase;
+use function Eris\Generator\associative;
+use function Eris\Generator\int;
+use function Eris\Generator\oneOf;
+use function Eris\Generator\string;
+use function Eris\Generator\vector;
 
 class SetupWizardPropertyTest extends TestCase
 {
@@ -49,9 +54,9 @@ class SetupWizardPropertyTest extends TestCase
 
         foreach ($steps as $step) {
             $this->forAll(
-                \Eris\Generator\associative([
-                    'random_field' => \Eris\Generator\string(),
-                    'another_field' => \Eris\Generator\int()
+                associative([
+                    'random_field' => string(),
+                    'another_field' => int()
                 ])
             )
             ->then(function ($data) use ($step) {
@@ -79,10 +84,10 @@ class SetupWizardPropertyTest extends TestCase
     {
         // Testy dla danych bez ssh_host
         $this->forAll(
-            \Eris\Generator\associative([
-                'ssh_user' => \Eris\Generator\string(),
-                'ssh_port' => \Eris\Generator\int(),
-                'random_field' => \Eris\Generator\string()
+            associative([
+                'ssh_user' => string(),
+                'ssh_port' => int(),
+                'random_field' => string()
             ])
         )
         ->then(function ($data) {
@@ -96,10 +101,10 @@ class SetupWizardPropertyTest extends TestCase
 
         // Testy dla danych bez ssh_user
         $this->forAll(
-            \Eris\Generator\associative([
-                'ssh_host' => \Eris\Generator\string(),
-                'ssh_port' => \Eris\Generator\int(),
-                'random_field' => \Eris\Generator\string()
+            associative([
+                'ssh_host' => string(),
+                'ssh_port' => int(),
+                'random_field' => string()
             ])
         )
         ->then(function ($data) {
@@ -113,9 +118,9 @@ class SetupWizardPropertyTest extends TestCase
 
         // Testy dla danych bez obu pól
         $this->forAll(
-            \Eris\Generator\associative([
-                'ssh_port' => \Eris\Generator\int(),
-                'random_field' => \Eris\Generator\string()
+            associative([
+                'ssh_port' => int(),
+                'random_field' => string()
             ])
         )
         ->then(function ($data) {
@@ -130,11 +135,11 @@ class SetupWizardPropertyTest extends TestCase
 
         // Testy dla poprawnych danych
         $this->forAll(
-            \Eris\Generator\associative([
+            associative([
                 'ssh_host' => \Eris\Generator\constant('example.com'),
                 'ssh_user' => \Eris\Generator\constant('testuser'),
-                'ssh_port' => \Eris\Generator\int(),
-                'random_field' => \Eris\Generator\string()
+                'ssh_port' => int(),
+                'random_field' => string()
             ])
         )
         ->then(function ($data) {
@@ -152,12 +157,12 @@ class SetupWizardPropertyTest extends TestCase
     {
         // Testy dla ssh_enabled=false
         $this->forAll(
-            \Eris\Generator\vector(
+            vector(
                 5,
-                \Eris\Generator\associative([
-                    'name' => \Eris\Generator\string(),
-                    'path' => \Eris\Generator\string(),
-                    'type' => \Eris\Generator\oneOf(
+                associative([
+                    'name' => string(),
+                    'path' => string(),
+                    'type' => oneOf(
                         \Eris\Generator\constant('local'),
                         \Eris\Generator\constant('ssh')
                     )
@@ -185,12 +190,12 @@ class SetupWizardPropertyTest extends TestCase
 
         // Testy dla ssh_enabled=true
         $this->forAll(
-            \Eris\Generator\vector(
+            vector(
                 5,
-                \Eris\Generator\associative([
-                    'name' => \Eris\Generator\string(),
-                    'path' => \Eris\Generator\string(),
-                    'type' => \Eris\Generator\oneOf(
+                associative([
+                    'name' => string(),
+                    'path' => string(),
+                    'type' => oneOf(
                         \Eris\Generator\constant('local'),
                         \Eris\Generator\constant('ssh')
                     )

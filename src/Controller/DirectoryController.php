@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Controller;
 
+use Exception;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\LogScanner;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -28,7 +29,7 @@ class DirectoryController
             $id = $this->logConfig->addDirectory($data);
             $response->getBody()->write(json_encode(['success' => true, 'id' => $id]));
             return $response->withHeader('Content-Type', 'application/json');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
         }
@@ -53,6 +54,13 @@ class DirectoryController
         $id = (int)($args['id'] ?? 0);
         $result = $this->logConfig->deleteDirectory($id);
         $response->getBody()->write(json_encode(['success' => $result]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    public function getDefaultDirectories(Request $request, Response $response): Response
+    {
+        $dirs = LogConfig::getDefaultDirectories();
+        $response->getBody()->write(json_encode($dirs));
         return $response->withHeader('Content-Type', 'application/json');
     }
 

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests;
 
+use InvalidArgumentException;
 use Mariusz\LogViewer\Service\SSH;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class SSHTest extends TestCase
 {
@@ -29,7 +31,7 @@ class SSHTest extends TestCase
 
     public function testConnectThrowsExceptionWhenHostMissing(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('SSH host and user are required');
 
         $ssh = new SSH(['ssh_user' => 'user']);
@@ -38,7 +40,7 @@ class SSHTest extends TestCase
 
     public function testConnectThrowsExceptionWhenUserMissing(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('SSH host and user are required');
 
         $ssh = new SSH(['ssh_host' => 'example.com']);
@@ -51,7 +53,7 @@ class SSHTest extends TestCase
             $this->markTestSkipped('SSH2 extension not available');
         }
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('SSH password is required for password authentication');
 
         // Ustawiamy brak hosta, aby uniknąć ssh2_connect, 
@@ -74,7 +76,7 @@ class SSHTest extends TestCase
 
     public function testExecThrowsExceptionWhenNotConnected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('SSH connection not established');
 
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
@@ -83,7 +85,7 @@ class SSHTest extends TestCase
 
     public function testFileExistsThrowsExceptionWhenNotConnected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('SSH connection not established');
 
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
@@ -92,7 +94,7 @@ class SSHTest extends TestCase
 
     public function testDirectoryExistsThrowsExceptionWhenNotConnected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('SSH connection not established');
 
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
@@ -101,7 +103,7 @@ class SSHTest extends TestCase
 
     public function testFileSizeThrowsExceptionWhenNotConnected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('SSH connection not established');
 
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
@@ -110,7 +112,7 @@ class SSHTest extends TestCase
 
     public function testReadFileThrowsExceptionWhenNotConnected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('SSH connection not established');
 
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
@@ -119,7 +121,7 @@ class SSHTest extends TestCase
 
     public function testListFilesThrowsExceptionWhenNotConnected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('SSH connection not established');
 
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
@@ -149,7 +151,7 @@ class SSHTest extends TestCase
 
         try {
             $ssh->connect();
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             // Connection failed, but disconnect should still work
         }
 
@@ -174,7 +176,7 @@ class SSHTest extends TestCase
         try {
             $ssh->connect();
             $this->fail('Powinien zostać rzucony wyjątek o braku klucza lub błędzie połączenia');
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             // Jeśli walidacja klucza działa, powinniśmy dostać błąd o braku pliku.
             // Jeśli jednak jakiś domyślny klucz istnieje w środowisku testowym,
             // dostaniemy błąd połączenia (Failed to connect to SSH server).
@@ -202,7 +204,7 @@ class SSHTest extends TestCase
 
         try {
             $ssh->connect();
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             // W teście sprawdzamy czy sformatowany komunikat zawiera sformatowane ścieżki
             $this->assertStringContainsString('!/non/existent/path/id_rsa || !file_exists(/non/existent/path/id_rsa)', $e->getMessage());
             $this->assertStringContainsString('keyPath: /non/existent/path/id_rsa', $e->getMessage());

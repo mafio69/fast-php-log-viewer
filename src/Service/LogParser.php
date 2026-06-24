@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Service;
 
+use RuntimeException;
+
 /**
  * Parses log lines into structured arrays.
  *
@@ -55,7 +57,7 @@ class LogParser
 
         $content = @file_get_contents($path);
         if ($content === false) {
-            throw new \RuntimeException("(\$content === false) Failed to read log file: $path (path: $path)" . $this->getLastErrorMessage());
+            throw new RuntimeException("(\$content === false) Failed to read log file: $path (path: $path)" . $this->getLastErrorMessage());
         }
 
         return $this->parseString($content);

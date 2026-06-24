@@ -10,13 +10,15 @@ use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Log\LoggerInterface;
 
 class LogController
 {
     public function __construct(
         private readonly LogConfig $logConfig,
         private readonly ConfigManager $configManager,
-        private readonly LogFinderInterface $logFinder
+        private readonly LogFinderInterface $logFinder,
+        private readonly ?LoggerInterface $logger = null
     ) {
     }
 
@@ -39,10 +41,14 @@ class LogController
         $path = $params['path'] ?? null;
         $dirKey = $params['dir'] ?? null;
 
+        $this->logger?->debug('getFiles called', ['path' => $path, 'dirKey' => $dirKey]);
+
         // Default directories bypass DB lookup — scan path directly
         if ($path) {
             $absPath = $this->resolvePath($path);
+            $this->logger?->debug('getFiles path resolved', ['path' => $path, 'absPath' => $absPath]);
             $files = $this->logFinder->findAll($absPath);
+            $this->logger?->debug('getFiles files found', ['absPath' => $absPath, 'count' => count($files)]);
             $basePath = rtrim($absPath, '/');
             $result = array_map(fn($f) => [
                 'file' => $basePath . '/' . $f['file'],
@@ -91,42 +97,58 @@ class LogController
      */
     private function resolveDirPath(string $key): ?string
     {
+        $this->logger?->debug('resolveDirPath input', ['key' => $key]);
+
         // SSH directories — not validated against local paths
         if (str_starts_with($key, 'ssh:')) {
+            $this->logger?->debug('resolveDirPath ssh branch', ['key' => $key]);
             return null;
         }
 
         // Direct filesystem path — use as-is
         if (str_starts_with($key, '/')) {
-            return $this->resolvePath($key);
+            $result = $this->resolvePath($key);
+            $this->logger?->debug('resolveDirPath absolute branch', ['key' => $key, 'result' => $result]);
+            return $result;
         }
 
         // Default directories with colon prefix (docker:/var/log, host:/var/log, etc.)
         if (str_contains($key, ':')) {
             $path = substr($key, strpos($key, ':') + 1);
-            return $this->resolvePath($path);
+            $result = $this->resolvePath($path);
+            $this->logger?->debug('resolveDirPath colon branch', ['key' => $key, 'pathAfterColon' => $path, 'result' => $result]);
+            return $result;
         }
 
         // DB-saved directory — look up by name
         $dirs = $this->logConfig->getDirectories();
         foreach ($dirs as $dir) {
             if ($dir['name'] === $key) {
+                $this->logger?->debug('resolveDirPath db branch', ['key' => $key, 'path' => $dir['path']]);
                 return $dir['path'];
             }
         }
 
         // Fallback: treat key as direct path (for defaultDirectories from frontend)
+        $this->logger?->debug('resolveDirPath fallback branch', ['key' => $key]);
         return $this->resolvePath($key);
     }
 
     private function resolvePath(string $path): string
     {
+        $this->logger?->debug('resolvePath input', ['path' => $path]);
+
         if (str_starts_with($path, '~/')) {
-            return ($_SERVER['HOME'] ?? '/root') . '/' . substr($path, 2);
+            $result = ($_SERVER['HOME'] ?? '/root') . '/' . substr($path, 2);
+            $this->logger?->debug('resolvePath tilde branch', ['home' => ($_SERVER['HOME'] ?? '/root'), 'result' => $result]);
+            return $result;
         }
         if (!str_starts_with($path, '/')) {
-            return dirname(__DIR__, 2) . '/' . $path;
+            $result = dirname(__DIR__, 2) . '/' . $path;
+            $this->logger?->debug('resolvePath relative branch', ['root' => dirname(__DIR__, 2), 'result' => $result]);
+            return $result;
         }
+        $this->logger?->debug('resolvePath absolute branch', ['result' => $path]);
         return $path;
     }
 
@@ -144,17 +166,23 @@ class LogController
 
         $dirKey = $request->getQueryParams()['dir'] ?? null;
 
+        $this->logger?->debug('getEntries called', ['filePath' => $filePath, 'dirKey' => $dirKey, 'realPath' => $realPath]);
+
         // SSH — pliki już zweryfikowane przy pobieraniu
         if ($dirKey && str_starts_with($dirKey, 'ssh:')) {
             $allowed = $realPath !== false;
+            $this->logger?->debug('getEntries ssh branch', ['filePath' => $filePath, 'realPath' => $realPath, 'allowed' => $allowed]);
         } else {
             $dirPath = $dirKey ? $this->resolveDirPath($dirKey) : null;
+            $this->logger?->debug('getEntries dir resolved', ['dirKey' => $dirKey, 'dirPath' => $dirPath]);
 
             if ($dirPath) {
                 $resolved = realpath($dirPath);
+                $this->logger?->debug('getEntries dirPath resolved', ['dirPath' => $dirPath, 'resolved' => $resolved]);
                 if ($realPath && $resolved && str_starts_with($realPath, $resolved)) {
                     $allowed = true;
                 }
+                $this->logger?->debug('getEntries path check', ['realPath' => $realPath, 'resolved' => $resolved, 'startsWith' => ($realPath && $resolved && str_starts_with($realPath, $resolved))]);
             } else {
                 // Fallback: sprawdź czy plik jest w zapisanych katalogach
                 $dirs = $this->logConfig->getDirectories();
@@ -165,8 +193,11 @@ class LogController
                         break;
                     }
                 }
+                $this->logger?->debug('getEntries fallback branch', ['dirCount' => count($dirs), 'allowed' => $allowed]);
             }
         }
+
+        $this->logger?->debug('getEntries result', ['filePath' => $filePath, 'allowed' => $allowed]);
 
         if (!$allowed) {
             $response->getBody()->write(json_encode(['error' => 'access_denied']));

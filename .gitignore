@@ -10,6 +10,10 @@
 /logs/php_errors.log
 /docker-logs/
 *.backup
+/img_*.png
+/data/app_*.json
+/data/logviewer_backup.json
+/data/2026/
 /.ai/
 /TODO.md
 /TODO_JUTRO.md
