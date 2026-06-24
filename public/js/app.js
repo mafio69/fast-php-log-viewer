@@ -606,9 +606,8 @@ createApp({
             try {
                 directories.value = await fetchJson('/api/directories');
                 syncSSHDirs();
-                if (directories.value.length) {
-                    selectedDir.value = directories.value[0].key;
-                }
+                // Domyślnie wybierz docker:/var/log (najpewniejszy przy starcie w kontenerze)
+                selectedDir.value = 'docker:/var/log';
             } catch (e) {
                 console.error('Failed to load directories:', e);
             }
