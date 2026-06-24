@@ -15,11 +15,17 @@
         "ext-pdo": "*",
         "ext-ssh2": "*",
         "ext-pdo_sqlite": "*",
-        "mafio69/fast-php-logger": "^1.0",
+        "mafio69/fast-php-logger": ">=1.0.1",
         "slim/slim": "^4.12",
         "slim/psr7": "^1.7",
         "php-di/php-di": "^7.0"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/mafio69/php-logger"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "Mariusz\\LogViewer\\Controller\\": "src/Controller/",

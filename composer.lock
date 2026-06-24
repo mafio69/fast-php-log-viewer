@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2a614de5b3cbfecf67dfa15d3007b118",
+    "content-hash": "bcfa19c4cee074d2177067c081be55bd",
     "packages": [
         {
             "name": "fig/http-message-util",
@@ -125,16 +125,16 @@
         },
         {
             "name": "mafio69/fast-php-logger",
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mafio69/php-logger.git",
-                "reference": "6a2e85218c10d2d43d5e7131ffa73a8a8a3e53d7"
+                "reference": "5e803a21fc405c38b45745223cc0a3e3375b8aa2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mafio69/php-logger/zipball/6a2e85218c10d2d43d5e7131ffa73a8a8a3e53d7",
-                "reference": "6a2e85218c10d2d43d5e7131ffa73a8a8a3e53d7",
+                "url": "https://api.github.com/repos/mafio69/php-logger/zipball/5e803a21fc405c38b45745223cc0a3e3375b8aa2",
+                "reference": "5e803a21fc405c38b45745223cc0a3e3375b8aa2",
                 "shasum": ""
             },
             "require": {
@@ -158,7 +158,16 @@
                     "Mariusz\\Logger\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Mariusz\\Logger\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -169,7 +178,7 @@
                 }
             ],
             "description": "PSR-3 dual logger with file rotation, date-based structure and automatic anonymization of sensitive fields",
-            "homepage": "https://github.com/mafio69/fast-php-logger",
+            "homepage": "https://github.com/mafio69/php-logger",
             "keywords": [
                 "anonymization",
                 "file-rotation",
@@ -180,10 +189,10 @@
                 "symfony"
             ],
             "support": {
-                "issues": "https://github.com/mafio69/php-logger/issues",
-                "source": "https://github.com/mafio69/php-logger/tree/v1.0.0"
+                "source": "https://github.com/mafio69/php-logger/tree/v1.0.1",
+                "issues": "https://github.com/mafio69/php-logger/issues"
             },
-            "time": "2026-05-02T00:49:44+00:00"
+            "time": "2026-06-24T20:33:44+00:00"
         },
         {
             "name": "nikic/fast-route",
