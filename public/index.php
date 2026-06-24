@@ -1,4 +1,9 @@
 <?php
+
+use Mariusz\LogViewer\Bootstrap\AppBootstrap;
+use Mariusz\LogViewer\Routing\LegacyRouter;
+use Slim\Psr7\Factory\ServerRequestFactory;
+
 if (!defined('LOG_DIR')) {
     define('LOG_DIR', getenv('LOG_DIR') ?: __DIR__ . '/logs');
 }
@@ -12,13 +17,11 @@ $path = parse_url($requestUri, PHP_URL_PATH);
 // Bootstrap Slim once
 $bootstrapSlim = function (): void {
     require_once __DIR__ . '/../vendor/autoload.php';
-    $app = \Mariusz\LogViewer\Bootstrap\AppBootstrap::create();
-    $request = \Slim\Psr7\Factory\ServerRequestFactory::createFromGlobals();
+    $app = AppBootstrap::create();
+    $request = ServerRequestFactory::createFromGlobals();
     $app->run($request);
     exit;
 };
-
-use Mariusz\LogViewer\Routing\LegacyRouter;
 
 // Handle ?action= legacy requests (kompatybilność wsteczna)
 if (isset($_GET['action'])) {
