@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mariusz\LogViewer\Bootstrap;
 
 use DI\ContainerBuilder;
+use Mariusz\Logger\DualLogger;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\AppConfigController;
@@ -16,6 +17,8 @@ use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\SetupWizard;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 use function DI\autowire;
 
 return function (ContainerBuilder $containerBuilder): void {
@@ -31,6 +34,9 @@ return function (ContainerBuilder $containerBuilder): void {
         // Parameters
         'root_dir' => ROOT_DIR,
         'data_dir' => DATA_DIR,
+
+        // Logger (debug + info + warning + error via DualLogger)
+        LoggerInterface::class => DualLogger::create(DATA_DIR, LogLevel::DEBUG),
 
         // Service Bindings
         LogFinderInterface::class => autowire(GlobLogFinder::class),
@@ -70,12 +76,13 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogController (nowy Slim) - wstrzykuje LogConfig, ConfigManager i LogFinderInterface
+        // LogController (nowy Slim) - wstrzykuje LogConfig, ConfigManager, LogFinderInterface i Logger
         LogController::class => function ($c) {
             return new LogController(
                 $c->get(LogConfig::class),
                 $c->get(ConfigManager::class),
-                $c->get(LogFinderInterface::class)
+                $c->get(LogFinderInterface::class),
+                $c->get(LoggerInterface::class)
             );
         },
 

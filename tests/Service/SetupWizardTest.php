@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Service;
 
+use InvalidArgumentException;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\SetupWizard;
@@ -316,7 +317,7 @@ class SetupWizardTest extends TestCase
 
     public function testProcessStepWithUnknownStepThrowsException(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unknown step');
 
         $this->wizard->processStep('unknown_step', [], false);

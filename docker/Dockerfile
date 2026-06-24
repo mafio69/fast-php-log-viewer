@@ -9,6 +9,7 @@ RUN mkdir -p /var/www/html/data \
     && chown -R www-data:www-data /var/log/nginx /run/nginx /var/lib/nginx/logs
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/php-errors.ini /usr/local/etc/php/conf.d/zz-php-errors.ini
 COPY docker/start.sh /usr/local/bin/start.sh
 
 RUN chmod +x /usr/local/bin/start.sh

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Service;
 
+use InvalidArgumentException;
+use RuntimeException;
+
 /**
  * SSH connection handler for remote log file access.
  */
@@ -36,7 +39,7 @@ class SSH
         $port = (int)($this->config['ssh_port'] ?? 22);
 
         if (empty($host) || empty($user)) {
-            throw new \InvalidArgumentException('SSH host and user are required');
+            throw new InvalidArgumentException('SSH host and user are required');
         }
 
         $authMethod = $this->config['ssh_auth_method'] ?? 'password';
@@ -46,14 +49,14 @@ class SSH
             $this->validateKeyFile();
         } else {
             if (empty($this->config['ssh_password'])) {
-                throw new \InvalidArgumentException('SSH password is required for password authentication');
+                throw new InvalidArgumentException('SSH password is required for password authentication');
             }
         }
 
         $this->connection = @ssh2_connect($host, $port);
 
         if (!$this->connection) {
-            throw new \RuntimeException("(!$this->connection) Failed to connect to SSH server: $host:$port (host: $host, port: $port)" . $this->getLastErrorMessage());
+            throw new RuntimeException("(!$this->connection) Failed to connect to SSH server: $host:$port (host: $host, port: $port)" . $this->getLastErrorMessage());
         }
 
         if ($authMethod === 'key') {
@@ -74,7 +77,7 @@ class SSH
         }
 
         if (!$keyPath || !file_exists($keyPath)) {
-            throw new \RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
+            throw new RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
         }
     }
 
@@ -110,7 +113,7 @@ class SSH
         $keyPath = $this->config['ssh_key_path'] ?? $this->findDefaultKeyPath();
 
         if (!$keyPath || !file_exists($keyPath)) {
-            throw new \RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
+            throw new RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
         }
 
         // Check permissions (SSH2 extension is sensitive to this)
@@ -147,7 +150,7 @@ class SSH
             }
         }
 
-        throw new \RuntimeException("SSH key authentication failed (keyPath: $keyPath, user: {$this->config['ssh_user']})" . $this->getLastErrorMessage());
+        throw new RuntimeException("SSH key authentication failed (keyPath: $keyPath, user: {$this->config['ssh_user']})" . $this->getLastErrorMessage());
     }
 
     /**
@@ -158,13 +161,13 @@ class SSH
         $password = $this->config['ssh_password'] ?? null;
 
         if (!$password) {
-            throw new \InvalidArgumentException('SSH password is required for password authentication');
+            throw new InvalidArgumentException('SSH password is required for password authentication');
         }
 
         $authResult = @ssh2_auth_password($this->connection, $this->config['ssh_user'], $password);
 
         if (!$authResult) {
-            throw new \RuntimeException("(!$authResult) SSH password authentication failed (user: {$this->config['ssh_user']})" . $this->getLastErrorMessage());
+            throw new RuntimeException("(!$authResult) SSH password authentication failed (user: {$this->config['ssh_user']})" . $this->getLastErrorMessage());
         }
 
         return true;
@@ -176,13 +179,13 @@ class SSH
     public function exec(string $command): string
     {
         if (!$this->connection) {
-            throw new \RuntimeException('SSH connection not established');
+            throw new RuntimeException('SSH connection not established');
         }
 
         $stream = @ssh2_exec($this->connection, $command);
 
         if (!$stream) {
-            throw new \RuntimeException("(!$stream) Failed to execute SSH command (command: $command)" . $this->getLastErrorMessage());
+            throw new RuntimeException("(!$stream) Failed to execute SSH command (command: $command)" . $this->getLastErrorMessage());
         }
 
         stream_set_blocking($stream, true);

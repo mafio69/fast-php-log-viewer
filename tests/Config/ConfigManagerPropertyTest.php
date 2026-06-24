@@ -7,6 +7,12 @@ namespace Mariusz\LogViewer\Tests\Config;
 use Eris\TestTrait;
 use Mariusz\LogViewer\Config\ConfigManager;
 use PHPUnit\Framework\TestCase;
+use function Eris\Generator\associative;
+use function Eris\Generator\bool;
+use function Eris\Generator\int;
+use function Eris\Generator\oneOf;
+use function Eris\Generator\string;
+use function Eris\Generator\vector;
 
 class ConfigManagerPropertyTest extends TestCase
 {
@@ -80,13 +86,13 @@ class ConfigManagerPropertyTest extends TestCase
     public function testConfigSerializationIsReversible(): void
     {
         $this->forAll(
-            \Eris\Generator\associative([
-                'installation_id' => \Eris\Generator\string(),
-                'app_name' => \Eris\Generator\string(),
-                'debug' => \Eris\Generator\bool(),
-                'nested' => \Eris\Generator\associative([
-                    'foo' => \Eris\Generator\string(),
-                    'bar' => \Eris\Generator\int()
+            associative([
+                'installation_id' => string(),
+                'app_name' => string(),
+                'debug' => bool(),
+                'nested' => associative([
+                    'foo' => string(),
+                    'bar' => int()
                 ])
             ])
         )
@@ -111,14 +117,14 @@ class ConfigManagerPropertyTest extends TestCase
     public function testSensitiveFieldsNeverLeaveTheSystem(): void
     {
         $this->forAll(
-            \Eris\Generator\associative([
-                'ssh_password' => \Eris\Generator\string(),
-                'ssh_key_passphrase' => \Eris\Generator\string(),
-                'encryption_key_raw' => \Eris\Generator\string(),
-                'public_field' => \Eris\Generator\string(),
-                'ssh_connections' => \Eris\Generator\vector(1, \Eris\Generator\associative([
-                    'name' => \Eris\Generator\string(),
-                    'ssh_password' => \Eris\Generator\string()
+            associative([
+                'ssh_password' => string(),
+                'ssh_key_passphrase' => string(),
+                'encryption_key_raw' => string(),
+                'public_field' => string(),
+                'ssh_connections' => vector(1, associative([
+                    'name' => string(),
+                    'ssh_password' => string()
                 ]))
             ])
         )
@@ -146,8 +152,8 @@ class ConfigManagerPropertyTest extends TestCase
     public function testEveryConfigSaveSets0600Permissions(): void
     {
         $this->forAll(
-            \Eris\Generator\associative([
-                'foo' => \Eris\Generator\string()
+            associative([
+                'foo' => string()
             ])
         )
         ->then(function ($data) {
@@ -162,13 +168,13 @@ class ConfigManagerPropertyTest extends TestCase
     public function testSetupDetectionIsAlwaysCorrect(): void
     {
         $this->forAll(
-            \Eris\Generator\oneOf(
+            oneOf(
                 \Eris\Generator\constant(null),
                 \Eris\Generator\constant(false),
                 \Eris\Generator\constant(true),
-                \Eris\Generator\string(),
-                \Eris\Generator\associative(['setup_complete' => \Eris\Generator\bool()]),
-                \Eris\Generator\associative(['setup_complete' => \Eris\Generator\constant('yes')])
+                string(),
+                associative(['setup_complete' => bool()]),
+                associative(['setup_complete' => \Eris\Generator\constant('yes')])
             )
         )
         ->then(function ($input) {
@@ -193,23 +199,23 @@ class ConfigManagerPropertyTest extends TestCase
     public function testSetupIsCompleteForAnyCompleteSkippedCombination(): void
     {
         $this->forAll(
-            \Eris\Generator\associative([
-                'generate_keys' => \Eris\Generator\oneOf(
+            associative([
+                'generate_keys' => oneOf(
                     \Eris\Generator\constant('complete'),
                     \Eris\Generator\constant('skipped'),
                     \Eris\Generator\constant('pending')
                 ),
-                'ssh_config' => \Eris\Generator\oneOf(
+                'ssh_config' => oneOf(
                     \Eris\Generator\constant('complete'),
                     \Eris\Generator\constant('skipped'),
                     \Eris\Generator\constant('pending')
                 ),
-                'local_directories' => \Eris\Generator\oneOf(
+                'local_directories' => oneOf(
                     \Eris\Generator\constant('complete'),
                     \Eris\Generator\constant('skipped'),
                     \Eris\Generator\constant('pending')
                 ),
-                'finalize' => \Eris\Generator\oneOf(
+                'finalize' => oneOf(
                     \Eris\Generator\constant('complete'),
                     \Eris\Generator\constant('skipped'),
                     \Eris\Generator\constant('pending')
