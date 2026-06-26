@@ -88,15 +88,15 @@ class LogConfig
 
     /**
      * Add a log directory configuration
-     * @throws Exception if directory already exists
+     * If the directory already exists, returns the existing ID (idempotent).
      */
     public function addDirectory(array $config): int
     {
-        // Check if directory already exists
+        // Check if directory already exists — return existing ID
         $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
         $stmt->execute([':path' => $config['path']]);
-        if ($stmt->fetch()) {
-            throw new Exception("(\$stmt->fetch()) Directory already exists: " . $config['path'] . " (path: {$config['path']})");
+        if ($existing = $stmt->fetch()) {
+            return (int)$existing['id'];
         }
 
         $stmt = $this->db->prepare("
