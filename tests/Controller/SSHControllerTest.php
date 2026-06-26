@@ -22,6 +22,48 @@ class SSHControllerTest extends TestCase
         $this->controller = new SSHController($logParser, $securityService);
     }
 
+    public function testExtractSSHDataReturnsExpectedKeys(): void
+    {
+        $reflection = new \ReflectionMethod(SSHController::class, 'extractSSHData');
+
+        $input = [
+            'ssh_host' => '192.168.1.1',
+            'ssh_user' => 'admin',
+            'ssh_port' => 2222,
+            'ssh_auth_method' => 'key',
+            'ssh_password' => 'secret',
+            'ssh_key_path' => '/home/user/.ssh/id_rsa',
+            'ssh_key_passphrase' => 'pass',
+            'path' => '/var/log',
+        ];
+
+        $result = $reflection->invoke($this->controller, $input);
+
+        $this->assertSame('192.168.1.1', $result['ssh_host']);
+        $this->assertSame('admin', $result['ssh_user']);
+        $this->assertSame(2222, $result['ssh_port']);
+        $this->assertSame('key', $result['ssh_auth_method']);
+        $this->assertSame('secret', $result['ssh_password']);
+        $this->assertSame('/home/user/.ssh/id_rsa', $result['ssh_key_path']);
+        $this->assertSame('pass', $result['ssh_key_passphrase']);
+        $this->assertArrayNotHasKey('path', $result);
+    }
+
+    public function testExtractSSHDataWithEmptyInput(): void
+    {
+        $reflection = new \ReflectionMethod(SSHController::class, 'extractSSHData');
+
+        $result = $reflection->invoke($this->controller, []);
+
+        $this->assertSame('', $result['ssh_host']);
+        $this->assertSame('', $result['ssh_user']);
+        $this->assertSame(22, $result['ssh_port']);
+        $this->assertSame('password', $result['ssh_auth_method']);
+        $this->assertNull($result['ssh_password']);
+        $this->assertNull($result['ssh_key_path']);
+        $this->assertNull($result['ssh_key_passphrase']);
+    }
+
     public function testTestConnectionWithInvalidJson(): void
     {
         $requestFactory = new RequestFactory();

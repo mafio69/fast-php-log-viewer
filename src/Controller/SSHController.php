@@ -20,6 +20,19 @@ class SSHController
     ) {
     }
 
+    private function extractSSHData(array $data): array
+    {
+        return [
+            'ssh_host' => $data['ssh_host'] ?? '',
+            'ssh_user' => $data['ssh_user'] ?? '',
+            'ssh_port' => $data['ssh_port'] ?? 22,
+            'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
+            'ssh_password' => $data['ssh_password'] ?? null,
+            'ssh_key_path' => $data['ssh_key_path'] ?? null,
+            'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
+        ];
+    }
+
     public function testConnection(Request $request, Response $response): Response
     {
         $data = $request->getParsedBody();
@@ -29,7 +42,7 @@ class SSHController
         }
 
         try {
-            $ssh = new SSH($data);
+            $ssh = new SSH($this->extractSSHData($data));
             $ssh->connect();
             $ssh->disconnect();
             $response->getBody()->write(json_encode(['success' => true]));
@@ -55,17 +68,7 @@ class SSHController
         }
 
         try {
-            $sshData = [
-                'ssh_host' => $data['ssh_host'] ?? '',
-                'ssh_user' => $data['ssh_user'] ?? '',
-                'ssh_port' => $data['ssh_port'] ?? 22,
-                'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
-                'ssh_password' => $data['ssh_password'] ?? null,
-                'ssh_key_path' => $data['ssh_key_path'] ?? null,
-                'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
-            ];
-
-            $ssh = new SSH($sshData);
+            $ssh = new SSH($this->extractSSHData($data));
             $ssh->connect();
 
             $finder = new RemoteLogFinder($ssh);
@@ -96,17 +99,7 @@ class SSHController
         }
 
         try {
-            $sshData = [
-                'ssh_host' => $data['ssh_host'] ?? '',
-                'ssh_user' => $data['ssh_user'] ?? '',
-                'ssh_port' => $data['ssh_port'] ?? 22,
-                'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
-                'ssh_password' => $data['ssh_password'] ?? null,
-                'ssh_key_path' => $data['ssh_key_path'] ?? null,
-                'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
-            ];
-
-            $ssh = new SSH($sshData);
+            $ssh = new SSH($this->extractSSHData($data));
             $ssh->connect();
 
             $content = $ssh->readFile($path);
@@ -137,17 +130,7 @@ class SSHController
         }
 
         try {
-            $sshData = [
-                'ssh_host' => $data['ssh_host'] ?? '',
-                'ssh_user' => $data['ssh_user'] ?? '',
-                'ssh_port' => $data['ssh_port'] ?? 22,
-                'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
-                'ssh_password' => $data['ssh_password'] ?? null,
-                'ssh_key_path' => $data['ssh_key_path'] ?? null,
-                'ssh_key_passphrase' => $data['ssh_key_passphrase'] ?? null,
-            ];
-
-            $ssh = new SSH($sshData);
+            $ssh = new SSH($this->extractSSHData($data));
             $ssh->connect();
 
             $fileSize = $ssh->fileSize($path);
