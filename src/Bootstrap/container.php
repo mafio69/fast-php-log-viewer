@@ -14,8 +14,11 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
+use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
+use Mariusz\LogViewer\Service\LogParser;
+use Mariusz\LogViewer\Service\PathResolver;
 use Mariusz\LogViewer\Service\SetupWizard;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -76,14 +79,38 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogController (nowy Slim) - wstrzykuje LogConfig, ConfigManager, LogFinderInterface i Logger
+        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser
         LogController::class => function ($c) {
             return new LogController(
                 $c->get(LogConfig::class),
                 $c->get(ConfigManager::class),
                 $c->get(LogFinderInterface::class),
+                $c->get(PathResolver::class),
+                $c->get(FileAccessValidator::class),
+                $c->get(LogParser::class)
+            );
+        },
+
+        // PathResolver - wstrzykuje LogConfig i Logger
+        PathResolver::class => function ($c) {
+            return new PathResolver(
+                $c->get(LogConfig::class),
                 $c->get(LoggerInterface::class)
             );
+        },
+
+        // FileAccessValidator - wstrzykuje PathResolver, LogConfig i Logger
+        FileAccessValidator::class => function ($c) {
+            return new FileAccessValidator(
+                $c->get(PathResolver::class),
+                $c->get(LogConfig::class),
+                $c->get(LoggerInterface::class)
+            );
+        },
+
+        // LogParser - brak zależności
+        LogParser::class => function () {
+            return new LogParser();
         },
 
         // DirectoryController - wstrzykuje LogConfig
