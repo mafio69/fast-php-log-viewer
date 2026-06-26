@@ -6,6 +6,7 @@ namespace Mariusz\LogViewer\Tests\Controller;
 
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\LogScanner;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -18,7 +19,8 @@ class DirectoryControllerTest extends TestCase
     protected function setUp(): void
     {
         $this->logConfig = $this->createMock(LogConfig::class);
-        $this->controller = new DirectoryController($this->logConfig);
+        $logScanner = $this->createMock(LogScanner::class);
+        $this->controller = new DirectoryController($this->logConfig, $logScanner);
     }
 
     public function testAddDirectorySuccess(): void

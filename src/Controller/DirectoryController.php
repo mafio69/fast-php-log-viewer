@@ -13,7 +13,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 class DirectoryController
 {
     public function __construct(
-        private readonly LogConfig $logConfig
+        private readonly LogConfig $logConfig,
+        private readonly LogScanner $logScanner,
     ) {
     }
 
@@ -66,8 +67,7 @@ class DirectoryController
 
     public function scanDirectories(Request $request, Response $response): Response
     {
-        $scanner = new LogScanner();
-        $dirs = $scanner->scanCommonDirectories();
+        $dirs = $this->logScanner->scanCommonDirectories();
         $response->getBody()->write(json_encode($dirs));
         return $response->withHeader('Content-Type', 'application/json');
     }

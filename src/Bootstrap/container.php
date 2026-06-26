@@ -18,7 +18,9 @@ use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
+use Mariusz\LogViewer\Service\LogScanner;
 use Mariusz\LogViewer\Service\PathResolver;
+use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SetupWizard;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -113,16 +115,30 @@ return function (ContainerBuilder $containerBuilder): void {
             return new LogParser();
         },
 
-        // DirectoryController - wstrzykuje LogConfig
+        // LogScanner - brak zależności
+        LogScanner::class => function () {
+            return new LogScanner();
+        },
+
+        // SecurityService - brak zależności
+        SecurityService::class => function () {
+            return new SecurityService();
+        },
+
+        // DirectoryController - wstrzykuje LogConfig i LogScanner
         DirectoryController::class => function ($c) {
             return new DirectoryController(
-                $c->get(LogConfig::class)
+                $c->get(LogConfig::class),
+                $c->get(LogScanner::class)
             );
         },
 
-        // SSHController - brak zależności
+        // SSHController - wstrzykuje LogParser i SecurityService
         SSHController::class => function ($c) {
-            return new SSHController();
+            return new SSHController(
+                $c->get(LogParser::class),
+                $c->get(SecurityService::class)
+            );
         },
 
         // SetupMiddleware - wstrzykuje ConfigManager

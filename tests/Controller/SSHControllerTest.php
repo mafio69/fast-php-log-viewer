@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Mariusz\LogViewer\Tests\Controller;
 
 use Mariusz\LogViewer\Controller\SSHController;
+use Mariusz\LogViewer\Service\LogParser;
+use Mariusz\LogViewer\Service\SecurityService;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -15,7 +17,9 @@ class SSHControllerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->controller = new SSHController();
+        $logParser = $this->createMock(LogParser::class);
+        $securityService = $this->createMock(SecurityService::class);
+        $this->controller = new SSHController($logParser, $securityService);
     }
 
     public function testTestConnectionWithInvalidJson(): void
