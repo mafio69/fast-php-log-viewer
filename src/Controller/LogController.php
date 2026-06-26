@@ -104,8 +104,19 @@ class LogController
         $dirKey = $request->getQueryParams()['dir'] ?? null;
 
         if (!$this->accessValidator->isFileAllowed($filePath, $dirKey)) {
-            $response->getBody()->write(json_encode(['error' => 'access_denied']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
+            // Direct file path (no dirKey): auto-add parent directory to allowed dirs
+            if ($dirKey === null && str_starts_with($filePath, '/')) {
+                $parentDir = $this->autoRegisterParentDir($filePath);
+                if ($parentDir !== null && $this->accessValidator->isFileAllowed($filePath, $dirKey)) {
+                    // Falls through — continue to parseFile
+                } else {
+                    $response->getBody()->write(json_encode(['error' => 'access_denied']));
+                    return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
+                }
+            } else {
+                $response->getBody()->write(json_encode(['error' => 'access_denied']));
+                return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
+            }
         }
 
         if (!file_exists($filePath)) {
@@ -122,5 +133,28 @@ class LogController
 
         $response->getBody()->write(json_encode($entries));
         return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    private function autoRegisterParentDir(string $filePath): ?string
+    {
+        $blockedDirs = ['/etc', '/root', '/proc', '/sys', '/dev'];
+        foreach ($blockedDirs as $blocked) {
+            if (str_starts_with($filePath, $blocked)) {
+                return null;
+            }
+        }
+
+        $parentDir = dirname($filePath);
+        if ($parentDir === '.' || $parentDir === '/') {
+            return null;
+        }
+
+        $this->logConfig->addDirectory([
+            'name' => 'local:' . $parentDir,
+            'path' => $parentDir,
+            'type' => 'local',
+        ]);
+
+        return $parentDir;
     }
 }
