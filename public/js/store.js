@@ -245,18 +245,18 @@ window.FPLV = window.FPLV || {};
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
-            if (e.message.includes('Access denied') || e.message.includes('403')) {
+            if (e.message.includes('access_denied')) {
                 const parentDir = path.substring(0, path.lastIndexOf('/'));
-                if (parentDir && confirm('Plik nie jest w dozwolonym katalogu. Dodać "' + parentDir + '" do katalogów dozwolonych?')) {
+                if (parentDir) {
                     store.allowedDirPath = parentDir;
-                    await addAllowedDir();
                     try {
+                        await addAllowedDir();
                         store.entries = await fetchJson('/api/entries?file=' + encodeURIComponent(path));
                         store.filtered = store.entries;
                         applyFilters();
                         return;
                     } catch (e2) {
-                        alert('Nadal nie można załadować pliku: ' + e2.message);
+                        alert('Nie udało się dodać katalogu: ' + e2.message);
                     }
                 }
             } else {
