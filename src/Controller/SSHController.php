@@ -14,7 +14,10 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class SSHController
 {
-    public function __construct() {
+    public function __construct(
+        private readonly LogParser $logParser,
+        private readonly SecurityService $securityService,
+    ) {
     }
 
     public function testConnection(Request $request, Response $response): Response
@@ -52,7 +55,6 @@ class SSHController
         }
 
         try {
-            // Przygotuj dane SSH z payload
             $sshData = [
                 'ssh_host' => $data['ssh_host'] ?? '',
                 'ssh_user' => $data['ssh_user'] ?? '',
@@ -94,7 +96,6 @@ class SSHController
         }
 
         try {
-            // Przygotuj dane SSH z payload
             $sshData = [
                 'ssh_host' => $data['ssh_host'] ?? '',
                 'ssh_user' => $data['ssh_user'] ?? '',
@@ -109,8 +110,7 @@ class SSHController
             $ssh->connect();
 
             $content = $ssh->readFile($path);
-            $parser = new LogParser();
-            $entries = $parser->parseString($content);
+            $entries = $this->logParser->parseString($content);
 
             $ssh->disconnect();
 
@@ -137,7 +137,6 @@ class SSHController
         }
 
         try {
-            // Przygotuj dane SSH z payload
             $sshData = [
                 'ssh_host' => $data['ssh_host'] ?? '',
                 'ssh_user' => $data['ssh_user'] ?? '',
@@ -151,26 +150,22 @@ class SSHController
             $ssh = new SSH($sshData);
             $ssh->connect();
 
-            // Walidacja bezpieczeństwa - rozmiar pliku
             $fileSize = $ssh->fileSize($path);
-            if ($fileSize > 10 * 1024 * 1024) { // 10MB limit
+            if ($fileSize > 10 * 1024 * 1024) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'file_too_large']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
             }
 
-            // Pobierz zawartość
             $content = $ssh->readFile($path);
 
-            // Walidacja bezpieczeństwa - zawartość binarna
-            if (SecurityService::isBinaryContent($content)) {
+            if ($this->securityService->isBinaryContent($content)) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'binary_content_not_allowed']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
             }
 
-            // Walidacja bezpieczeństwa - suspicious content
-            if (SecurityService::containsSuspiciousContent($content)) {
+            if ($this->securityService->containsSuspiciousContent($content)) {
                 $ssh->disconnect();
                 $response->getBody()->write(json_encode(['error' => 'suspicious_content_detected']));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
@@ -178,7 +173,6 @@ class SSHController
 
             $ssh->disconnect();
 
-            // Zapisz lokalnie
             $dataDir = defined('DATA_DIR') ? DATA_DIR : dirname(__DIR__, 2) . '/data';
             $localPath = $dataDir . '/downloaded_' . bin2hex(random_bytes(8)) . '.log';
             file_put_contents($localPath, $content);
