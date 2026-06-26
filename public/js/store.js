@@ -290,8 +290,9 @@ window.FPLV = window.FPLV || {};
             if (data.success) {
                 alert('Katalog dodany: ' + dir);
                 await loadDirectories();
-                store.selectedDir = name;
-                await loadFiles();
+                const found = store.directories.find(d => d.path === dir);
+                store.selectedDir = found ? found.key : name;
+                try { await loadFiles(); } catch (e) { /* ignore */ }
             } else {
                 alert('Błąd: ' + (data.error || 'Unknown error'));
             }
