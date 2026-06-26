@@ -19,7 +19,8 @@ class FileAccessValidator
     public function isFileAllowed(string $filePath, ?string $dirKey, bool $defaultAllowed = false): bool
     {
         $realPath = realpath($filePath);
-        $this->logger?->debug('isFileAllowed', ['filePath' => $filePath, 'dirKey' => $dirKey, 'realPath' => $realPath]);
+        $checkPath = $realPath !== false ? $realPath : $filePath;
+        $this->logger?->debug('isFileAllowed', ['filePath' => $filePath, 'dirKey' => $dirKey, 'realPath' => $realPath, 'checkPath' => $checkPath]);
 
         if ($dirKey && str_starts_with($dirKey, 'ssh:')) {
             $allowed = $realPath !== false;
@@ -32,8 +33,9 @@ class FileAccessValidator
 
         if ($dirPath) {
             $resolved = realpath($dirPath);
-            $this->logger?->debug('isFileAllowed dirPath resolved', ['dirPath' => $dirPath, 'resolved' => $resolved]);
-            if ($realPath && $resolved && str_starts_with($realPath, $resolved)) {
+            $checkDir = $resolved !== false ? $resolved : $dirPath;
+            $this->logger?->debug('isFileAllowed dirPath resolved', ['dirPath' => $dirPath, 'resolved' => $resolved, 'checkDir' => $checkDir]);
+            if ($checkPath && $checkDir && str_starts_with($checkPath, $checkDir)) {
                 return true;
             }
         }
@@ -41,8 +43,9 @@ class FileAccessValidator
         $dirs = $this->logConfig->getDirectories();
         foreach ($dirs as $dir) {
             $resolved = realpath($dir['path']);
-            if ($realPath && $resolved && str_starts_with($realPath, $resolved)) {
-                $this->logger?->debug('isFileAllowed fallback match', ['dir' => $dir['name'], 'resolved' => $resolved]);
+            $checkDir = $resolved !== false ? $resolved : $dir['path'];
+            if ($checkPath && $checkDir && str_starts_with($checkPath, $checkDir)) {
+                $this->logger?->debug('isFileAllowed fallback match', ['dir' => $dir['name'], 'checkDir' => $checkDir]);
                 return true;
             }
         }
