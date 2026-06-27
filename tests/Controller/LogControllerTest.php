@@ -7,6 +7,7 @@ namespace Mariusz\LogViewer\Tests\Controller;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\LogController;
+use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
@@ -453,5 +454,138 @@ class LogControllerTest extends TestCase
         $this->assertEquals('Warning message', $body[0]['message']);
 
         unlink($logFile);
+    }
+
+    private function createControllerWithDocker(?DockerExecService $dockerExec): LogController
+    {
+        return new LogController(
+            $this->logConfig,
+            $this->configManager,
+            $this->logFinder,
+            $this->pathResolver,
+            $this->accessValidator,
+            $this->logParser,
+            $dockerExec,
+        );
+    }
+
+    public function testGetEntriesWithContainerIdDelegatesToDockerExec(): void
+    {
+        $dockerExec = $this->createMock(DockerExecService::class);
+        $dockerExec->method('isAvailable')->willReturn(true);
+        $dockerExec->method('readFile')
+            ->with('my-app', '/var/log/app.log')
+            ->willReturn("[2024-01-01 10:00:00] [INFO] [app.php:1] test\n");
+
+        $this->logParser->method('parseString')
+            ->with("[2024-01-01 10:00:00] [INFO] [app.php:1] test\n")
+            ->willReturn([
+                ['datetime' => '2024-01-01 10:00:00', 'level' => 'INFO', 'location' => 'app.php:1', 'message' => 'test', 'context' => []],
+            ]);
+
+        $controller = $this->createControllerWithDocker($dockerExec);
+
+        $request = (new RequestFactory())->createRequest(
+            'GET', '/api/entries?file=/var/log/app.log&container_id=my-app'
+        );
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->getEntries($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertCount(1, $body);
+        $this->assertEquals('INFO', $body[0]['level']);
+    }
+
+    public function testGetEntriesWithContainerIdReturns404WhenContainerNotFound(): void
+    {
+        $dockerExec = $this->createMock(DockerExecService::class);
+        $dockerExec->method('isAvailable')->willReturn(true);
+        $dockerExec->method('readFile')
+            ->willThrowException(new \RuntimeException('container_not_found'));
+
+        $controller = $this->createControllerWithDocker($dockerExec);
+
+        $request = (new RequestFactory())->createRequest(
+            'GET', '/api/entries?file=/var/log/app.log&container_id=nonexistent'
+        );
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->getEntries($request, $response);
+
+        $this->assertEquals(404, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('container_not_found', $body['error']);
+    }
+
+    public function testGetEntriesWithContainerIdReturns404WhenFileNotFound(): void
+    {
+        $dockerExec = $this->createMock(DockerExecService::class);
+        $dockerExec->method('isAvailable')->willReturn(true);
+        $dockerExec->method('readFile')
+            ->willThrowException(new \RuntimeException('file_not_found'));
+
+        $controller = $this->createControllerWithDocker($dockerExec);
+
+        $request = (new RequestFactory())->createRequest(
+            'GET', '/api/entries?file=/var/log/missing.log&container_id=my-app'
+        );
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->getEntries($request, $response);
+
+        $this->assertEquals(404, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('file_not_found', $body['error']);
+    }
+
+    public function testGetEntriesWithContainerIdReturns503WhenDockerUnavailable(): void
+    {
+        $dockerExec = $this->createMock(DockerExecService::class);
+        $dockerExec->method('isAvailable')->willReturn(false);
+
+        $controller = $this->createControllerWithDocker($dockerExec);
+
+        $request = (new RequestFactory())->createRequest(
+            'GET', '/api/entries?file=/var/log/app.log&container_id=my-app'
+        );
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->getEntries($request, $response);
+
+        $this->assertEquals(503, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('docker_unavailable', $body['error']);
+    }
+
+    public function testGetEntriesWithContainerIdFiltersByLevel(): void
+    {
+        $dockerExec = $this->createMock(DockerExecService::class);
+        $dockerExec->method('isAvailable')->willReturn(true);
+        $dockerExec->method('readFile')
+            ->with('my-app', '/var/log/app.log')
+            ->willReturn("content");
+
+        $this->logParser->method('parseString')
+            ->with('content')
+            ->willReturn([
+                ['datetime' => '2024-01-01 10:00:00', 'level' => 'INFO', 'location' => 'a:1', 'message' => 'info', 'context' => []],
+                ['datetime' => '2024-01-01 10:01:00', 'level' => 'WARNING', 'location' => 'a:2', 'message' => 'warn', 'context' => []],
+            ]);
+
+        $controller = $this->createControllerWithDocker($dockerExec);
+
+        $request = (new RequestFactory())->createRequest(
+            'GET', '/api/entries?file=/var/log/app.log&container_id=my-app&level=WARNING'
+        );
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->getEntries($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertCount(1, $body);
+        $this->assertEquals('WARNING', $body[0]['level']);
     }
 }

@@ -6,6 +6,7 @@ namespace Mariusz\LogViewer\Controller;
 
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
@@ -22,6 +23,7 @@ class LogController
         private readonly PathResolver $pathResolver,
         private readonly FileAccessValidator $accessValidator,
         private readonly LogParser $logParser,
+        private readonly ?DockerExecService $dockerExec = null,
     ) {
     }
 
@@ -101,6 +103,12 @@ class LogController
             return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
         }
 
+        $containerId = $request->getQueryParams()['container_id'] ?? null;
+
+        if ($containerId !== null) {
+            return $this->getEntriesFromContainer($containerId, $filePath, $request, $response);
+        }
+
         $dirKey = $request->getQueryParams()['dir'] ?? null;
 
         if (!$this->accessValidator->isFileAllowed($filePath, $dirKey)) {
@@ -127,6 +135,41 @@ class LogController
         $level = $request->getQueryParams()['level'] ?? null;
         $entries = $this->logParser->parseFile($filePath);
 
+        if ($level) {
+            $entries = array_values(array_filter($entries, fn($e) => strtoupper($e['level']) === strtoupper($level)));
+        }
+
+        $response->getBody()->write(json_encode($entries));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    private function getEntriesFromContainer(string $containerId, string $filePath, Request $request, Response $response): Response
+    {
+        if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {
+            $response->getBody()->write(json_encode(['error' => 'docker_unavailable']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(503);
+        }
+
+        try {
+            $content = $this->dockerExec->readFile($containerId, $filePath);
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'file_not_found' || $message === 'container_not_found') {
+                $response->getBody()->write(json_encode(['error' => $message]));
+                return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            }
+            $response->getBody()->write(json_encode(['error' => 'docker_exec_failed', 'message' => $message]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+
+        try {
+            $entries = $this->logParser->parseString($content);
+        } catch (\Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'parse_error', 'message' => $e->getMessage()]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+
+        $level = $request->getQueryParams()['level'] ?? null;
         if ($level) {
             $entries = array_values(array_filter($entries, fn($e) => strtoupper($e['level']) === strtoupper($level)));
         }

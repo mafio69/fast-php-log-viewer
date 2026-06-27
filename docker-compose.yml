@@ -18,3 +18,4 @@ services:
       - ./data:/var/www/html/data
       - /var/log:/host/var/log
       - ~/logs:/host/home/logs
+      - /var/run/docker.sock:/var/run/docker.sock

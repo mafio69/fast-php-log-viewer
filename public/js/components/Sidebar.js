@@ -47,13 +47,18 @@ window.FPLV.components = window.FPLV.components || [];
             </div>
             <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
                 <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
-                <div class="flex gap-1 mb-2">
+                <input type="text" v-model="store.containerId" placeholder="container_name (opcjonalnie)"
+                    class="w-full rounded px-2 py-1 text-xs crt-input mb-2" style="color:#00aacc;">
+                <div v-if="!store.containerId" class="flex gap-1 mb-2">
                     <button @click="store.directFileMode = 'docker'"
                         :style="store.directFileMode === 'docker' ? 'background:#00aa00;color:#000;' : 'background:#002200;color:#00aa00;'"
                         class="flex-1 rounded px-2 py-1 text-xs font-bold">🐳 DOCKER</button>
                     <button @click="store.directFileMode = 'host'"
                         :style="store.directFileMode === 'host' ? 'background:#0066cc;color:#fff;' : 'background:#001133;color:#0066cc;'"
                         class="flex-1 rounded px-2 py-1 text-xs font-bold">💻 HOST</button>
+                </div>
+                <div v-if="store.containerId" class="text-xs crt-text mb-2" style="color:#00aacc;">
+                    📦 czytanie z kontenera
                 </div>
                 <input type="text" v-model="store.directFilePath" placeholder="/var/log/php/php_errors.log"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
