@@ -64,7 +64,6 @@ window.FPLV.components = window.FPLV.components || [];
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
                 <button @click="$emit('load-direct-file')" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">⚡ ZAŁADUJ</button>
             </div>
-
             <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
                 <button @click="$emit('open-ssh-modal'); $emit('cancel-edit')" class="w-full rounded py-1 text-xs crt-button">🔗 SSH Connections</button>
             </div>
