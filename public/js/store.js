@@ -165,6 +165,7 @@ window.FPLV = window.FPLV || {};
     function resetConnectionState() {
         store.connectingConnectionIndex = -1;
         store.passwordForConnection = '';
+        store.manualFilePath = '';
     }
 
     const levelColor = l => LEVEL_COLORS[l] ?? '#9ca3af';
@@ -791,15 +792,13 @@ window.FPLV = window.FPLV || {};
         } catch (e) {
             alert('SSH operation failed: ' + e.message);
         } finally {
-            store.connectingConnectionIndex = -1;
-            store.manualFilePath = '';
+            resetConnectionState();
         }
     }
 
     function cancelManualFileModal() {
         store.showManualFileModal = false;
-        store.connectingConnectionIndex = -1;
-        store.manualFilePath = '';
+        resetConnectionState();
     }
 
     async function refreshSSHDir(dirKey) {
