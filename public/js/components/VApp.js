@@ -24,7 +24,6 @@ window.FPLV.components = window.FPLV.components || [];
                 @select-file="selectFile"
                 @change-dir="changeDir"
                 @load-direct-file="loadDirectFile"
-                @add-allowed-dir="addAllowedDir"
                 @refresh-ssh-dir="refreshSSHDir"
                 @open-ssh-modal="store.showSSHModal = true"
                 @cancel-edit="cancelEdit"
@@ -78,7 +77,6 @@ window.FPLV.components = window.FPLV.components || [];
                 selectFile: F.selectFile,
                 changeDir: F.changeDir,
                 loadDirectFile: F.loadDirectFile,
-                addAllowedDir: F.addAllowedDir,
                 refreshSSHDir: F.refreshSSHDir,
                 cancelEdit: F.cancelEdit,
                 testSSHConnection: F.testSSHConnection,

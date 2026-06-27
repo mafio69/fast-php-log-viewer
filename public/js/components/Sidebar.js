@@ -10,7 +10,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'Sidebar',
         props: ['store'],
-        emits: ['select-file', 'change-dir', 'load-direct-file', 'add-allowed-dir', 'refresh-ssh-dir', 'open-ssh-modal', 'cancel-edit'],
+        emits: ['select-file', 'change-dir', 'load-direct-file', 'refresh-ssh-dir', 'open-ssh-modal', 'cancel-edit'],
         template: `
         <aside style="width:350px;min-width:350px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
             <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
@@ -47,16 +47,19 @@ window.FPLV.components = window.FPLV.components || [];
             </div>
             <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
                 <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
+                <div class="flex gap-1 mb-2">
+                    <button @click="store.directFileMode = 'docker'"
+                        :style="store.directFileMode === 'docker' ? 'background:#00aa00;color:#000;' : 'background:#002200;color:#00aa00;'"
+                        class="flex-1 rounded px-2 py-1 text-xs font-bold">🐳 DOCKER</button>
+                    <button @click="store.directFileMode = 'host'"
+                        :style="store.directFileMode === 'host' ? 'background:#0066cc;color:#fff;' : 'background:#001133;color:#0066cc;'"
+                        class="flex-1 rounded px-2 py-1 text-xs font-bold">💻 HOST</button>
+                </div>
                 <input type="text" v-model="store.directFilePath" placeholder="/var/log/php/php_errors.log"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
                 <button @click="$emit('load-direct-file')" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">⚡ ZAŁADUJ</button>
             </div>
-            <div class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
-                <div class="text-xs font-semibold mb-1 crt-dim">➕ DODAJ KATALOG DOZWOLONY</div>
-                <input type="text" v-model="store.allowedDirPath" placeholder="/var/log"
-                    class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
-                <button @click="$emit('add-allowed-dir')" class="w-full rounded px-2 py-1 text-xs crt-button mb-2">DODAJ</button>
-            </div>
+
             <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
                 <button @click="$emit('open-ssh-modal'); $emit('cancel-edit')" class="w-full rounded py-1 text-xs crt-button">🔗 SSH Connections</button>
             </div>
