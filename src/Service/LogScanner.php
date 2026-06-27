@@ -11,6 +11,8 @@ use RuntimeException;
  */
 class LogScanner
 {
+    use ErrorContextTrait;
+
     private array $commonLogPaths = [
         '/var/log',
         '/var/www/html/logs',
@@ -31,15 +33,6 @@ class LogScanner
         '*error*', '*debug*', '*access*', '*access*',
         '*php*', '*apache*', '*nginx*', '*fpm*',
     ];
-
-    private function getLastErrorMessage(): string
-    {
-        $error = error_get_last();
-        if ($error === null) {
-            return '';
-        }
-        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
-    }
 
     /**
      * Scan common log directories for log files
@@ -158,33 +151,6 @@ class LogScanner
         }
 
         return false;
-    }
-
-    /**
-     * Get Docker container log paths
-     */
-    public function getDockerLogPaths(): array
-    {
-        $dockerPaths = [];
-
-        if (file_exists('/.dockerenv')) {
-            $dockerPaths[] = '/var/log/supervisor';
-            $dockerPaths[] = '/var/log/php-fpm';
-        }
-
-        $dockerMounts = [
-            '/var/log/docker',
-            '/docker/logs',
-            '/container/logs',
-        ];
-
-        foreach ($dockerMounts as $mount) {
-            if (is_dir($mount) && is_readable($mount)) {
-                $dockerPaths[] = $mount;
-            }
-        }
-
-        return $dockerPaths;
     }
 
 }

@@ -48,26 +48,6 @@ class ConfigManager
     }
 
     /**
-     * Zwraca {state, steps[{name, status}]}.
-     */
-    public function getSetupStatus(): array
-    {
-        $config = $this->getConfig();
-        $state = $this->getSetupState();
-        
-        $steps = [
-            ['name' => 'General Configuration', 'status' => isset($config['installation_id']) ? 'complete' : 'pending'],
-            ['name' => 'SSH Configuration', 'status' => (isset($config['ssh_connections']) && count($config['ssh_connections']) > 0) ? 'complete' : 'pending'],
-            ['name' => 'Encryption Key', 'status' => isset($config['encryption_key_raw']) ? 'complete' : 'pending'],
-        ];
-
-        return [
-            'state' => $state,
-            'steps' => $steps
-        ];
-    }
-
-    /**
      * Zwraca not_started|in_progress|complete|skipped.
      */
     public function getSetupState(): string
@@ -175,28 +155,6 @@ class ConfigManager
     }
 
     /**
-     * Sprawdza uprawnienia pliku konfiguracji.
-     */
-    public function checkFilePermissions(): void
-    {
-        if (!file_exists($this->configPath)) {
-            return;
-        }
-
-        $perms = fileperms($this->configPath) & 0777;
-        if ($perms > 0640) {
-            if ($this->loggingEnabled) {
-                $errorLogPath = DATA_DIR.'/php_errors.log';
-                $message = "[".date('Y-m-d H:i:s')."] WARNING: Config file permissions are too open: ".sprintf(
-                        '%o',
-                        $perms
-                    ).". Recommended: 0600\n";
-                @file_put_contents($errorLogPath, $message, FILE_APPEND);
-            }
-        }
-    }
-
-    /**
      * Atomowy zapis JSON: tmp-file + verify + rename + chmod 0600.
      */
     private function validateAndWriteJson(string $path, array $data): void
@@ -226,26 +184,6 @@ class ConfigManager
             }
             throw new RuntimeException("Atomic JSON write failed for $path: " . $e->getMessage());
         }
-    }
-
-    /**
-     * Zwraca profil SSH po ID (bez pól wrażliwych).
-     */
-    public function getSSHProfile(string $id): ?array
-    {
-        $config = $this->getConfig();
-        $profile = $config['ssh_profiles'][$id] ?? null;
-        return $profile ? $this->filterSensitiveFields($profile) : null;
-    }
-
-    /**
-     * Zwraca listę profili SSH (bez pól wrażliwych).
-     */
-    public function getSSHProfiles(): array
-    {
-        $config = $this->getConfig();
-        $profiles = $config['ssh_profiles'] ?? [];
-        return $this->filterSensitiveFields($profiles);
     }
 
     /**
@@ -304,20 +242,6 @@ class ConfigManager
         }
 
         return true;
-    }
-
-    /**
-     * Eksportuje backup konfiguracji (delegacja lub nowa logika).
-     */
-    public function exportBackup(): string
-    {
-        $config = $this->getConfig();
-        $backupPath = DATA_DIR . '/logviewer_backup_' . date('Ymd_His') . '.json';
-        
-        // W backupie chcemy mieć wszystko, ale plik musi być chroniony
-        $this->validateAndWriteJson($backupPath, $config);
-        
-        return $backupPath;
     }
 
     /**

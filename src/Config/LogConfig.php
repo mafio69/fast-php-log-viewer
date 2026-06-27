@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Config;
 
+use Mariusz\LogViewer\Service\ErrorContextTrait;
 use Exception;
 use PDO;
 use PDOException;
@@ -14,6 +15,8 @@ use RuntimeException;
  */
 class LogConfig
 {
+    use ErrorContextTrait;
+
     private PDO $db;
     private string $dbPath;
 
@@ -24,15 +27,6 @@ class LogConfig
         $this->connect();
         $this->initSchema();
         $this->restoreFromBackupIfEmpty();
-    }
-
-    private function getLastErrorMessage(): string
-    {
-        $error = error_get_last();
-        if ($error === null) {
-            return '';
-        }
-        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
     }
 
     private function ensureDbDirectory(): void
@@ -177,17 +171,6 @@ class LogConfig
     }
 
     /**
-     * Get a specific directory by ID
-     */
-    public function getDirectory(int $id): ?array
-    {
-        $stmt = $this->db->prepare("SELECT * FROM log_directories WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-        $result = $stmt->fetch();
-        return $result ?: null;
-    }
-
-    /**
      * Update directory configuration
      */
     public function updateDirectory(int $id, array $config): bool
@@ -230,35 +213,6 @@ class LogConfig
         }
 
         return $result;
-    }
-
-    /**
-     * Remember a log file
-     */
-    public function rememberFile(int $directoryId, string $filePath): bool
-    {
-        $stmt = $this->db->prepare("
-            INSERT OR REPLACE INTO log_files (directory_id, file_path, last_seen)
-            VALUES (:directory_id, :file_path, CURRENT_TIMESTAMP)
-        ");
-        return $stmt->execute([
-            ':directory_id' => $directoryId,
-            ':file_path' => $filePath,
-        ]);
-    }
-
-    /**
-     * Get remembered files for a directory
-     */
-    public function getRememberedFiles(int $directoryId): array
-    {
-        $stmt = $this->db->prepare("
-            SELECT * FROM log_files
-            WHERE directory_id = :directory_id
-            ORDER BY last_seen DESC
-        ");
-        $stmt->execute([':directory_id' => $directoryId]);
-        return $stmt->fetchAll();
     }
 
     /**

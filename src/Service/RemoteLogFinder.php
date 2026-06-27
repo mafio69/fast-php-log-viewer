@@ -9,20 +9,13 @@ namespace Mariusz\LogViewer\Service;
  */
 class RemoteLogFinder
 {
+    use ErrorContextTrait;
+
     private SSH $ssh;
 
     public function __construct(SSH $ssh)
     {
         $this->ssh = $ssh;
-    }
-
-    private function getLastErrorMessage(): string
-    {
-        $error = error_get_last();
-        if ($error === null) {
-            return '';
-        }
-        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
     }
 
     /**
