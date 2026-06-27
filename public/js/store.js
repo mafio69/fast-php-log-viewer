@@ -359,7 +359,10 @@ window.FPLV = window.FPLV || {};
                 return true;
             });
         }
-        if (store.timeFrom || store.timeTo) {
+        const hasTimeFilter =
+            (store.timeFrom && store.timeFrom !== '00:00') ||
+            (store.timeTo && !['23:59', '23:59:59'].includes(store.timeTo));
+        if (hasTimeFilter) {
             r = r.filter(e => {
                 if (!e.datetime) return false;
                 const t = e.datetime.slice(11, 19);
