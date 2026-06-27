@@ -273,6 +273,13 @@ fast-php-log-viewer/
 
 ---
 
+## Contributors
+
+- **Mariusz** — author and maintainer
+- **OpenCode Go Contributors** — AI-assisted development, refactoring, documentation
+
+---
+
 ## License
 
 MIT
