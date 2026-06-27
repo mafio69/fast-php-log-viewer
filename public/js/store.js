@@ -19,6 +19,7 @@ window.FPLV = window.FPLV || {};
         defaultDirectories: [],
         directFilePath: '',
         directFileMode: 'docker',
+        containerId: '',
 
         // Filter state
         filterText: '',
@@ -237,19 +238,23 @@ window.FPLV = window.FPLV || {};
             alert('Wpisz ścieżkę do pliku');
             return;
         }
+        const containerId = store.containerId.trim();
         let resolvedPath = path;
-        if (store.directFileMode === 'host') {
+        if (!containerId && store.directFileMode === 'host') {
             resolvedPath = '/host' + path;
         }
         store.selectedFile = path;
         try {
             store.loading = true;
-            const url = '/api/entries?file=' + encodeURIComponent(resolvedPath);
+            let url = '/api/entries?file=' + encodeURIComponent(resolvedPath);
+            if (containerId) {
+                url += '&container_id=' + encodeURIComponent(containerId);
+            }
             store.entries = await fetchJson(url);
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
-            if (e.message.includes('access_denied')) {
+            if (!containerId && e.message.includes('access_denied')) {
                 const parentDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
                 if (parentDir) {
                     try {
@@ -264,6 +269,10 @@ window.FPLV = window.FPLV || {};
                 }
             } else if (e.message.includes('file_not_found')) {
                 alert('Plik nie istnieje: ' + path);
+            } else if (e.message.includes('container_not_found')) {
+                alert('Kontener nie znaleziony: ' + containerId);
+            } else if (e.message.includes('docker_unavailable')) {
+                alert('Docker niedostępny. Zamontuj /var/run/docker.sock.');
             } else {
                 alert('Błąd ładowania pliku: ' + e.message);
             }
