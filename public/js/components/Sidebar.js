@@ -36,9 +36,13 @@ window.FPLV.components = window.FPLV.components || [];
             <div class="flex-1 overflow-y-auto" style="flex:6;">
                 <div v-if="store.files.length === 0" class="px-3 py-8 text-center crt-dim">pusto</div>
                 <div v-for="f in store.files" :key="f.file"
+                    tabindex="0"
+                    role="button"
                     @click="$emit('select-file', f.file)"
+                    @keydown.enter.prevent="$emit('select-file', f.file)"
+                    @keydown.space.prevent="$emit('select-file', f.file)"
                     class="px-3 py-2 cursor-pointer"
-                    style="border-bottom:1px solid #002200;"
+                    style="border-bottom:1px solid #002200;outline:none;"
                     :style="store.selectedFile === f.file ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;' : 'color:#006600;border-left:3px solid transparent;'">
                     <div class="font-medium truncate text-xs">{{ f.file.split('/').pop() }}</div>
                     <div class="crt-dim text-xs">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
