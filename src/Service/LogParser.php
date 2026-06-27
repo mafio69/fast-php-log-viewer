@@ -36,7 +36,6 @@ class LogParser
     private const PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
     private const PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
     private const PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
-    private const PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
     private const PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
     private const PATTERN_APT_LOG = '/^(?P<datetime>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<message>.+)$/';
     private const PATTERN_SYSTEMD_JOURNAL = '/^(?P<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
@@ -248,7 +247,7 @@ class LogParser
 
             // Alpine APK install/purge: (N/M) Installing package (version)
             if (preg_match(self::PATTERN_APK_INSTALL, $line, $m)) {
-                $level = $m['action'] === 'Installing' ? 'INFO' : 'INFO';
+                $level = 'INFO';
                 $entries[] = [
                     'datetime' => '', // No timestamp in this line
                     'level' => $level,
