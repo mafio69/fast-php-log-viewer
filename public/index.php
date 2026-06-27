@@ -563,7 +563,7 @@ createApp({
             if (timeFrom.value || timeTo.value) {
                 r = r.filter(e => {
                     if (!e.datetime) return true; // Skip time filter for entries without datetime
-                    const t = e.datetime.slice(11, 16);
+                    const t = e.datetime.slice(11, 19);
                     if (timeFrom.value && t < timeFrom.value) return false;
                     if (timeTo.value   && t > timeTo.value)   return false;
                     return true;
@@ -636,17 +636,17 @@ createApp({
                 }
             } catch(e) {}
             await selectFile(bm.file);
-            // Find and expand the matching entry
             const idx = filtered.value.findIndex(e => bookmarkKey(e) === bm.key);
             if (idx >= 0) {
+                currentPage.value = Math.floor(idx / pageSize.value) + 1;
                 expanded[idx] = true;
                 await nextTick();
+                const localIdx = idx - pageOffset.value;
                 const rows = document.querySelectorAll('tbody tr');
-                // Each entry has 1-2 rows (main + expanded), find the right one
                 let rowIdx = 0;
-                for (let j = 0; j < idx; j++) {
+                for (let j = 0; j < localIdx; j++) {
                     rowIdx++;
-                    if (expanded[j]) rowIdx++;
+                    if (expanded[pageOffset.value + j]) rowIdx++;
                 }
                 if (rows[rowIdx]) rows[rowIdx].scrollIntoView({ block: 'center' });
             }
