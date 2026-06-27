@@ -18,7 +18,6 @@ $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = parse_url($requestUri, PHP_URL_PATH);
 
 $bootstrapSlim = function (): void {
-    require_once __DIR__.'/../../vendor/autoload.php';
     $app = AppBootstrap::create();
     $request = ServerRequestFactory::createFromGlobals();
     $app->run($request);

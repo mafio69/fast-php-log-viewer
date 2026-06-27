@@ -1,7 +1,6 @@
 {
     "name": "mafio69/log-viewer",
-    "description": "Standalone log viewer for fast-php-logger. Drop-in single file or Composer package.",
-    "version": "2.0.0",
+    "description": "Standalone log viewer for fast-php-logger.",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -15,7 +14,7 @@
         "ext-pdo": "*",
         "ext-ssh2": "*",
         "ext-pdo_sqlite": "*",
-        "mafio69/fast-php-logger": ">=1.0.1",
+        "mafio69/fast-php-logger": "^1.0",
         "slim/slim": "^4.12",
         "slim/psr7": "^1.7",
         "php-di/php-di": "^7.0"
@@ -41,7 +40,6 @@
         "giorgiosironi/eris": "^1.1"
     },
     "scripts": {
-        "build": "php bin/build.php",
         "test": "vendor/bin/phpunit"
     }
 }

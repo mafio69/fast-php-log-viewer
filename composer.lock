@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7665f375a7a3328dfd13c12636ac4e69",
+    "content-hash": "fa441543415338ccc7f5bd9b622841e2",
     "packages": [
         {
             "name": "fig/http-message-util",
