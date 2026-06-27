@@ -67,12 +67,18 @@ window.FPLV = window.FPLV || {};
         sshConnections: JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'),
         sshFiles: {},
         editingIndex: -1,
-        sshForm: {
+        sshForm: {...window.FPLV_CONFIG?.sshFormDefaults || {
             name: '', host: '', user: '', port: '22',
             authMethod: 'password', password: '', keyPath: '', keyPassphrase: '',
             remotePath: '/var/log', allFiles: false,
-        },
+        }},
     });
+
+    const SSH_FORM_DEFAULTS = {
+        name: '', host: '', user: '', port: '22',
+        authMethod: 'password', password: '', keyPath: '',
+        keyPassphrase: '', remotePath: '/var/log', allFiles: false,
+    };
 
     const LEVEL_COLORS = {
         DEBUG: '#00ff00', INFO: '#00ff00', NOTICE: '#00ff00',
@@ -148,6 +154,20 @@ window.FPLV = window.FPLV || {};
     const tableEndRow = computed(() => Math.min(store.tablePage * store.tablePageSize, tableSortedData.value.length));
 
     // Utility functions
+    function clearExpanded() {
+        Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+    }
+
+    function clearSetupStepData() {
+        Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k]);
+    }
+
+    function resetConnectionState() {
+        store.connectingConnectionIndex = -1;
+        store.passwordForConnection = '';
+        store.manualFilePath = '';
+    }
+
     const levelColor = l => LEVEL_COLORS[l] ?? '#9ca3af';
     const levelDot = l => LEVEL_DOTS[l] ?? '#6b7280';
     const rowBg = l => ROW_BG[l] ?? '';
@@ -330,7 +350,7 @@ window.FPLV = window.FPLV || {};
     async function loadEntries() {
         if (!store.selectedFile) return;
         store.loading = true;
-        Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+        clearExpanded();
         try {
             const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
             const dirParam = def ? def.path : store.selectedDir;
@@ -373,7 +393,7 @@ window.FPLV = window.FPLV || {};
         }
         store.filtered = r;
         store.tablePage = 1;
-        Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+        clearExpanded();
     }
 
     function toggle(entryIndex) {
@@ -480,7 +500,7 @@ window.FPLV = window.FPLV || {};
             }
             if (data.next_step) {
                 store.currentSetupStep = data.next_step;
-                Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k]);
+                clearSetupStepData();
             }
             store.setupSkipConfirm = false;
             if (data.setup_complete) {
@@ -498,7 +518,7 @@ window.FPLV = window.FPLV || {};
             if (status.setup_required) {
                 store.showSetupWizard = true;
                 store.setupSkipConfirm = false;
-                Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k]);
+                clearSetupStepData();
                 if (status.steps && status.steps.length > 0) {
                     store.setupSteps = status.steps;
                     store.currentSetupStep = status.steps[0].name;
@@ -563,7 +583,7 @@ window.FPLV = window.FPLV || {};
     function setTablePage(page) {
         if (page >= 1 && page <= tableTotalPages.value) {
             store.tablePage = page;
-            Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+            clearExpanded();
         }
     }
 
@@ -632,10 +652,7 @@ window.FPLV = window.FPLV || {};
         }
         localStorage.setItem('fplv_ssh_connections', JSON.stringify(store.sshConnections));
         store.editingIndex = -1;
-        Object.assign(store.sshForm, {
-            name: '', host: '', user: '', port: '22', authMethod: 'password', password: '', keyPath: '',
-            keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
+        Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
     }
 
     function deleteSSHConnection(idx) {
@@ -658,10 +675,7 @@ window.FPLV = window.FPLV || {};
 
     function cancelEdit() {
         store.editingIndex = -1;
-        Object.assign(store.sshForm, {
-            name: '', host: '', user: '', port: '22', authMethod: 'password', password: '', keyPath: '',
-            keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
+        Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
     }
 
     function connectSSH(idx) {
@@ -677,8 +691,7 @@ window.FPLV = window.FPLV || {};
         store.showPasswordModal = false;
         if (conn.authMethod === 'password' && !password) {
             alert('SSH password is required for this connection');
-            store.connectingConnectionIndex = -1;
-            store.passwordForConnection = '';
+            resetConnectionState();
             return;
         }
         try {
@@ -714,15 +727,13 @@ window.FPLV = window.FPLV || {};
         } catch (e) {
             alert('SSH connection failed: ' + e.message);
         } finally {
-            store.connectingConnectionIndex = -1;
-            store.passwordForConnection = '';
+            resetConnectionState();
         }
     }
 
     function cancelPasswordModal() {
         store.showPasswordModal = false;
-        store.connectingConnectionIndex = -1;
-        store.passwordForConnection = '';
+        resetConnectionState();
     }
 
     function addManualSSHFile(idx) {
@@ -781,15 +792,13 @@ window.FPLV = window.FPLV || {};
         } catch (e) {
             alert('SSH operation failed: ' + e.message);
         } finally {
-            store.connectingConnectionIndex = -1;
-            store.manualFilePath = '';
+            resetConnectionState();
         }
     }
 
     function cancelManualFileModal() {
         store.showManualFileModal = false;
-        store.connectingConnectionIndex = -1;
-        store.manualFilePath = '';
+        resetConnectionState();
     }
 
     async function refreshSSHDir(dirKey) {
@@ -824,7 +833,7 @@ window.FPLV = window.FPLV || {};
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
         loadDefaultDirectories, loadDirectories, syncSSHDirs, refreshSSHDir,
         applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,
-        removeBookmark, goToBookmark, validateBookmarks, filesApiUrl,
+        removeBookmark, goToBookmark, validateBookmarks,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
         cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal,
