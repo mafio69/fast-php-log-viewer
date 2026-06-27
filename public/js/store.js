@@ -35,7 +35,7 @@ window.FPLV = window.FPLV || {};
         loading: false,
         expanded: {},
         editorUrl: EDITOR_URL,
-        fontSize: parseInt(localStorage.getItem('fplv_fontsize') || '13'),
+        fontSize: parseInt(localStorage.getItem('fplv_fontsize') || '16'),
 
         // Bookmarks
         bookmarks: JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'),
