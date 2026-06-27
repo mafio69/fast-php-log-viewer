@@ -17,7 +17,6 @@ window.FPLV.components = window.FPLV.components || [];
                 :store="store"
                 @proceed-step="proceedStep"
                 @toggle-skip-confirm="v => store.setupSkipConfirm = v"
-                @clear-step-data="Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k])"
             ></setup-wizard>
             <sidebar
                 :store="store"
