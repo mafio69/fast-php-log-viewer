@@ -30,7 +30,7 @@ class LogScanner
     ];
 
     private array $logPatterns = [
-        '*error*', '*debug*', '*access*', '*access*',
+        '*error*', '*debug*', '*access*',
         '*php*', '*apache*', '*nginx*', '*fpm*',
     ];
 
