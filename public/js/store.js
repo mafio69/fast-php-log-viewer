@@ -96,7 +96,11 @@ window.FPLV = window.FPLV || {};
     const LEVELS = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'];
 
     // Watchers
-    Vue.watch(() => store.fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
+    Vue.watch(() => store.fontSize, v => {
+        localStorage.setItem('fplv_fontsize', String(v));
+        document.documentElement.style.fontSize = v + 'px';
+    });
+    document.documentElement.style.fontSize = store.fontSize + 'px';
 
     // Computed
     const mergedDirectories = computed(() => {

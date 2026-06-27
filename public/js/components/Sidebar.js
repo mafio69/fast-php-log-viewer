@@ -34,15 +34,15 @@ window.FPLV.components = window.FPLV.components || [];
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto" style="flex:6;">
-                <div v-if="store.files.length === 0" class="px-3 py-8 text-center crt-dim" style="font-size:12px;">pusto</div>
+                <div v-if="store.files.length === 0" class="px-3 py-8 text-center crt-dim">pusto</div>
                 <div v-for="f in store.files" :key="f.file"
                     @click="$emit('select-file', f.file)"
                     class="px-3 py-2 cursor-pointer"
                     style="border-bottom:1px solid #002200;"
                     :style="store.selectedFile === f.file ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;' : 'color:#006600;border-left:3px solid transparent;'">
-                    <div class="font-medium truncate" style="font-size:10px;">{{ f.file.split('/').pop() }}</div>
-                    <div class="crt-dim" style="font-size:10px;">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
-                    <div v-if="f.allow" class="crt-dim" style="font-size:10px;">allow: {{ f.allow }}</div>
+                    <div class="font-medium truncate text-xs">{{ f.file.split('/').pop() }}</div>
+                    <div class="crt-dim text-xs">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
+                    <div v-if="f.allow" class="crt-dim text-xs">allow: {{ f.allow }}</div>
                 </div>
             </div>
             <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
