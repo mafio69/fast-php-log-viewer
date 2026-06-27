@@ -29,12 +29,6 @@ window.FPLV.components = window.FPLV.components || [];
                     <div v-if="store.showLevelFilters" class="absolute left-0 top-full mt-1 rounded shadow-lg z-20 p-3"
                          style="background:#000;border:1px solid #00ff00;min-width:250px;">
                         <div class="mb-3 pb-2" style="border-bottom:1px solid #002200;">
-                            <div class="text-xs crt-dim mb-1">Sortowanie</div>
-                            <button @click="$emit('toggle-sort')" class="w-full px-2 py-1 text-xs crt-button">
-                                {{ store.sortOrder === 'desc' ? '↓ Najnowsze na górze' : '↑ Najstarsze na górze' }}
-                            </button>
-                        </div>
-                        <div class="mb-3 pb-2" style="border-bottom:1px solid #002200;">
                             <div class="text-xs crt-dim mb-1">Zakres daty</div>
                             <div class="flex items-center gap-1 mb-1">
                                 <input type="date" v-model="store.dateFrom" @change="$emit('apply-filters')" class="px-1 py-0.5 text-xs crt-input flex-1">

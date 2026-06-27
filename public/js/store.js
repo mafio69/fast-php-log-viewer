@@ -353,7 +353,7 @@ window.FPLV = window.FPLV || {};
         }
         if (store.dateFrom || store.dateTo) {
             r = r.filter(e => {
-                if (!e.datetime) return true;
+                if (!e.datetime) return false;
                 const d = e.datetime.slice(0, 10);
                 if (store.dateFrom && d < store.dateFrom) return false;
                 if (store.dateTo && d > store.dateTo) return false;
@@ -362,7 +362,7 @@ window.FPLV = window.FPLV || {};
         }
         if (store.timeFrom || store.timeTo) {
             r = r.filter(e => {
-                if (!e.datetime) return true;
+                if (!e.datetime) return false;
                 const t = e.datetime.slice(11, 16);
                 if (store.timeFrom && t < store.timeFrom) return false;
                 if (store.timeTo && t > store.timeTo) return false;
