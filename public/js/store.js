@@ -27,8 +27,8 @@ window.FPLV = window.FPLV || {};
         sortOrder: 'desc',
         dateFrom: '',
         dateTo: '',
-        timeFrom: '',
-        timeTo: '',
+        timeFrom: '00:00',
+        timeTo: '23:59',
         showLevelFilters: false,
 
         // UI state
@@ -367,9 +367,9 @@ window.FPLV = window.FPLV || {};
         if (store.timeFrom || store.timeTo) {
             r = r.filter(e => {
                 if (!e.datetime) return false;
-                const t = e.datetime.slice(11, 16);
-                if (store.timeFrom && t < store.timeFrom) return false;
-                if (store.timeTo && t > store.timeTo) return false;
+                const t = e.datetime.slice(11, 19);
+                if (store.timeFrom && t < (store.timeFrom.length === 5 ? store.timeFrom + ':00' : store.timeFrom)) return false;
+                if (store.timeTo && t > (store.timeTo.length === 5 ? store.timeTo + ':59' : store.timeTo)) return false;
                 return true;
             });
         }

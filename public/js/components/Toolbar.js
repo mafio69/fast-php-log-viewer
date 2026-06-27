@@ -28,13 +28,20 @@ window.FPLV.components = window.FPLV.components || [];
                     <button @click="$emit('toggle-level-filters')" class="px-2 py-1 text-xs crt-button">FILTRY ▼</button>
                     <div v-if="store.showLevelFilters" class="absolute left-0 top-full mt-1 rounded shadow-lg z-20 p-3"
                          style="background:#000;border:1px solid #00ff00;min-width:250px;">
-                        <div class="mb-3 pb-2" style="border-bottom:1px solid #002200;">
+                         <div class="mb-3 pb-2" style="border-bottom:1px solid #002200;">
                             <div class="text-xs crt-dim mb-1">Zakres daty</div>
                             <div class="flex items-center gap-1 mb-1">
                                 <input type="date" v-model="store.dateFrom" @change="$emit('apply-filters')" class="px-1 py-0.5 text-xs crt-input flex-1">
                             </div>
-                            <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-1 mb-2">
                                 <input type="date" v-model="store.dateTo" @change="$emit('apply-filters')" class="px-1 py-0.5 text-xs crt-input flex-1">
+                            </div>
+                            <div class="text-xs crt-dim mb-1">Zakres godzin</div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <input type="time" v-model="store.timeFrom" @change="$emit('apply-filters')" step="1" class="px-1 py-0.5 text-xs crt-input flex-1">
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="time" v-model="store.timeTo" @change="$emit('apply-filters')" step="1" class="px-1 py-0.5 text-xs crt-input flex-1">
                             </div>
                         </div>
                         <div class="text-xs crt-dim mb-1">Poziomy logów</div>
