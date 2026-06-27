@@ -23,7 +23,6 @@
         "psr-4": {
             "Mariusz\\LogViewer\\Controller\\": "src/Controller/",
             "Mariusz\\LogViewer\\Service\\": "src/Service/",
-            "Mariusz\\LogViewer\\Repository\\": "src/Repository/",
             "Mariusz\\LogViewer\\Config\\": "src/Config/",
             "Mariusz\\LogViewer\\Middleware\\": "src/Middleware/",
             "Mariusz\\LogViewer\\Bootstrap\\": "src/Bootstrap/",

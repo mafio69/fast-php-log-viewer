@@ -12,6 +12,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class SetupController
 {
+    use JsonResponseTrait;
+
     public function __construct(
         private readonly SetupWizard $wizard
     ) {
@@ -25,16 +27,14 @@ class SetupController
             $status['setup_required'] = true;
         }
 
-        $response->getBody()->write(json_encode($status));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $this->json($response, $status);
     }
 
     public function postStep(Request $request, Response $response): Response
     {
         $data = $request->getParsedBody();
         if (!is_array($data)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $step = $data['step'] ?? null;
@@ -42,20 +42,16 @@ class SetupController
         $skip = $data['skip'] ?? false;
 
         if (!in_array($step, SetupWizard::STEPS, true)) {
-            $response->getBody()->write(json_encode(['error' => 'unknown_step', 'step' => $step]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'unknown_step', 'step' => $step], 400);
         }
 
         try {
             $result = $this->wizard->processStep($step, $stepData, $skip);
-            $response->getBody()->write(json_encode($result));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json($response, $result);
         } catch (InvalidArgumentException $e) {
-            $response->getBody()->write(json_encode(['error' => 'unknown_step', 'step' => $step]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'unknown_step', 'step' => $step], 400);
         } catch (Exception $e) {
-            $response->getBody()->write(json_encode(['error' => 'internal_error', 'message' => $e->getMessage()]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+            return $this->json($response, ['error' => 'internal_error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -63,18 +59,15 @@ class SetupController
     {
         $data = $request->getParsedBody();
         if (!is_array($data) || !isset($data['connections'])) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $connections = $data['connections'];
         if (!is_array($connections)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $result = $this->wizard->migrateSSHFromLocalStorage($connections);
-        $response->getBody()->write(json_encode($result));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $this->json($response, $result);
     }
 }

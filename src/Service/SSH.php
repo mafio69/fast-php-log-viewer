@@ -12,21 +12,14 @@ use RuntimeException;
  */
 class SSH
 {
+    use ErrorContextTrait;
+
     private $connection = null;
     private array $config;
 
     public function __construct(array $config)
     {
         $this->config = $config;
-    }
-
-    private function getLastErrorMessage(): string
-    {
-        $error = error_get_last();
-        if ($error === null) {
-            return '';
-        }
-        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
     }
 
     /**

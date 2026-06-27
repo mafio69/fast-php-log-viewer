@@ -10,6 +10,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AppConfigController
 {
+    use JsonResponseTrait;
+
     public function __construct(
         private readonly ConfigManager $configManager
     ) {
@@ -18,20 +20,17 @@ class AppConfigController
     public function getConfig(Request $request, Response $response): Response
     {
         $config = $this->configManager->getPublicConfig();
-        $response->getBody()->write(json_encode($config));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $this->json($response, $config);
     }
 
     public function patchConfig(Request $request, Response $response): Response
     {
         $data = $request->getParsedBody();
         if (!is_array($data)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $this->configManager->updateConfig($data);
-        $response->getBody()->write(json_encode(['success' => true]));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $this->json($response, ['success' => true]);
     }
 }

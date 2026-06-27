@@ -14,6 +14,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class SSHController
 {
+    use JsonResponseTrait;
+
     public function __construct(
         private readonly LogParser $logParser,
         private readonly SecurityService $securityService,
@@ -37,19 +39,16 @@ class SSHController
     {
         $data = $request->getParsedBody();
         if (!is_array($data)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         try {
             $ssh = new SSH($this->extractSSHData($data));
             $ssh->connect();
             $ssh->disconnect();
-            $response->getBody()->write(json_encode(['success' => true]));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json($response, ['success' => true]);
         } catch (Exception $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+            return $this->json($response, ['error' => $e->getMessage()], 500);
         }
     }
 
@@ -57,14 +56,12 @@ class SSHController
     {
         $data = $request->getParsedBody();
         if (!is_array($data)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
-            $response->getBody()->write(json_encode(['error' => 'missing_path']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'missing_path'], 400);
         }
 
         try {
@@ -76,11 +73,9 @@ class SSHController
 
             $ssh->disconnect();
 
-            $response->getBody()->write(json_encode(['success' => true, 'files' => $files]));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json($response, ['success' => true, 'files' => $files]);
         } catch (Exception $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+            return $this->json($response, ['error' => $e->getMessage()], 500);
         }
     }
 
@@ -88,14 +83,12 @@ class SSHController
     {
         $data = $request->getParsedBody();
         if (!is_array($data)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
-            $response->getBody()->write(json_encode(['error' => 'missing_path']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'missing_path'], 400);
         }
 
         try {
@@ -107,11 +100,9 @@ class SSHController
 
             $ssh->disconnect();
 
-            $response->getBody()->write(json_encode(['success' => true, 'entries' => $entries]));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json($response, ['success' => true, 'entries' => $entries]);
         } catch (Exception $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+            return $this->json($response, ['error' => $e->getMessage()], 500);
         }
     }
 
@@ -119,14 +110,12 @@ class SSHController
     {
         $data = $request->getParsedBody();
         if (!is_array($data)) {
-            $response->getBody()->write(json_encode(['error' => 'invalid_json']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'invalid_json'], 400);
         }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
-            $response->getBody()->write(json_encode(['error' => 'missing_path']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'missing_path'], 400);
         }
 
         try {
@@ -136,22 +125,19 @@ class SSHController
             $fileSize = $ssh->fileSize($path);
             if ($fileSize > 10 * 1024 * 1024) {
                 $ssh->disconnect();
-                $response->getBody()->write(json_encode(['error' => 'file_too_large']));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->json($response, ['error' => 'file_too_large'], 400);
             }
 
             $content = $ssh->readFile($path);
 
             if ($this->securityService->isBinaryContent($content)) {
                 $ssh->disconnect();
-                $response->getBody()->write(json_encode(['error' => 'binary_content_not_allowed']));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->json($response, ['error' => 'binary_content_not_allowed'], 400);
             }
 
             if ($this->securityService->containsSuspiciousContent($content)) {
                 $ssh->disconnect();
-                $response->getBody()->write(json_encode(['error' => 'suspicious_content_detected']));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->json($response, ['error' => 'suspicious_content_detected'], 400);
             }
 
             $ssh->disconnect();
@@ -160,15 +146,13 @@ class SSHController
             $localPath = $dataDir . '/downloaded_' . bin2hex(random_bytes(8)) . '.log';
             file_put_contents($localPath, $content);
 
-            $response->getBody()->write(json_encode([
+            return $this->json($response, [
                 'success' => true,
                 'localPath' => $localPath,
                 'size' => strlen($content)
-            ]));
-            return $response->withHeader('Content-Type', 'application/json');
+            ]);
         } catch (Exception $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+            return $this->json($response, ['error' => $e->getMessage()], 500);
         }
     }
 }

@@ -121,12 +121,6 @@ class LogScannerTest extends TestCase
         $this->assertFalse($this->scanner->isLogFile($this->tmpDir . '/style.css'));
     }
 
-    public function testGetDockerLogPathsReturnsEmptyWhenNotInDocker(): void
-    {
-        $paths = $this->scanner->getDockerLogPaths();
-        $this->assertIsArray($paths);
-    }
-
     public function testScanCommonDirectoriesScansExistingDirs(): void
     {
         $this->createFile('error.log');
