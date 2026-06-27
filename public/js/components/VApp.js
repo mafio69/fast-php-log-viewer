@@ -11,7 +11,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'VApp',
         template: `
-        <div class="flex h-screen" :style="{ fontSize: store.fontSize + 'px' }">
+        <div class="flex h-screen">
             <setup-wizard
                 v-if="store.showSetupWizard"
                 :store="store"
