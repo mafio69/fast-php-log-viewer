@@ -24,7 +24,6 @@ window.FPLV = window.FPLV || {};
         // Filter state
         filterText: '',
         excludedLevels: [],
-        sortOrder: 'desc',
         dateFrom: '',
         dateTo: '',
         timeFrom: '00:00',
@@ -96,11 +95,7 @@ window.FPLV = window.FPLV || {};
     const LEVELS = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'];
 
     // Watchers
-    Vue.watch(() => store.fontSize, v => {
-        localStorage.setItem('fplv_fontsize', String(v));
-        document.documentElement.style.fontSize = v + 'px';
-    });
-    document.documentElement.style.fontSize = store.fontSize + 'px';
+    Vue.watch(() => store.fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
     // Computed
     const mergedDirectories = computed(() => {
@@ -373,7 +368,6 @@ window.FPLV = window.FPLV || {};
                 return true;
             });
         }
-        if (store.sortOrder === 'asc') r = [...r].reverse();
         store.filtered = r;
         store.tablePage = 1;
         Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
@@ -381,11 +375,6 @@ window.FPLV = window.FPLV || {};
 
     function toggle(entryIndex) {
         store.expanded[entryIndex] ? delete store.expanded[entryIndex] : (store.expanded[entryIndex] = true);
-    }
-
-    function toggleSort() {
-        store.sortOrder = store.sortOrder === 'desc' ? 'asc' : 'desc';
-        applyFilters();
     }
 
     function isBookmarked(entry) {
@@ -831,7 +820,7 @@ window.FPLV = window.FPLV || {};
         openInEditor, formatSize, formatDate, bookmarkKey, fetchJson,
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
         loadDefaultDirectories, loadDirectories, syncSSHDirs, refreshSSHDir,
-        applyFilters, toggle, toggleSort, toggleLevel, isBookmarked, toggleBookmark,
+        applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,
         removeBookmark, goToBookmark, validateBookmarks, filesApiUrl,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,

@@ -11,7 +11,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'VApp',
         template: `
-        <div class="flex h-screen">
+        <div class="flex h-screen" :style="{ fontSize: store.fontSize + 'px' }">
             <setup-wizard
                 v-if="store.showSetupWizard"
                 :store="store"
@@ -48,7 +48,6 @@ window.FPLV.components = window.FPLV.components || [];
                 <toolbar
                     :store="store"
                     @toggle-level="toggleLevel"
-                    @toggle-sort="toggleSort"
                     @apply-filters="applyFilters"
                     @load-entries="loadEntries"
                     @update-font-size="v => store.fontSize = v"
@@ -90,7 +89,6 @@ window.FPLV.components = window.FPLV.components || [];
                 executeManualFileAdd: F.executeManualFileAdd,
                 cancelManualFileModal: F.cancelManualFileModal,
                 toggleLevel: F.toggleLevel,
-                toggleSort: F.toggleSort,
                 applyFilters: F.applyFilters,
                 loadEntries: F.loadEntries,
                 goToBookmark: F.goToBookmark,

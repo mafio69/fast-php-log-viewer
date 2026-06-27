@@ -10,7 +10,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'Toolbar',
         props: ['store'],
-        emits: ['toggle-level', 'toggle-sort', 'apply-filters', 'load-entries', 'update-font-size', 'go-to-bookmark', 'remove-bookmark', 'toggle-bookmarks', 'toggle-level-filters'],
+        emits: ['toggle-level', 'apply-filters', 'load-entries', 'update-font-size', 'go-to-bookmark', 'remove-bookmark', 'toggle-bookmarks', 'toggle-level-filters'],
         template: `
         <div class="flex items-center gap-2 px-4 py-2" style="background:#000;border-bottom:1px solid #00ff00;">
             <input v-model="store.filterText" @input="$emit('apply-filters')" placeholder="Search…"
