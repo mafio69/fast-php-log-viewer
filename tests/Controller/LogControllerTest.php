@@ -396,6 +396,28 @@ class LogControllerTest extends TestCase
         $this->assertEquals('Permission denied', $body['message']);
     }
 
+    public function testGetEntriesReturnsFileNotFoundForNonExistentFile(): void
+    {
+        $nonExistentFile = sys_get_temp_dir() . '/non_existent_file_' . uniqid() . '.log';
+
+        $this->accessValidator->method('isFileAllowed')
+            ->with($nonExistentFile, null)
+            ->willReturn(true);
+
+        $this->logConfig->method('getDirectories')->willReturn([
+            ['name' => 'tmp', 'path' => sys_get_temp_dir()]
+        ]);
+
+        $request = (new RequestFactory())->createRequest('GET', '/api/entries?file=' . urlencode($nonExistentFile));
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $this->controller->getEntries($request, $response);
+
+        $this->assertEquals(404, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('file_not_found', $body['error']);
+    }
+
     public function testGetEntriesFiltersByLevelCorrectly(): void
     {
         $logFile = sys_get_temp_dir() . '/test_level_filter.log';

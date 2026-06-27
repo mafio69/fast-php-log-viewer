@@ -18,7 +18,7 @@ window.FPLV = window.FPLV || {};
         directories: [],
         defaultDirectories: [],
         directFilePath: '',
-        allowedDirPath: '/var/log',
+        directFileMode: 'docker',
 
         // Filter state
         filterText: '',
@@ -237,21 +237,24 @@ window.FPLV = window.FPLV || {};
             alert('Wpisz ścieżkę do pliku');
             return;
         }
+        let resolvedPath = path;
+        if (store.directFileMode === 'host') {
+            resolvedPath = '/host' + path;
+        }
         store.selectedFile = path;
         try {
             store.loading = true;
-            const url = '/api/entries?file=' + encodeURIComponent(path);
+            const url = '/api/entries?file=' + encodeURIComponent(resolvedPath);
             store.entries = await fetchJson(url);
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
             if (e.message.includes('access_denied')) {
-                const parentDir = path.substring(0, path.lastIndexOf('/'));
+                const parentDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
                 if (parentDir) {
-                    store.allowedDirPath = parentDir;
                     try {
-                        await addAllowedDir();
-                        store.entries = await fetchJson('/api/entries?file=' + encodeURIComponent(path));
+                        await addAllowedDir(parentDir);
+                        store.entries = await fetchJson('/api/entries?file=' + encodeURIComponent(resolvedPath));
                         store.filtered = store.entries;
                         applyFilters();
                         return;
@@ -259,6 +262,8 @@ window.FPLV = window.FPLV || {};
                         alert('Nie udało się dodać katalogu: ' + e2.message);
                     }
                 }
+            } else if (e.message.includes('file_not_found')) {
+                alert('Plik nie istnieje: ' + path);
             } else {
                 alert('Błąd ładowania pliku: ' + e.message);
             }
@@ -268,8 +273,7 @@ window.FPLV = window.FPLV || {};
         }
     }
 
-    async function addAllowedDir() {
-        const dir = store.allowedDirPath.trim();
+    async function addAllowedDir(dir) {
         if (!dir) {
             alert('Wpisz ścieżkę katalogu');
             return;
