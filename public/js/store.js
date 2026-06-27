@@ -67,12 +67,18 @@ window.FPLV = window.FPLV || {};
         sshConnections: JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'),
         sshFiles: {},
         editingIndex: -1,
-        sshForm: {
+        sshForm: {...window.FPLV_CONFIG?.sshFormDefaults || {
             name: '', host: '', user: '', port: '22',
             authMethod: 'password', password: '', keyPath: '', keyPassphrase: '',
             remotePath: '/var/log', allFiles: false,
-        },
+        }},
     });
+
+    const SSH_FORM_DEFAULTS = {
+        name: '', host: '', user: '', port: '22',
+        authMethod: 'password', password: '', keyPath: '',
+        keyPassphrase: '', remotePath: '/var/log', allFiles: false,
+    };
 
     const LEVEL_COLORS = {
         DEBUG: '#00ff00', INFO: '#00ff00', NOTICE: '#00ff00',
@@ -632,10 +638,7 @@ window.FPLV = window.FPLV || {};
         }
         localStorage.setItem('fplv_ssh_connections', JSON.stringify(store.sshConnections));
         store.editingIndex = -1;
-        Object.assign(store.sshForm, {
-            name: '', host: '', user: '', port: '22', authMethod: 'password', password: '', keyPath: '',
-            keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
+        Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
     }
 
     function deleteSSHConnection(idx) {
@@ -658,10 +661,7 @@ window.FPLV = window.FPLV || {};
 
     function cancelEdit() {
         store.editingIndex = -1;
-        Object.assign(store.sshForm, {
-            name: '', host: '', user: '', port: '22', authMethod: 'password', password: '', keyPath: '',
-            keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
+        Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
     }
 
     function connectSSH(idx) {
@@ -824,7 +824,7 @@ window.FPLV = window.FPLV || {};
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
         loadDefaultDirectories, loadDirectories, syncSSHDirs, refreshSSHDir,
         applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,
-        removeBookmark, goToBookmark, validateBookmarks, filesApiUrl,
+        removeBookmark, goToBookmark, validateBookmarks,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
         cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal,

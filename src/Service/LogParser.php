@@ -78,17 +78,7 @@ class LogParser
                 $location = $m['hostname'] . ' ' . $m['process'] . (isset($m['pid']) ? '[' . $m['pid'] . ']' : '');
 
                 // Try to detect log level from message
-                $messageLower = strtolower($m['message']);
-                $level = 'INFO';
-                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
-                    $level = 'ERROR';
-                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
-                    $level = 'WARNING';
-                } elseif (str_contains($messageLower, 'debug')) {
-                    $level = 'DEBUG';
-                } elseif (str_contains($messageLower, 'critical') || str_contains($messageLower, 'fatal')) {
-                    $level = 'CRITICAL';
-                }
+                $level = $this->guessLevel($m['message']);
 
                 $entries[] = [
                     'datetime' => $datetime,
@@ -300,14 +290,7 @@ class LogParser
 
             // APT/bootstrap log format: 2024-08-27 15:37:02 URL:http://... -> ...
             if (preg_match(self::PATTERN_APT_LOG, $line, $m)) {
-                // Try to detect log level from message
-                $messageLower = strtolower($m['message']);
-                $level = 'INFO';
-                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
-                    $level = 'ERROR';
-                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
-                    $level = 'WARNING';
-                }
+                $level = $this->guessLevel($m['message']);
 
                 $entries[] = [
                     'datetime' => $m['datetime'],
@@ -327,13 +310,7 @@ class LogParser
                 $location = $m['hostname'].' '.$m['process'].(isset($m['pid']) ? '['.$m['pid'].']' : '');
 
                 // Try to detect log level from message
-                $messageLower = strtolower($m['message']);
-                $level = 'INFO';
-                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
-                    $level = 'ERROR';
-                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
-                    $level = 'WARNING';
-                }
+                $level = $this->guessLevel($m['message']);
 
                 $entries[] = [
                     'datetime' => $datetime,
@@ -374,5 +351,15 @@ class LogParser
                 ? (json_decode($m['context'], true, 512, JSON_THROW_ON_ERROR) ?? [])
                 : [],
         ];
+    }
+
+    private function guessLevel(string $message): string
+    {
+        $lower = strtolower($message);
+        if (str_contains($lower, 'error') || str_contains($lower, 'failed')) return 'ERROR';
+        if (str_contains($lower, 'warning') || str_contains($lower, 'warn')) return 'WARNING';
+        if (str_contains($lower, 'debug')) return 'DEBUG';
+        if (str_contains($lower, 'critical') || str_contains($lower, 'fatal')) return 'CRITICAL';
+        return 'INFO';
     }
 }
