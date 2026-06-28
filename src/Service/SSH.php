@@ -189,32 +189,6 @@ class SSH
     }
 
     /**
-     * List files in a remote directory
-     */
-    public function listFiles(string $path): array
-    {
-        $command = sprintf('ls -la %s 2>/dev/null', escapeshellarg($path));
-        $output = $this->exec($command);
-
-        $files = [];
-        $lines = explode("\n", trim($output));
-
-        foreach ($lines as $line) {
-            if (preg_match('/^([\-dl])([rwx\-]{9})\s+\d+\s+\w+\s+\w+\s+(\d+)\s+(\w+\s+\d+\s+[\d\:]+)\s+(.+)$/', $line, $matches)) {
-                $files[] = [
-                    'type' => $matches[1] === 'd' ? 'directory' : 'file',
-                    'permissions' => $matches[2],
-                    'size' => (int)$matches[3],
-                    'date' => $matches[4],
-                    'name' => $matches[5],
-                ];
-            }
-        }
-
-        return $files;
-    }
-
-    /**
      * Read a remote file
      */
     public function readFile(string $path): string
