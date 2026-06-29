@@ -55,6 +55,7 @@ window.FPLV = window.FPLV || {};
         setupSkipConfirm: false,
         setupStepData: {},
         setupWarning: '',
+        setupKeyDisplay: '',
         sshEnabled: true,
 
         // SSH state
@@ -468,6 +469,17 @@ window.FPLV = window.FPLV || {};
 
     async function proceedStep(skip) {
         const step = store.currentSetupStep;
+
+        // If encryption key is already displayed, user clicked "Dalej" to advance
+        if (step === 'generate_keys' && store.setupKeyDisplay) {
+            store.setupKeyDisplay = '';
+            store.currentSetupStep = store.setupSteps.length > 1
+                ? store.setupSteps[1].name
+                : 'ssh_config';
+            clearSetupStepData();
+            return;
+        }
+
         if (!skip && step === 'ssh_config') {
             if (!store.setupStepData.ssh_host || !store.setupStepData.ssh_user) {
                 alert('Wypełnij pole Host i Użytkownik SSH lub kliknij "Pomiń".');
@@ -498,6 +510,13 @@ window.FPLV = window.FPLV || {};
             } else {
                 store.setupWarning = '';
             }
+
+            // Show encryption key before advancing
+            if (step === 'generate_keys' && data.encryption_key_display) {
+                store.setupKeyDisplay = data.encryption_key_display;
+                return;
+            }
+
             if (data.next_step) {
                 store.currentSetupStep = data.next_step;
                 clearSetupStepData();
@@ -518,6 +537,7 @@ window.FPLV = window.FPLV || {};
             if (status.setup_required) {
                 store.showSetupWizard = true;
                 store.setupSkipConfirm = false;
+                store.setupKeyDisplay = '';
                 clearSetupStepData();
                 if (status.steps && status.steps.length > 0) {
                     store.setupSteps = status.steps;
