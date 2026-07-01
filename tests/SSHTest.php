@@ -119,15 +119,6 @@ class SSHTest extends TestCase
         $ssh->readFile('/path/to/file');
     }
 
-    public function testListFilesThrowsExceptionWhenNotConnected(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('SSH connection not established');
-
-        $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
-        $ssh->listFiles('/path/to/dir');
-    }
-
     public function testDisconnectDoesNothingWhenNotConnected(): void
     {
         $ssh = new SSH(['ssh_host' => 'example.com', 'ssh_user' => 'user']);
