@@ -24,18 +24,17 @@ window.FPLV = window.FPLV || {};
         // Filter state
         filterText: '',
         excludedLevels: [],
-        sortOrder: 'desc',
         dateFrom: '',
         dateTo: '',
-        timeFrom: '',
-        timeTo: '',
+        timeFrom: '00:00',
+        timeTo: '23:59',
         showLevelFilters: false,
 
         // UI state
         loading: false,
         expanded: {},
         editorUrl: EDITOR_URL,
-        fontSize: parseInt(localStorage.getItem('fplv_fontsize') || '13'),
+        fontSize: parseInt(localStorage.getItem('fplv_fontsize') || '16'),
 
         // Bookmarks
         bookmarks: JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'),
@@ -353,23 +352,25 @@ window.FPLV = window.FPLV || {};
         }
         if (store.dateFrom || store.dateTo) {
             r = r.filter(e => {
-                if (!e.datetime) return true;
+                if (!e.datetime) return false;
                 const d = e.datetime.slice(0, 10);
                 if (store.dateFrom && d < store.dateFrom) return false;
                 if (store.dateTo && d > store.dateTo) return false;
                 return true;
             });
         }
-        if (store.timeFrom || store.timeTo) {
+        const hasTimeFilter =
+            (store.timeFrom && store.timeFrom !== '00:00') ||
+            (store.timeTo && !['23:59', '23:59:59'].includes(store.timeTo));
+        if (hasTimeFilter) {
             r = r.filter(e => {
-                if (!e.datetime) return true;
-                const t = e.datetime.slice(11, 16);
-                if (store.timeFrom && t < store.timeFrom) return false;
-                if (store.timeTo && t > store.timeTo) return false;
+                if (!e.datetime) return false;
+                const t = e.datetime.slice(11, 19);
+                if (store.timeFrom && t < (store.timeFrom.length === 5 ? store.timeFrom + ':00' : store.timeFrom)) return false;
+                if (store.timeTo && t > (store.timeTo.length === 5 ? store.timeTo + ':59' : store.timeTo)) return false;
                 return true;
             });
         }
-        if (store.sortOrder === 'asc') r = [...r].reverse();
         store.filtered = r;
         store.tablePage = 1;
         Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
@@ -377,11 +378,6 @@ window.FPLV = window.FPLV || {};
 
     function toggle(entryIndex) {
         store.expanded[entryIndex] ? delete store.expanded[entryIndex] : (store.expanded[entryIndex] = true);
-    }
-
-    function toggleSort() {
-        store.sortOrder = store.sortOrder === 'desc' ? 'asc' : 'desc';
-        applyFilters();
     }
 
     function isBookmarked(entry) {
@@ -827,7 +823,7 @@ window.FPLV = window.FPLV || {};
         openInEditor, formatSize, formatDate, bookmarkKey, fetchJson,
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
         loadDefaultDirectories, loadDirectories, syncSSHDirs, refreshSSHDir,
-        applyFilters, toggle, toggleSort, toggleLevel, isBookmarked, toggleBookmark,
+        applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,
         removeBookmark, goToBookmark, validateBookmarks, filesApiUrl,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
