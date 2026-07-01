@@ -10,7 +10,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'SetupWizard',
         props: ['store'],
-        emits: ['proceed-step', 'toggle-skip-confirm', 'clear-step-data'],
+        emits: ['proceed-step', 'toggle-skip-confirm'],
         template: `
         <div class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.95);">
             <div class="rounded shadow-lg p-6" style="background:#000;border:1px solid #00ff00;width:600px;">
@@ -20,7 +20,14 @@ window.FPLV.components = window.FPLV.components || [];
                 </div>
                 <div v-if="store.currentSetupStep === 'generate_keys'">
                     <p class="text-xs crt-text mb-4">Aplikacja wygeneruje klucz szyfrowania i unikalny ID instalacji.</p>
-                    <div v-if="!store.setupSkipConfirm" class="flex gap-2">
+                    <div v-if="store.setupKeyDisplay" class="mb-4">
+                        <div class="p-3 rounded text-xs" style="border:1px solid #00ff00;background:#001100;">
+                            <p class="mb-2 font-bold" style="color:#00ff00;">Twoj klucz szyfrowania (zapisz go!):</p>
+                            <code class="block break-all" style="color:#00ff00;font-size:11px;">{{ store.setupKeyDisplay }}</code>
+                        </div>
+                        <button @click="$emit('proceed-step', false)" class="w-full crt-button py-1 text-xs mt-3">Dalej</button>
+                    </div>
+                    <div v-else-if="!store.setupSkipConfirm" class="flex gap-2">
                         <button @click="$emit('proceed-step', false)" class="flex-1 crt-button py-1 text-xs">Generuj klucze</button>
                         <button @click="$emit('toggle-skip-confirm', true)" class="flex-1 crt-button py-1 text-xs" style="border-color:#ff6600;color:#ff6600;">Pomiń</button>
                     </div>

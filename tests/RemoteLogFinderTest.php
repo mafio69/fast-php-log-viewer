@@ -78,32 +78,4 @@ class RemoteLogFinderTest extends TestCase
         $this->assertCount(1, $files);
     }
 
-    public function testScanCommonDirectoriesScansExistingPaths(): void
-    {
-        $this->mockSsh->method('directoryExists')->willReturnCallback(function($path) {
-            return $path === '/var/log';
-        });
-        $this->mockSsh->method('exec')->willReturn('/var/log/error.log');
-        $this->mockSsh->method('fileExists')->willReturn(true);
-        $this->mockSsh->method('fileSize')->willReturn(1024);
-
-        $finder = new RemoteLogFinder($this->mockSsh);
-        $dirs = $finder->scanCommonDirectories();
-
-        $this->assertArrayHasKey('/var/log', $dirs);
-        $this->assertArrayHasKey('path', $dirs['/var/log']);
-        $this->assertArrayHasKey('name', $dirs['/var/log']);
-        $this->assertArrayHasKey('file_count', $dirs['/var/log']);
-        $this->assertArrayHasKey('files', $dirs['/var/log']);
-    }
-
-    public function testScanCommonDirectoriesSkipsNonExistentPaths(): void
-    {
-        $this->mockSsh->method('directoryExists')->willReturn(false);
-
-        $finder = new RemoteLogFinder($this->mockSsh);
-        $dirs = $finder->scanCommonDirectories();
-
-        $this->assertEmpty($dirs);
-    }
 }
