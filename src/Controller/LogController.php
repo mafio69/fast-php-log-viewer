@@ -147,6 +147,9 @@ class LogController
             if ($message === 'file_not_found' || $message === 'container_not_found') {
                 return $this->json($response, ['error' => $message], 404);
             }
+            if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
+                return $this->json($response, ['error' => $message], 403);
+            }
             return $this->json($response, ['error' => 'docker_exec_failed', 'message' => $message], 500);
         }
 
