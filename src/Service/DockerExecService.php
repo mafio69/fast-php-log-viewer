@@ -11,6 +11,42 @@ class DockerExecService
     private const SOCKET = '/var/run/docker.sock';
     private const TIMEOUT = 10;
     private const API_VERSION = 'v1.47';
+    private const DEFAULT_ALLOWED_PATH_PREFIXES = ['/var/log/', '/var/www/html/logs/'];
+
+    /** @var string[] */
+    private array $allowedContainers;
+    /** @var string[] */
+    private array $allowedPathPrefixes;
+
+    /**
+     * @param string[]|null $allowedContainers Container names/IDs this instance may read from.
+     *   Defaults to the LOG_VIEWER_ALLOWED_CONTAINERS env var (comma-separated). Empty means
+     *   no container is allowed - this feature is opt-in, not opt-out, since it exposes
+     *   arbitrary files from any container reachable via the mounted Docker socket.
+     * @param string[]|null $allowedPathPrefixes File path prefixes readable inside an allowed
+     *   container. Defaults to LOG_VIEWER_ALLOWED_CONTAINER_PATHS env var, falling back to
+     *   common log locations.
+     */
+    public function __construct(?array $allowedContainers = null, ?array $allowedPathPrefixes = null)
+    {
+        $this->allowedContainers = $allowedContainers ?? $this->parseEnvList('LOG_VIEWER_ALLOWED_CONTAINERS');
+
+        $envPathPrefixes = $this->parseEnvList('LOG_VIEWER_ALLOWED_CONTAINER_PATHS');
+        $this->allowedPathPrefixes = $allowedPathPrefixes ?? ($envPathPrefixes ?: self::DEFAULT_ALLOWED_PATH_PREFIXES);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function parseEnvList(string $name): array
+    {
+        $value = getenv($name);
+        if ($value === false || trim($value) === '') {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $value))));
+    }
 
     public function isAvailable(): bool
     {
@@ -21,6 +57,8 @@ class DockerExecService
     {
         $this->validateContainerId($containerId);
         $this->validateFilePath($filePath);
+        $this->assertContainerAllowed($containerId);
+        $this->assertPathAllowed($filePath);
 
         $execId = $this->createExec($containerId, $filePath);
         $output = $this->startExec($execId);
@@ -47,6 +85,24 @@ class DockerExecService
         if (str_contains($filePath, "\0") || str_contains($filePath, "\n") || str_contains($filePath, "\r")) {
             throw new RuntimeException('invalid_file_path');
         }
+    }
+
+    private function assertContainerAllowed(string $containerId): void
+    {
+        if (!in_array($containerId, $this->allowedContainers, true)) {
+            throw new RuntimeException('container_not_allowed');
+        }
+    }
+
+    private function assertPathAllowed(string $filePath): void
+    {
+        foreach ($this->allowedPathPrefixes as $prefix) {
+            if (str_starts_with($filePath, $prefix)) {
+                return;
+            }
+        }
+
+        throw new RuntimeException('path_not_allowed');
     }
 
     private function createExec(string $containerId, string $filePath): string

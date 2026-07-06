@@ -35,7 +35,7 @@ class FileAccessValidator
             $resolved = realpath($dirPath);
             $checkDir = $resolved !== false ? $resolved : $dirPath;
             $this->logger?->debug('isFileAllowed dirPath resolved', ['dirPath' => $dirPath, 'resolved' => $resolved, 'checkDir' => $checkDir]);
-            if ($checkPath && $checkDir && str_starts_with($checkPath, $checkDir)) {
+            if ($checkPath && $checkDir && self::isPathWithinDir($checkPath, $checkDir)) {
                 return true;
             }
         }
@@ -44,7 +44,7 @@ class FileAccessValidator
         foreach ($dirs as $dir) {
             $resolved = realpath($dir['path']);
             $checkDir = $resolved !== false ? $resolved : $dir['path'];
-            if ($checkPath && $checkDir && str_starts_with($checkPath, $checkDir)) {
+            if ($checkPath && $checkDir && self::isPathWithinDir($checkPath, $checkDir)) {
                 $this->logger?->debug('isFileAllowed fallback match', ['dir' => $dir['name'], 'checkDir' => $checkDir]);
                 return true;
             }
@@ -58,6 +58,17 @@ class FileAccessValidator
     {
         $realFile = realpath($filePath);
         $realDir = realpath($dirPath);
-        return $realFile !== false && $realDir !== false && str_starts_with($realFile, $realDir);
+        return $realFile !== false && $realDir !== false && self::isPathWithinDir($realFile, $realDir);
+    }
+
+    /**
+     * Directory-boundary-safe containment check. A plain str_starts_with($path, $dir)
+     * would let an allowed dir like "/logs" also match a sibling "/logs-other", so this
+     * requires an exact match or a match at a path-separator boundary.
+     */
+    private static function isPathWithinDir(string $path, string $dir): bool
+    {
+        $dir = rtrim($dir, '/');
+        return $path === $dir || str_starts_with($path, $dir . '/');
     }
 }

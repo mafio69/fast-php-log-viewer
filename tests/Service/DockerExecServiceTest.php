@@ -78,6 +78,37 @@ class DockerExecServiceTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function testReadFileDeniesContainerNotOnAllowList(): void
+    {
+        $service = new DockerExecService(['allowed-container'], ['/var/log/']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('container_not_allowed');
+
+        $service->readFile('some-other-container', '/var/log/test.log');
+    }
+
+    public function testReadFileDeniesContainerWhenAllowListEmptyByDefault(): void
+    {
+        // No allow-list configured (env var unset) => deny by default, fail closed.
+        $service = new DockerExecService();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('container_not_allowed');
+
+        $service->readFile('any-container', '/var/log/test.log');
+    }
+
+    public function testReadFileDeniesPathOutsideAllowedPrefixes(): void
+    {
+        $service = new DockerExecService(['allowed-container'], ['/var/log/']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('path_not_allowed');
+
+        $service->readFile('allowed-container', '/etc/passwd');
+    }
+
     public function testDemuxStreamDemultiplexesStdoutAndStderr(): void
     {
         $service = new DockerExecService();
