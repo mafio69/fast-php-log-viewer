@@ -18,6 +18,7 @@ services:
       - ./data:/var/www/html/data
       - /var/log:/host/var/log
       - ~/logs:/host/home/logs
+      - /var/run/docker.sock:/var/run/docker.sock
 
   playwright:
     image: mcr.microsoft.com/playwright:v1.44.0-jammy

@@ -19,22 +19,22 @@ window.FPLV = window.FPLV || {};
         defaultDirectories: [],
         directFilePath: '',
         directFileMode: 'docker',
+        containerId: '',
 
         // Filter state
         filterText: '',
         excludedLevels: [],
-        sortOrder: 'desc',
         dateFrom: '',
         dateTo: '',
-        timeFrom: '',
-        timeTo: '',
+        timeFrom: '00:00',
+        timeTo: '23:59',
         showLevelFilters: false,
 
         // UI state
         loading: false,
         expanded: {},
         editorUrl: EDITOR_URL,
-        fontSize: parseInt(localStorage.getItem('fplv_fontsize') || '13'),
+        fontSize: parseInt(localStorage.getItem('fplv_fontsize') || '16'),
 
         // Bookmarks
         bookmarks: JSON.parse(localStorage.getItem('fplv_bookmarks') || '[]'),
@@ -67,12 +67,18 @@ window.FPLV = window.FPLV || {};
         sshConnections: JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'),
         sshFiles: {},
         editingIndex: -1,
-        sshForm: {
+        sshForm: {...window.FPLV_CONFIG?.sshFormDefaults || {
             name: '', host: '', user: '', port: '22',
             authMethod: 'password', password: '', keyPath: '', keyPassphrase: '',
             remotePath: '/var/log', allFiles: false,
-        },
+        }},
     });
+
+    const SSH_FORM_DEFAULTS = {
+        name: '', host: '', user: '', port: '22',
+        authMethod: 'password', password: '', keyPath: '',
+        keyPassphrase: '', remotePath: '/var/log', allFiles: false,
+    };
 
     const LEVEL_COLORS = {
         DEBUG: '#00ff00', INFO: '#00ff00', NOTICE: '#00ff00',
@@ -148,6 +154,20 @@ window.FPLV = window.FPLV || {};
     const tableEndRow = computed(() => Math.min(store.tablePage * store.tablePageSize, tableSortedData.value.length));
 
     // Utility functions
+    function clearExpanded() {
+        Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+    }
+
+    function clearSetupStepData() {
+        Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k]);
+    }
+
+    function resetConnectionState() {
+        store.connectingConnectionIndex = -1;
+        store.passwordForConnection = '';
+        store.manualFilePath = '';
+    }
+
     const levelColor = l => LEVEL_COLORS[l] ?? '#9ca3af';
     const levelDot = l => LEVEL_DOTS[l] ?? '#6b7280';
     const rowBg = l => ROW_BG[l] ?? '';
@@ -237,19 +257,23 @@ window.FPLV = window.FPLV || {};
             alert('Wpisz ścieżkę do pliku');
             return;
         }
+        const containerId = store.containerId.trim();
         let resolvedPath = path;
-        if (store.directFileMode === 'host') {
+        if (!containerId && store.directFileMode === 'host') {
             resolvedPath = '/host' + path;
         }
         store.selectedFile = path;
         try {
             store.loading = true;
-            const url = '/api/entries?file=' + encodeURIComponent(resolvedPath);
+            let url = '/api/entries?file=' + encodeURIComponent(resolvedPath);
+            if (containerId) {
+                url += '&container_id=' + encodeURIComponent(containerId);
+            }
             store.entries = await fetchJson(url);
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
-            if (e.message.includes('access_denied')) {
+            if (!containerId && e.message.includes('access_denied')) {
                 const parentDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
                 if (parentDir) {
                     try {
@@ -264,6 +288,10 @@ window.FPLV = window.FPLV || {};
                 }
             } else if (e.message.includes('file_not_found')) {
                 alert('Plik nie istnieje: ' + path);
+            } else if (e.message.includes('container_not_found')) {
+                alert('Kontener nie znaleziony: ' + containerId);
+            } else if (e.message.includes('docker_unavailable')) {
+                alert('Docker niedostępny. Zamontuj /var/run/docker.sock.');
             } else {
                 alert('Błąd ładowania pliku: ' + e.message);
             }
@@ -322,7 +350,7 @@ window.FPLV = window.FPLV || {};
     async function loadEntries() {
         if (!store.selectedFile) return;
         store.loading = true;
-        Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+        clearExpanded();
         try {
             const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
             const dirParam = def ? def.path : store.selectedDir;
@@ -344,35 +372,32 @@ window.FPLV = window.FPLV || {};
         }
         if (store.dateFrom || store.dateTo) {
             r = r.filter(e => {
-                if (!e.datetime) return true;
+                if (!e.datetime) return false;
                 const d = e.datetime.slice(0, 10);
                 if (store.dateFrom && d < store.dateFrom) return false;
                 if (store.dateTo && d > store.dateTo) return false;
                 return true;
             });
         }
-        if (store.timeFrom || store.timeTo) {
+        const hasTimeFilter =
+            (store.timeFrom && store.timeFrom !== '00:00') ||
+            (store.timeTo && !['23:59', '23:59:59'].includes(store.timeTo));
+        if (hasTimeFilter) {
             r = r.filter(e => {
-                if (!e.datetime) return true;
-                const t = e.datetime.slice(11, 16);
-                if (store.timeFrom && t < store.timeFrom) return false;
-                if (store.timeTo && t > store.timeTo) return false;
+                if (!e.datetime) return false;
+                const t = e.datetime.slice(11, 19);
+                if (store.timeFrom && t < (store.timeFrom.length === 5 ? store.timeFrom + ':00' : store.timeFrom)) return false;
+                if (store.timeTo && t > (store.timeTo.length === 5 ? store.timeTo + ':59' : store.timeTo)) return false;
                 return true;
             });
         }
-        if (store.sortOrder === 'asc') r = [...r].reverse();
         store.filtered = r;
         store.tablePage = 1;
-        Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+        clearExpanded();
     }
 
     function toggle(entryIndex) {
         store.expanded[entryIndex] ? delete store.expanded[entryIndex] : (store.expanded[entryIndex] = true);
-    }
-
-    function toggleSort() {
-        store.sortOrder = store.sortOrder === 'desc' ? 'asc' : 'desc';
-        applyFilters();
     }
 
     function isBookmarked(entry) {
@@ -475,7 +500,7 @@ window.FPLV = window.FPLV || {};
             }
             if (data.next_step) {
                 store.currentSetupStep = data.next_step;
-                Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k]);
+                clearSetupStepData();
             }
             store.setupSkipConfirm = false;
             if (data.setup_complete) {
@@ -493,7 +518,7 @@ window.FPLV = window.FPLV || {};
             if (status.setup_required) {
                 store.showSetupWizard = true;
                 store.setupSkipConfirm = false;
-                Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k]);
+                clearSetupStepData();
                 if (status.steps && status.steps.length > 0) {
                     store.setupSteps = status.steps;
                     store.currentSetupStep = status.steps[0].name;
@@ -558,7 +583,7 @@ window.FPLV = window.FPLV || {};
     function setTablePage(page) {
         if (page >= 1 && page <= tableTotalPages.value) {
             store.tablePage = page;
-            Object.keys(store.expanded).forEach(k => delete store.expanded[k]);
+            clearExpanded();
         }
     }
 
@@ -627,10 +652,7 @@ window.FPLV = window.FPLV || {};
         }
         localStorage.setItem('fplv_ssh_connections', JSON.stringify(store.sshConnections));
         store.editingIndex = -1;
-        Object.assign(store.sshForm, {
-            name: '', host: '', user: '', port: '22', authMethod: 'password', password: '', keyPath: '',
-            keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
+        Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
     }
 
     function deleteSSHConnection(idx) {
@@ -653,10 +675,7 @@ window.FPLV = window.FPLV || {};
 
     function cancelEdit() {
         store.editingIndex = -1;
-        Object.assign(store.sshForm, {
-            name: '', host: '', user: '', port: '22', authMethod: 'password', password: '', keyPath: '',
-            keyPassphrase: '', remotePath: '/var/log', allFiles: false
-        });
+        Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
     }
 
     function connectSSH(idx) {
@@ -672,8 +691,7 @@ window.FPLV = window.FPLV || {};
         store.showPasswordModal = false;
         if (conn.authMethod === 'password' && !password) {
             alert('SSH password is required for this connection');
-            store.connectingConnectionIndex = -1;
-            store.passwordForConnection = '';
+            resetConnectionState();
             return;
         }
         try {
@@ -709,15 +727,13 @@ window.FPLV = window.FPLV || {};
         } catch (e) {
             alert('SSH connection failed: ' + e.message);
         } finally {
-            store.connectingConnectionIndex = -1;
-            store.passwordForConnection = '';
+            resetConnectionState();
         }
     }
 
     function cancelPasswordModal() {
         store.showPasswordModal = false;
-        store.connectingConnectionIndex = -1;
-        store.passwordForConnection = '';
+        resetConnectionState();
     }
 
     function addManualSSHFile(idx) {
@@ -776,15 +792,13 @@ window.FPLV = window.FPLV || {};
         } catch (e) {
             alert('SSH operation failed: ' + e.message);
         } finally {
-            store.connectingConnectionIndex = -1;
-            store.manualFilePath = '';
+            resetConnectionState();
         }
     }
 
     function cancelManualFileModal() {
         store.showManualFileModal = false;
-        store.connectingConnectionIndex = -1;
-        store.manualFilePath = '';
+        resetConnectionState();
     }
 
     async function refreshSSHDir(dirKey) {
@@ -818,8 +832,8 @@ window.FPLV = window.FPLV || {};
         openInEditor, formatSize, formatDate, bookmarkKey, fetchJson,
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
         loadDefaultDirectories, loadDirectories, syncSSHDirs, refreshSSHDir,
-        applyFilters, toggle, toggleSort, toggleLevel, isBookmarked, toggleBookmark,
-        removeBookmark, goToBookmark, validateBookmarks, filesApiUrl,
+        applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,
+        removeBookmark, goToBookmark, validateBookmarks,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
         cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal,

@@ -34,20 +34,26 @@ window.FPLV.components = window.FPLV.components || [];
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto" style="flex:6;">
-                <div v-if="store.files.length === 0" class="px-3 py-8 text-center crt-dim" style="font-size:12px;">pusto</div>
+                <div v-if="store.files.length === 0" class="px-3 py-8 text-center crt-dim">pusto</div>
                 <div v-for="f in store.files" :key="f.file"
+                    tabindex="0"
+                    role="button"
                     @click="$emit('select-file', f.file)"
+                    @keydown.enter.prevent="$emit('select-file', f.file)"
+                    @keydown.space.prevent="$emit('select-file', f.file)"
                     class="px-3 py-2 cursor-pointer"
-                    style="border-bottom:1px solid #002200;"
+                    style="border-bottom:1px solid #002200;outline:none;"
                     :style="store.selectedFile === f.file ? 'background:#002200;border-left:3px solid #00ff00;color:#00ff00;' : 'color:#006600;border-left:3px solid transparent;'">
-                    <div class="font-medium truncate" style="font-size:10px;">{{ f.file.split('/').pop() }}</div>
-                    <div class="crt-dim" style="font-size:10px;">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
-                    <div v-if="f.allow" class="crt-dim" style="font-size:10px;">allow: {{ f.allow }}</div>
+                    <div class="font-medium truncate text-xs">{{ f.file.split('/').pop() }}</div>
+                    <div class="crt-dim text-xs">{{ formatDate(f.date) }} · {{ formatSize(f.size) }}</div>
+                    <div v-if="f.allow" class="crt-dim text-xs">allow: {{ f.allow }}</div>
                 </div>
             </div>
             <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
                 <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
-                <div class="flex gap-1 mb-2">
+                <input type="text" v-model="store.containerId" placeholder="container_name (opcjonalnie)"
+                    class="w-full rounded px-2 py-1 text-xs crt-input mb-2" style="color:#00aacc;">
+                <div v-if="!store.containerId" class="flex gap-1 mb-2">
                     <button @click="store.directFileMode = 'docker'"
                         :style="store.directFileMode === 'docker' ? 'background:#00aa00;color:#000;' : 'background:#002200;color:#00aa00;'"
                         class="flex-1 rounded px-2 py-1 text-xs font-bold">🐳 DOCKER</button>
@@ -55,11 +61,13 @@ window.FPLV.components = window.FPLV.components || [];
                         :style="store.directFileMode === 'host' ? 'background:#0066cc;color:#fff;' : 'background:#001133;color:#0066cc;'"
                         class="flex-1 rounded px-2 py-1 text-xs font-bold">💻 HOST</button>
                 </div>
+                <div v-if="store.containerId" class="text-xs crt-text mb-2" style="color:#00aacc;">
+                    📦 czytanie z kontenera
+                </div>
                 <input type="text" v-model="store.directFilePath" placeholder="/var/log/php/php_errors.log"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
                 <button @click="$emit('load-direct-file')" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">⚡ ZAŁADUJ</button>
             </div>
-
             <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
                 <button @click="$emit('open-ssh-modal'); $emit('cancel-edit')" class="w-full rounded py-1 text-xs crt-button">🔗 SSH Connections</button>
             </div>

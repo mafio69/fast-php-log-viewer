@@ -6,6 +6,7 @@ namespace Mariusz\LogViewer\Controller;
 
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
@@ -15,6 +16,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class LogController
 {
+    use JsonResponseTrait;
+
     public function __construct(
         private readonly LogConfig $logConfig,
         private readonly ConfigManager $configManager,
@@ -22,6 +25,7 @@ class LogController
         private readonly PathResolver $pathResolver,
         private readonly FileAccessValidator $accessValidator,
         private readonly LogParser $logParser,
+        private readonly ?DockerExecService $dockerExec = null,
     ) {
     }
 
@@ -34,8 +38,7 @@ class LogController
             $dirs = array_filter($dirs, fn($d) => ($d['type'] ?? 'local') !== 'ssh');
         }
 
-        $response->getBody()->write(json_encode(array_values($dirs)));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $this->json($response, array_values($dirs));
     }
 
     public function getFiles(Request $request, Response $response): Response
@@ -54,13 +57,11 @@ class LogController
                     'date' => $f['date'],
                     'size' => $f['size'],
                 ], $files);
-                $response->getBody()->write(json_encode($result));
-                return $response->withHeader('Content-Type', 'application/json');
+                return $this->json($response, $result);
             }
 
             if (!$dirKey) {
-                $response->getBody()->write(json_encode(['error' => 'missing_dir']));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->json($response, ['error' => 'missing_dir'], 400);
             }
 
             $dirs = $this->logConfig->getDirectories();
@@ -73,8 +74,7 @@ class LogController
             }
 
             if (!$dir) {
-                $response->getBody()->write(json_encode(['error' => 'directory_not_found']));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+                return $this->json($response, ['error' => 'directory_not_found'], 404);
             }
 
             $files = $this->logFinder->findAll($dir['path']);
@@ -85,11 +85,9 @@ class LogController
                 'size' => $f['size'],
             ], $files);
 
-            $response->getBody()->write(json_encode($result));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json($response, $result);
         } catch (\Exception $e) {
-            $response->getBody()->write(json_encode(['error' => 'server_error', 'message' => $e->getMessage()]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+            return $this->json($response, ['error' => 'server_error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -97,8 +95,13 @@ class LogController
     {
         $filePath = $request->getQueryParams()['file'] ?? null;
         if (!$filePath) {
-            $response->getBody()->write(json_encode(['error' => 'missing_file']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->json($response, ['error' => 'missing_file'], 400);
+        }
+
+        $containerId = $request->getQueryParams()['container_id'] ?? null;
+
+        if ($containerId !== null) {
+            return $this->getEntriesFromContainer($containerId, $filePath, $request, $response);
         }
 
         $dirKey = $request->getQueryParams()['dir'] ?? null;
@@ -110,18 +113,15 @@ class LogController
                 if ($parentDir !== null && $this->accessValidator->isFileAllowed($filePath, $dirKey)) {
                     // Falls through — continue to parseFile
                 } else {
-                    $response->getBody()->write(json_encode(['error' => 'access_denied']));
-                    return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
+                    return $this->json($response, ['error' => 'access_denied'], 403);
                 }
             } else {
-                $response->getBody()->write(json_encode(['error' => 'access_denied']));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
+                return $this->json($response, ['error' => 'access_denied'], 403);
             }
         }
 
         if (!file_exists($filePath)) {
-            $response->getBody()->write(json_encode(['error' => 'file_not_found']));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            return $this->json($response, ['error' => 'file_not_found'], 404);
         }
 
         $level = $request->getQueryParams()['level'] ?? null;
@@ -131,8 +131,40 @@ class LogController
             $entries = array_values(array_filter($entries, fn($e) => strtoupper($e['level']) === strtoupper($level)));
         }
 
-        $response->getBody()->write(json_encode($entries));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $this->json($response, $entries);
+    }
+
+    private function getEntriesFromContainer(string $containerId, string $filePath, Request $request, Response $response): Response
+    {
+        if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {
+            return $this->json($response, ['error' => 'docker_unavailable'], 503);
+        }
+
+        try {
+            $content = $this->dockerExec->readFile($containerId, $filePath);
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'file_not_found' || $message === 'container_not_found') {
+                return $this->json($response, ['error' => $message], 404);
+            }
+            if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
+                return $this->json($response, ['error' => $message], 403);
+            }
+            return $this->json($response, ['error' => 'docker_exec_failed', 'message' => $message], 500);
+        }
+
+        try {
+            $entries = $this->logParser->parseString($content);
+        } catch (\Exception $e) {
+            return $this->json($response, ['error' => 'parse_error', 'message' => $e->getMessage()], 500);
+        }
+
+        $level = $request->getQueryParams()['level'] ?? null;
+        if ($level) {
+            $entries = array_values(array_filter($entries, fn($e) => strtoupper($e['level']) === strtoupper($level)));
+        }
+
+        return $this->json($response, $entries);
     }
 
     private function autoRegisterParentDir(string $filePath): ?string

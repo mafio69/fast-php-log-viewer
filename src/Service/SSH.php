@@ -12,21 +12,14 @@ use RuntimeException;
  */
 class SSH
 {
+    use ErrorContextTrait;
+
     private $connection = null;
     private array $config;
 
     public function __construct(array $config)
     {
         $this->config = $config;
-    }
-
-    private function getLastErrorMessage(): string
-    {
-        $error = error_get_last();
-        if ($error === null) {
-            return '';
-        }
-        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
     }
 
     /**
@@ -193,32 +186,6 @@ class SSH
         fclose($stream);
 
         return $output;
-    }
-
-    /**
-     * List files in a remote directory
-     */
-    public function listFiles(string $path): array
-    {
-        $command = sprintf('ls -la %s 2>/dev/null', escapeshellarg($path));
-        $output = $this->exec($command);
-
-        $files = [];
-        $lines = explode("\n", trim($output));
-
-        foreach ($lines as $line) {
-            if (preg_match('/^([\-dl])([rwx\-]{9})\s+\d+\s+\w+\s+\w+\s+(\d+)\s+(\w+\s+\d+\s+[\d\:]+)\s+(.+)$/', $line, $matches)) {
-                $files[] = [
-                    'type' => $matches[1] === 'd' ? 'directory' : 'file',
-                    'permissions' => $matches[2],
-                    'size' => (int)$matches[3],
-                    'date' => $matches[4],
-                    'name' => $matches[5],
-                ];
-            }
-        }
-
-        return $files;
     }
 
     /**

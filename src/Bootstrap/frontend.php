@@ -18,7 +18,6 @@ $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = parse_url($requestUri, PHP_URL_PATH);
 
 $bootstrapSlim = function (): void {
-    require_once __DIR__.'/../../vendor/autoload.php';
     $app = AppBootstrap::create();
     $request = ServerRequestFactory::createFromGlobals();
     $app->run($request);
@@ -49,7 +48,7 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 header(
-    "Content-Security-Policy: default-src 'self'; script-src 'self' cdn.jsdelivr.net 'nonce-$cspNonce' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' cdn.jsdelivr.net"
+    "Content-Security-Policy: default-src 'self'; script-src 'self' cdn.jsdelivr.net 'nonce-$cspNonce' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' cdn.jsdelivr.net"
 );
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');

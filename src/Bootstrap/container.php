@@ -14,6 +14,7 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
+use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
@@ -81,7 +82,7 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser
+        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser, DockerExecService
         LogController::class => function ($c) {
             return new LogController(
                 $c->get(LogConfig::class),
@@ -89,7 +90,8 @@ return function (ContainerBuilder $containerBuilder): void {
                 $c->get(LogFinderInterface::class),
                 $c->get(PathResolver::class),
                 $c->get(FileAccessValidator::class),
-                $c->get(LogParser::class)
+                $c->get(LogParser::class),
+                $c->get(DockerExecService::class)
             );
         },
 
@@ -123,6 +125,11 @@ return function (ContainerBuilder $containerBuilder): void {
         // SecurityService - brak zależności
         SecurityService::class => function () {
             return new SecurityService();
+        },
+
+        // DockerExecService - brak zależności
+        DockerExecService::class => function () {
+            return new DockerExecService();
         },
 
         // DirectoryController - wstrzykuje LogConfig i LogScanner

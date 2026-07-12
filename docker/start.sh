@@ -15,6 +15,13 @@ if [ -d "/var/www/.ssh" ]; then
     chmod 700 /var/www/.ssh || true
 fi
 
+# Add www-data to host's docker group so it can access /var/run/docker.sock
+DOCKER_GID=$(stat -c '%g' /var/run/docker.sock 2>/dev/null || echo "0")
+if [ "$DOCKER_GID" != "0" ]; then
+    addgroup -g "$DOCKER_GID" docker_host 2>/dev/null || true
+    addgroup www-data docker_host 2>/dev/null || true
+fi
+
 echo "[start] Testing nginx configuration..."
 nginx -t
 

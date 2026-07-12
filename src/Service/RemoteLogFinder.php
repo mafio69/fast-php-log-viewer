@@ -9,20 +9,13 @@ namespace Mariusz\LogViewer\Service;
  */
 class RemoteLogFinder
 {
+    use ErrorContextTrait;
+
     private SSH $ssh;
 
     public function __construct(SSH $ssh)
     {
         $this->ssh = $ssh;
-    }
-
-    private function getLastErrorMessage(): string
-    {
-        $error = error_get_last();
-        if ($error === null) {
-            return '';
-        }
-        return sprintf(' [PHP Error: %s in %s:%d]', $error['message'], $error['file'], $error['line']);
     }
 
     /**
@@ -95,34 +88,4 @@ class RemoteLogFinder
         return $files;
     }
 
-    /**
-     * Scan common remote log directories
-     */
-    public function scanCommonDirectories(): array
-    {
-        $commonPaths = [
-            '/var/log',
-            '/var/www/html/logs',
-            '/home/*/logs',
-            '/opt/logs',
-        ];
-
-        $foundDirs = [];
-
-        foreach ($commonPaths as $path) {
-            if ($this->ssh->directoryExists($path)) {
-                $files = $this->findAll($path);
-                if (!empty($files)) {
-                    $foundDirs[$path] = [
-                        'path' => $path,
-                        'name' => basename($path),
-                        'file_count' => count($files),
-                        'files' => array_slice($files, 0, 5),
-                    ];
-                }
-            }
-        }
-
-        return $foundDirs;
-    }
 }

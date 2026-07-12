@@ -1,0 +1,19 @@
+# Export-ignore for Packagist (clean dist package)
+/.ai/               export-ignore
+/.idea/             export-ignore
+/.local/            export-ignore
+/docker-logs/       export-ignore
+/docs/              export-ignore
+/tests/             export-ignore
+/.config            export-ignore
+/.dockerignore      export-ignore
+/.env               export-ignore
+/.env.example       export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/CHANGELOG.md       export-ignore
+/docker-compose.yml export-ignore
+/phpunit.xml        export-ignore
+/start.sh           export-ignore
+/TODO.md            export-ignore
+/TODO_JUTRO.md      export-ignore

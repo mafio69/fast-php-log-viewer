@@ -83,6 +83,28 @@ class FileAccessValidatorTest extends TestCase
         $this->assertFalse($this->validator->isFileAllowed('/etc/passwd', null));
     }
 
+    public function testDeniesSiblingDirectoryWithSharedPrefix(): void
+    {
+        // Regression test: an allowed dir like ".../va_prefix" must not also match
+        // a sibling ".../va_prefix-evil" just because the strings share a prefix.
+        $tmpDir = sys_get_temp_dir() . '/va_prefix_' . uniqid();
+        $siblingDir = $tmpDir . '-evil';
+        mkdir($tmpDir);
+        mkdir($siblingDir);
+        $siblingFile = $siblingDir . '/secret.log';
+        file_put_contents($siblingFile, 'test');
+
+        $this->logConfig->method('getDirectories')->willReturn([
+            ['name' => 'safe', 'path' => $tmpDir]
+        ]);
+
+        $this->assertFalse($this->validator->isFileAllowed($siblingFile, null));
+
+        unlink($siblingFile);
+        rmdir($siblingDir);
+        rmdir($tmpDir);
+    }
+
     public function testIsFileInDirectory(): void
     {
         $tmpDir = sys_get_temp_dir() . '/va_sub_' . uniqid();

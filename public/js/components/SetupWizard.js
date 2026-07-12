@@ -10,7 +10,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'SetupWizard',
         props: ['store'],
-        emits: ['proceed-step', 'toggle-skip-confirm', 'clear-step-data'],
+        emits: ['proceed-step', 'toggle-skip-confirm'],
         template: `
         <div class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.95);">
             <div class="rounded shadow-lg p-6" style="background:#000;border:1px solid #00ff00;width:600px;">
