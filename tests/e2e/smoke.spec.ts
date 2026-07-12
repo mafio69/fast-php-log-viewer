@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('homepage loads and mounts Vue app', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('fast-php-log-viewer');
+  await expect(page).toHaveTitle('⚡ LOG VIEWER');
   await expect(page.locator('#app')).toBeAttached();
 });
 
