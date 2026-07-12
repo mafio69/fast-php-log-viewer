@@ -18,3 +18,13 @@ services:
       - ./data:/var/www/html/data
       - /var/log:/host/var/log
       - ~/logs:/host/home/logs
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.44.0-jammy
+    command: tail -f /dev/null
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - php
+    restart: "no"
