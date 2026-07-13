@@ -119,7 +119,6 @@ window.FPLV.components = window.FPLV.components || [];
                 tableStartRow: F.tableStartRow,
                 tableEndRow: F.tableEndRow,
                 levelColor: F.levelColor,
-                levelDot: F.levelDot,
                 rowBg: F.rowBg,
                 hasContext: F.hasContext,
                 openInEditor: F.openInEditor,

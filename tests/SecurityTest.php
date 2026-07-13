@@ -16,16 +16,6 @@ class SecurityTest extends TestCase
         $this->securityService = new SecurityService();
     }
 
-    public function testSanitizeFilename()
-    {
-        // Test basic sanitization
-        $this->assertEquals('file.log', $this->securityService->sanitizeFilename('file.log'));
-        $this->assertEquals('passwd', $this->securityService->sanitizeFilename('../../etc/passwd'));
-        $this->assertEquals('file.log', $this->securityService->sanitizeFilename('file.log'));
-        $this->assertEquals('test_file.log', $this->securityService->sanitizeFilename('test file.log'));
-        $this->assertEquals('file.log', $this->securityService->sanitizeFilename("\0file.log"));
-    }
-
     public function testIsBinaryContent()
     {
         // Text content should not be binary
@@ -39,29 +29,6 @@ class SecurityTest extends TestCase
         // Mixed content with null bytes
         $mixedContent = "Text content\0\x01\x02";
         $this->assertTrue($this->securityService->isBinaryContent($mixedContent));
-    }
-
-    public function testIsValidTextFile()
-    {
-        // Valid log file with date format
-        $logFile = "[2026-06-09 18:00:00] [INFO] Application started\n";
-        $this->assertTrue($this->securityService->isValidTextFile($logFile));
-
-        // Valid log file with time format
-        $logFile2 = "18:00:00 ERROR Something went wrong\n";
-        $this->assertTrue($this->securityService->isValidTextFile($logFile2));
-
-        // Valid log file with log levels
-        $logFile3 = "[WARNING] Low memory\n";
-        $this->assertTrue($this->securityService->isValidTextFile($logFile3));
-
-        // Plain text (mostly printable ASCII)
-        $plainText = str_repeat("A", 1000);
-        $this->assertTrue($this->securityService->isValidTextFile($plainText));
-
-        // Binary content should fail
-        $binaryContent = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09";
-        $this->assertFalse($this->securityService->isValidTextFile($binaryContent));
     }
 
     public function testContainsSuspiciousContent()

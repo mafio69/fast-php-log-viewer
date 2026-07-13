@@ -43,19 +43,6 @@ class LegacyRouterTest extends TestCase
         $this->assertFalse(LegacyRouter::hasAction('config-update-dir'));
     }
 
-    public function testResolveReturnsCorrectPathForAllMappedActions(): void
-    {
-        foreach (self::EXPECTED_MAP as $action => $expectedPath) {
-            $this->assertSame($expectedPath, LegacyRouter::resolve($action));
-        }
-    }
-
-    public function testResolveReturnsNullForUnknownAction(): void
-    {
-        $this->assertNull(LegacyRouter::resolve('unknown_action'));
-        $this->assertNull(LegacyRouter::resolve(''));
-    }
-
     /** @dataProvider provideRewriteScenarios */
     public function testRewriteRequestUri(string $action, array $queryParams, string $expected): void
     {

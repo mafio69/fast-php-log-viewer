@@ -7,27 +7,6 @@ namespace Mariusz\LogViewer\Service;
 class SecurityService
 {
     /**
-     * Sanitizes a filename to prevent path traversal.
-     */
-    public function sanitizeFilename(string $filename): string
-    {
-        // Remove directory traversal attempts
-        $filename = basename($filename);
-
-        // Remove null bytes
-        $filename = str_replace("\0", '', $filename);
-
-        // Allow only alphanumeric, dots, underscores and dashes
-        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
-
-        // Limit length
-        $filename = substr($filename, 0, 255);
-
-        // Ensure it's not empty
-        return empty($filename) ? 'file.log' : $filename;
-    }
-
-    /**
      * Checks if a string contains binary content.
      */
     public function isBinaryContent(string $content): bool
@@ -54,37 +33,6 @@ class SecurityService
         }
 
         return ($nonPrintable / $sampleSize) > 0.1;
-    }
-
-    /**
-     * Checks if a string appears to be a valid text log file.
-     */
-    public function isValidTextFile(string $content): bool
-    {
-        if (empty($content)) {
-            return true;
-        }
-
-        if ($this->isBinaryContent($content)) {
-            return false;
-        }
-
-        // Basic heuristic: check for common log patterns
-        $patterns = [
-            '/^\[\d{4}-\d{2}-\d{2}/', // [2026-06-20
-            '/^\d{4}-\d{2}-\d{2}/',   // 2026-06-20
-            '/^\d{2}:\d{2}:\d{2}/',   // 12:34:56
-            '/\[(INFO|DEBUG|ERROR|WARNING|NOTICE)\]/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $content)) {
-                return true;
-            }
-        }
-
-        // If no patterns match, but it's not binary, it's probably okay if it's mostly printable
-        return true;
     }
 
     /**

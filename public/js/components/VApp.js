@@ -17,7 +17,6 @@ window.FPLV.components = window.FPLV.components || [];
                 :store="store"
                 @proceed-step="proceedStep"
                 @toggle-skip-confirm="v => store.setupSkipConfirm = v"
-                @clear-step-data="Object.keys(store.setupStepData).forEach(k => delete store.setupStepData[k])"
             ></setup-wizard>
             <sidebar
                 :store="store"
@@ -48,7 +47,6 @@ window.FPLV.components = window.FPLV.components || [];
                 <toolbar
                     :store="store"
                     @toggle-level="toggleLevel"
-                    @toggle-sort="toggleSort"
                     @apply-filters="applyFilters"
                     @load-entries="loadEntries"
                     @update-font-size="v => store.fontSize = v"
@@ -90,7 +88,6 @@ window.FPLV.components = window.FPLV.components || [];
                 executeManualFileAdd: F.executeManualFileAdd,
                 cancelManualFileModal: F.cancelManualFileModal,
                 toggleLevel: F.toggleLevel,
-                toggleSort: F.toggleSort,
                 applyFilters: F.applyFilters,
                 loadEntries: F.loadEntries,
                 goToBookmark: F.goToBookmark,

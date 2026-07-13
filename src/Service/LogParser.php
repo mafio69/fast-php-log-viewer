@@ -36,7 +36,6 @@ class LogParser
     private const PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
     private const PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
     private const PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
-    private const PATTERN_APK_TRIGGER = '/^Executing (?P<message>.+)\.trigger$/';
     private const PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
     private const PATTERN_APT_LOG = '/^(?P<datetime>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<message>.+)$/';
     private const PATTERN_SYSTEMD_JOURNAL = '/^(?P<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
@@ -79,17 +78,7 @@ class LogParser
                 $location = $m['hostname'] . ' ' . $m['process'] . (isset($m['pid']) ? '[' . $m['pid'] . ']' : '');
 
                 // Try to detect log level from message
-                $messageLower = strtolower($m['message']);
-                $level = 'INFO';
-                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
-                    $level = 'ERROR';
-                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
-                    $level = 'WARNING';
-                } elseif (str_contains($messageLower, 'debug')) {
-                    $level = 'DEBUG';
-                } elseif (str_contains($messageLower, 'critical') || str_contains($messageLower, 'fatal')) {
-                    $level = 'CRITICAL';
-                }
+                $level = $this->guessLevel($m['message']);
 
                 $entries[] = [
                     'datetime' => $datetime,
@@ -248,7 +237,7 @@ class LogParser
 
             // Alpine APK install/purge: (N/M) Installing package (version)
             if (preg_match(self::PATTERN_APK_INSTALL, $line, $m)) {
-                $level = $m['action'] === 'Installing' ? 'INFO' : 'INFO';
+                $level = 'INFO';
                 $entries[] = [
                     'datetime' => '', // No timestamp in this line
                     'level' => $level,
@@ -301,14 +290,7 @@ class LogParser
 
             // APT/bootstrap log format: 2024-08-27 15:37:02 URL:http://... -> ...
             if (preg_match(self::PATTERN_APT_LOG, $line, $m)) {
-                // Try to detect log level from message
-                $messageLower = strtolower($m['message']);
-                $level = 'INFO';
-                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
-                    $level = 'ERROR';
-                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
-                    $level = 'WARNING';
-                }
+                $level = $this->guessLevel($m['message']);
 
                 $entries[] = [
                     'datetime' => $m['datetime'],
@@ -328,13 +310,7 @@ class LogParser
                 $location = $m['hostname'].' '.$m['process'].(isset($m['pid']) ? '['.$m['pid'].']' : '');
 
                 // Try to detect log level from message
-                $messageLower = strtolower($m['message']);
-                $level = 'INFO';
-                if (str_contains($messageLower, 'error') || str_contains($messageLower, 'failed')) {
-                    $level = 'ERROR';
-                } elseif (str_contains($messageLower, 'warning') || str_contains($messageLower, 'warn')) {
-                    $level = 'WARNING';
-                }
+                $level = $this->guessLevel($m['message']);
 
                 $entries[] = [
                     'datetime' => $datetime,
@@ -375,5 +351,15 @@ class LogParser
                 ? (json_decode($m['context'], true, 512, JSON_THROW_ON_ERROR) ?? [])
                 : [],
         ];
+    }
+
+    private function guessLevel(string $message): string
+    {
+        $lower = strtolower($message);
+        if (str_contains($lower, 'error') || str_contains($lower, 'failed')) return 'ERROR';
+        if (str_contains($lower, 'warning') || str_contains($lower, 'warn')) return 'WARNING';
+        if (str_contains($lower, 'debug')) return 'DEBUG';
+        if (str_contains($lower, 'critical') || str_contains($lower, 'fatal')) return 'CRITICAL';
+        return 'INFO';
     }
 }

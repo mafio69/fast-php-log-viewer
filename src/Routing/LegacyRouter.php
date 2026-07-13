@@ -31,11 +31,6 @@ final class LegacyRouter
         return isset(self::ACTION_MAP[$action]);
     }
 
-    public static function resolve(string $action): ?string
-    {
-        return self::ACTION_MAP[$action] ?? null;
-    }
-
     public static function rewriteRequestUri(string $action, array $queryParams): string
     {
         $path = self::ACTION_MAP[$action] ?? '/';

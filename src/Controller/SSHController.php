@@ -41,6 +41,9 @@ class SSHController
         if (!is_array($data)) {
             return $this->json($response, ['error' => 'invalid_json'], 400);
         }
+        if (!SSH::isAvailable()) {
+            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
+        }
 
         try {
             $ssh = new SSH($this->extractSSHData($data));
@@ -57,6 +60,9 @@ class SSHController
         $data = $request->getParsedBody();
         if (!is_array($data)) {
             return $this->json($response, ['error' => 'invalid_json'], 400);
+        }
+        if (!SSH::isAvailable()) {
+            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
         }
 
         $path = $data['path'] ?? '';
@@ -85,6 +91,9 @@ class SSHController
         if (!is_array($data)) {
             return $this->json($response, ['error' => 'invalid_json'], 400);
         }
+        if (!SSH::isAvailable()) {
+            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
+        }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
@@ -111,6 +120,9 @@ class SSHController
         $data = $request->getParsedBody();
         if (!is_array($data)) {
             return $this->json($response, ['error' => 'invalid_json'], 400);
+        }
+        if (!SSH::isAvailable()) {
+            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
         }
 
         $path = $data['path'] ?? '';
