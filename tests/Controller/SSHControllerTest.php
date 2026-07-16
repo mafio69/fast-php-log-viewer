@@ -239,9 +239,31 @@ class SSHControllerTest extends TestCase
         $this->assertArrayHasKey('error', $body);
     }
 
+    public function testTestConnectionWithRealFrogConnection(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/test-connection');
+        $data = [
+            'ssh_host' => 'frog01.mikr.us',
+            'ssh_user' => 'frog',
+            'ssh_port' => 10137,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'GxCdTbACI7',
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->testConnection($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('success', $body);
+        $this->assertTrue($body['success']);
+    }
+
     public function testListFilesWithRealFrogConnection(): void
     {
-        $this->markTestSkipped('Serwer frog01 niedostępny');
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/list-files');
         $data = [
@@ -269,7 +291,6 @@ class SSHControllerTest extends TestCase
 
     public function testReadFileWithRealFrogConnection(): void
     {
-        $this->markTestSkipped('Serwer frog01 niedostępny');
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
         $data = [
@@ -295,9 +316,39 @@ class SSHControllerTest extends TestCase
         $this->assertGreaterThanOrEqual(1, count($body['entries']));
     }
 
+    public function testDownloadFileWithRealFrogConnection(): void
+    {
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('POST', '/api/ssh/download-file');
+        $data = [
+            'ssh_host' => 'frog01.mikr.us',
+            'ssh_user' => 'frog',
+            'ssh_port' => 10137,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => 'GxCdTbACI7',
+            'path' => '/home/frog/test/php_errors.log'
+        ];
+        $request = $request->withParsedBody($data);
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->downloadFile($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertArrayHasKey('success', $body);
+        $this->assertTrue($body['success']);
+        $this->assertArrayHasKey('localPath', $body);
+        $this->assertArrayHasKey('size', $body);
+        $this->assertGreaterThan(0, $body['size']);
+
+        if (isset($body['localPath']) && file_exists($body['localPath'])) {
+            unlink($body['localPath']);
+        }
+    }
+
     public function testReadFileWithNginxFormat(): void
     {
-        $this->markTestSkipped('Serwer frog01 niedostępny');
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
         $data = [

@@ -16,7 +16,7 @@ window.FPLV.components = window.FPLV.components || [];
             <input v-model="store.filterText" @input="$emit('apply-filters')" placeholder="Search…"
                 class="rounded px-3 py-1 text-sm flex-1 max-w-xs crt-input">
             <div class="flex items-center gap-1">
-                <button v-for="level in ['DEBUG','INFO','NOTICE']" :key="level"
+                <button v-for="level in LEVELS" :key="level"
                         @click="$emit('toggle-level', level)"
                         class="px-2 py-1 text-xs rounded crt-button"
                         :style="store.excludedLevels.includes(level) ? 'border-color:#003300;color:#003300;' : 'border-color:' + levelDot(level) + ';color:' + levelColor(level)">
@@ -44,14 +44,6 @@ window.FPLV.components = window.FPLV.components || [];
                                 <input type="time" v-model="store.timeTo" @change="$emit('apply-filters')" step="1" class="px-1 py-0.5 text-xs crt-input flex-1">
                             </div>
                         </div>
-                        <div class="text-xs crt-dim mb-1">Poziomy logów</div>
-                        <label v-for="level in LEVELS" :key="level"
-                               class="flex items-center gap-2 text-xs cursor-pointer crt-dim mb-1">
-                            <span class="w-2 h-2 rounded-full inline-block" :style="'background:' + levelDot(level)"></span>
-                            <input type="checkbox" :checked="!store.excludedLevels.includes(level)" @change="$emit('toggle-level', level)" class="hidden">
-                            <span @click="$emit('toggle-level', level)" :style="store.excludedLevels.includes(level) ? 'color:#003300;' : 'color:#00ff00;'">{{ level }}</span>
-                            <span class="ml-auto crt-dim">{{ levelCounts[level] || '' }}</span>
-                        </label>
                     </div>
                 </div>
             </div>
