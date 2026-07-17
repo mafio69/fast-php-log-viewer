@@ -17,7 +17,13 @@ class SSHControllerTest extends TestCase
 
     protected function setUp(): void
     {
-        $logParser = $this->createMock(LogParser::class);
+        // Uwaga: LogParser jest tu prawdziwą instancją (nie mockiem) celowo -
+        // testy read-file/download-file z realnym frogiem sprawdzają pełny
+        // pipeline SSH -> parsowanie, więc muszą używać prawdziwej logiki
+        // parseString(). Wcześniej mock zawsze zwracał [] (nieskonfigurowany
+        // domyślny zwrot typu array), przez co testy poza jednym wyjątkiem
+        // (assertIsArray zamiast assertCount) nigdy tego nie wykrywały.
+        $logParser = new LogParser();
         $securityService = $this->createMock(SecurityService::class);
         $this->controller = new SSHController($logParser, $securityService);
     }

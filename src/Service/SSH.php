@@ -182,7 +182,18 @@ class SSH
         }
 
         stream_set_blocking($stream, true);
+
+        // Also fetch and drain the stderr stream. Known ext-ssh2/libssh2 gotcha:
+        // if stderr is never read, the SSH channel can report EOF prematurely on
+        // stdout for very short-lived commands (e.g. `cat` on a tiny file),
+        // silently truncating the output to an empty string.
+        $stderrStream = ssh2_fetch_stream($stream, SSH2_STREAM_STDERR);
+        stream_set_blocking($stderrStream, true);
+
         $output = stream_get_contents($stream);
+        stream_get_contents($stderrStream);
+
+        fclose($stderrStream);
         fclose($stream);
 
         return $output;
