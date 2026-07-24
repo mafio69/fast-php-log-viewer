@@ -270,28 +270,34 @@ class LogControllerTest extends TestCase
     {
         $appRoot = dirname(__DIR__, 2);
         $logDir = $appRoot . '/logs';
+        $marker = $logDir . '/relative-path-test.log';
+        file_put_contents($marker, "[2024-01-01 10:00:00] [INFO] [test.php:1] test\n");
 
-        $logConfig = $this->createMock(LogConfig::class);
-        $configManager = $this->createMock(ConfigManager::class);
-        $realFinder = new GlobLogFinder();
-        $resolver = $this->createMock(PathResolver::class);
-        $validator = $this->createMock(FileAccessValidator::class);
-        $parser = $this->createMock(LogParser::class);
+        try {
+            $logConfig = $this->createMock(LogConfig::class);
+            $configManager = $this->createMock(ConfigManager::class);
+            $realFinder = new GlobLogFinder();
+            $resolver = $this->createMock(PathResolver::class);
+            $validator = $this->createMock(FileAccessValidator::class);
+            $parser = $this->createMock(LogParser::class);
 
-        $resolver->method('resolvePath')
-            ->with('logs/')
-            ->willReturn($logDir);
+            $resolver->method('resolvePath')
+                ->with('logs/')
+                ->willReturn($logDir);
 
-        $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser);
+            $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser);
 
-        $request = (new RequestFactory())->createRequest('GET', '/api/files?path=logs/');
-        $response = (new ResponseFactory())->createResponse();
+            $request = (new RequestFactory())->createRequest('GET', '/api/files?path=logs/');
+            $response = (new ResponseFactory())->createResponse();
 
-        $result = $controller->getFiles($request, $response);
+            $result = $controller->getFiles($request, $response);
 
-        $this->assertEquals(200, $result->getStatusCode());
-        $body = json_decode((string)$result->getBody(), true);
-        $this->assertNotEmpty($body, 'Expected log files in project logs/ directory');
+            $this->assertEquals(200, $result->getStatusCode());
+            $body = json_decode((string)$result->getBody(), true);
+            $this->assertNotEmpty($body, 'Expected log files in project logs/ directory');
+        } finally {
+            unlink($marker);
+        }
     }
 
     public function testGetFilesWithRealGlobLogFinderAndTildePath(): void

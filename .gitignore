@@ -9,8 +9,8 @@
 /data/logviewer.db
 /data/directories.json
 /temp/
-/logs/php_errors.log
-/docker-logs/
+/logs/php-error/
+/logs/nginx/
 *.backup
 /img_*.png
 /data/app_*.json

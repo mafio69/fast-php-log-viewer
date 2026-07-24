@@ -13,6 +13,7 @@ services:
     volumes:
       - .:/var/www/html
       - ./logs:/var/www/html/logs
+      - ./logs/nginx:/var/log/nginx
       - ~/.ssh:/home/www-data/.ssh
       - ./data:/var/www/html/data
       - /var/log:/host/var/log
