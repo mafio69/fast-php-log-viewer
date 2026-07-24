@@ -75,7 +75,7 @@ class ConfigManager
     {
         $this->updateConfig([
             'setup_complete' => true,
-            'setup_state' => 'complete'
+            'setup_state' => 'complete',
         ]);
     }
 
@@ -122,7 +122,7 @@ class ConfigManager
             return json_decode($content, true, 512, JSON_THROW_ON_ERROR) ?: [];
         } catch (JsonException $e) {
             if ($this->loggingEnabled) {
-                error_log("Invalid JSON in config file: {$this->configPath}. Error: ".$e->getMessage());
+                error_log("Invalid JSON in config file: {$this->configPath}. Error: " . $e->getMessage());
             }
             return [];
         }
@@ -160,10 +160,10 @@ class ConfigManager
     private function validateAndWriteJson(string $path, array $data): void
     {
         $tmpPath = $path . '.tmp.' . bin2hex(random_bytes(8));
-        
+
         try {
             $json = json_encode($data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
-            
+
             if (file_put_contents($tmpPath, $json) === false) {
                 throw new RuntimeException("Failed to write temporary config file: $tmpPath");
             }
@@ -192,7 +192,7 @@ class ConfigManager
     public function saveSSHProfile(array $profileData): string
     {
         $config = $this->getConfig();
-        
+
         if (!isset($config['ssh_profiles'])) {
             $config['ssh_profiles'] = [];
         }
@@ -201,7 +201,7 @@ class ConfigManager
         $profileData['id'] = $id;
 
         $config['ssh_profiles'][$id] = $profileData;
-        
+
         $this->saveConfig($config);
         return $id;
     }
@@ -221,7 +221,7 @@ class ConfigManager
     public function saveEncryptionKeyToEnv(string $hexKey): bool
     {
         if (!preg_match('/^[0-9a-f]{64}$/i', $hexKey)) {
-            throw new InvalidArgumentException("Invalid encryption key format. Expected 64-char hex.");
+            throw new InvalidArgumentException('Invalid encryption key format. Expected 64-char hex.');
         }
 
         $content = '';
@@ -230,7 +230,7 @@ class ConfigManager
         }
 
         $line = "BACKUP_ENCRYPTION_KEY=$hexKey";
-        
+
         if (preg_match('/^BACKUP_ENCRYPTION_KEY=.*$/m', $content)) {
             $newContent = preg_replace('/^BACKUP_ENCRYPTION_KEY=.*$/m', $line, $content);
         } else {
@@ -250,7 +250,7 @@ class ConfigManager
     private function filterSensitiveFields(array $data): array
     {
         $sensitive = ['ssh_password', 'ssh_key_passphrase', 'encryption_key_raw', 'encryption_key'];
-        
+
         foreach ($data as $key => $value) {
             if (in_array($key, $sensitive, true)) {
                 $data[$key] = '********';

@@ -36,9 +36,21 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",
-        "giorgiosironi/eris": "^1.1"
+        "giorgiosironi/eris": "^1.1",
+        "phpro/grumphp": "^2.23",
+        "phpstan/phpstan": "^2.2",
+        "friendsofphp/php-cs-fixer": "^3.95"
     },
     "scripts": {
-        "test": "vendor/bin/phpunit"
+        "test": "vendor/bin/phpunit",
+        "stan": "vendor/bin/phpstan analyse",
+        "cs-check": "vendor/bin/php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "vendor/bin/php-cs-fixer fix",
+        "grumphp": "vendor/bin/grumphp run"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpro/grumphp": true
+        }
     }
 }

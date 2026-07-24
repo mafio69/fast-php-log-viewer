@@ -7,8 +7,6 @@ namespace Mariusz\LogViewer\Tests\Middleware;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -52,7 +50,7 @@ class SetupMiddlewareTest extends TestCase
 
         $this->assertEquals(503, $response->getStatusCode());
         $this->assertEquals('application/json', $response->getHeaderLine('Content-Type'));
-        
+
         $body = (string)$response->getBody();
         $this->assertStringContainsString('setup_required', $body);
     }

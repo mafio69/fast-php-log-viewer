@@ -95,7 +95,7 @@ class SetupWizard
             try {
                 // Walidacja wymaganych pól
                 if (empty($conn['ssh_host']) || empty($conn['ssh_user'])) {
-                    $warnings[] = "Pominięto połączenie bez hosta lub użytkownika: " . ($conn['name'] ?? 'unnamed');
+                    $warnings[] = 'Pominięto połączenie bez hosta lub użytkownika: ' . ($conn['name'] ?? 'unnamed');
                     continue;
                 }
 
@@ -123,7 +123,7 @@ class SetupWizard
                 $this->configManager->saveSSHProfile($profile);
                 $migrated++;
             } catch (Exception $e) {
-                $warnings[] = "Błąd migracji połączenia " . ($conn['name'] ?? 'unnamed') . ": " . $e->getMessage();
+                $warnings[] = 'Błąd migracji połączenia ' . ($conn['name'] ?? 'unnamed') . ': ' . $e->getMessage();
             }
         }
 

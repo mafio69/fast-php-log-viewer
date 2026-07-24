@@ -38,7 +38,7 @@ class SecurityTest extends TestCase
         $this->assertTrue($this->securityService->containsSuspiciousContent($phpContent));
 
         // PHP short echo tag
-        $phpShort = "<?= \$variable ?>";
+        $phpShort = '<?= $variable ?>';
         $this->assertTrue($this->securityService->containsSuspiciousContent($phpShort));
 
         // HTML script tag
@@ -46,11 +46,11 @@ class SecurityTest extends TestCase
         $this->assertTrue($this->securityService->containsSuspiciousContent($scriptContent));
 
         // Shell shebang
-        $shebang = "#!/usr/bin/bash";
+        $shebang = '#!/usr/bin/bash';
         $this->assertTrue($this->securityService->containsSuspiciousContent($shebang));
 
         // PHP eval function
-        $evalContent = "eval(\$code)";
+        $evalContent = 'eval($code)';
         $this->assertTrue($this->securityService->containsSuspiciousContent($evalContent));
 
         // PHP exec function
@@ -77,11 +77,11 @@ class SecurityTest extends TestCase
         $this->assertEquals(10485760, $maxSize);
 
         // Small file should pass
-        $smallFile = str_repeat("A", 1000);
+        $smallFile = str_repeat('A', 1000);
         $this->assertTrue(strlen($smallFile) < $maxSize);
 
         // Large file should fail
-        $largeFile = str_repeat("A", 11 * 1024 * 1024); // 11MB
+        $largeFile = str_repeat('A', 11 * 1024 * 1024); // 11MB
         $this->assertTrue(strlen($largeFile) > $maxSize);
     }
 }

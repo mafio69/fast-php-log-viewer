@@ -161,7 +161,7 @@ class SSHController
             return $this->json($response, [
                 'success' => true,
                 'localPath' => $localPath,
-                'size' => strlen($content)
+                'size' => strlen($content),
             ]);
         } catch (Exception $e) {
             return $this->json($response, ['error' => $e->getMessage()], 500);

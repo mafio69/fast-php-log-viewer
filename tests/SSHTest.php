@@ -56,14 +56,14 @@ class SSHTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('SSH password is required for password authentication');
 
-        // Ustawiamy brak hosta, aby uniknąć ssh2_connect, 
+        // Ustawiamy brak hosta, aby uniknąć ssh2_connect,
         // ale konstruktor SSH rzuci InvalidArgumentException jeśli brakuje hosta.
         // Jednak authenticateWithPassword jest wywoływane dopiero PO ssh2_connect w metodzie connect().
-        // Aby przetestować samą walidację hasła bez łączenia, musimy zapewnić, 
+        // Aby przetestować samą walidację hasła bez łączenia, musimy zapewnić,
         // że dojdzie do wywołania authenticateWithPassword.
         // W obecnej strukturze SSH.php jest to trudne bez mockowania.
         // Zmieńmy SSH.php, aby walidacja hasła również była przed połączeniem.
-        
+
         $ssh = new SSH([
             'ssh_host' => '127.0.0.1',
             'ssh_port' => 1,
@@ -159,11 +159,11 @@ class SSHTest extends TestCase
             'ssh_auth_method' => 'key',
         ]);
 
-        // Musimy się upewnić, że nie ma żadnych domyślnych kluczy w systemie, 
+        // Musimy się upewnić, że nie ma żadnych domyślnych kluczy w systemie,
         // które mogłyby sprawić, że walidacja przejdzie pomyślnie.
-        // Jeśli test uruchamiany jest w środowisku, gdzie /home/www-data/.ssh/id_rsa istnieje, 
+        // Jeśli test uruchamiany jest w środowisku, gdzie /home/www-data/.ssh/id_rsa istnieje,
         // to ten test może próbować się łączyć.
-        
+
         try {
             $ssh->connect();
             $this->fail('Powinien zostać rzucony wyjątek o braku klucza lub błędzie połączenia');
@@ -171,7 +171,7 @@ class SSHTest extends TestCase
             // Jeśli walidacja klucza działa, powinniśmy dostać błąd o braku pliku.
             // Jeśli jednak jakiś domyślny klucz istnieje w środowisku testowym,
             // dostaniemy błąd połączenia (Failed to connect to SSH server).
-            
+
             $message = $e->getMessage();
             if (str_contains($message, 'Failed to connect to SSH server')) {
                 $this->markTestSkipped('W środowisku testowym znaleziono domyślny klucz SSH, test walidacji braku klucza pominięty.');
@@ -190,7 +190,7 @@ class SSHTest extends TestCase
             'ssh_port' => 1,
             'ssh_user' => 'user',
             'ssh_auth_method' => 'key',
-            'ssh_key_path' => '/non/existent/path/id_rsa'
+            'ssh_key_path' => '/non/existent/path/id_rsa',
         ]);
 
         try {

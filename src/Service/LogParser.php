@@ -25,9 +25,9 @@ class LogParser
 {
     use ErrorContextTrait;
 
-    private const PATTERN_FPL     = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
-    private const PATTERN_SIMPLE  = '/^\[(?P<datetime>[^\]]+)\] (?P<level>[A-Z]+): (?P<message>.+)$/';
-    private const PATTERN_LEGACY  = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
+    private const PATTERN_FPL = '/^\[(?P<datetime>[^\]]+)\] \[(?P<level>[^\]]+)\] \[(?P<location>[^\]]+)\] (?P<message>.+?)(?:\s+(?P<context>\{.+\}))?\s*$/';
+    private const PATTERN_SIMPLE = '/^\[(?P<datetime>[^\]]+)\] (?P<level>[A-Z]+): (?P<message>.+)$/';
+    private const PATTERN_LEGACY = '/^(?P<datetime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) --- (?P<level>[A-Z]+): (?P<rest>.*)$/';
     private const PATTERN_PHP_ERR = '/^\[(?P<datetime>[^\]]+)\] PHP (?P<level>Parse error|Fatal error|Warning|Notice|Deprecated|Strict Standards|Catchable fatal error|Recoverable fatal error): (?P<message>.+?)(?:\s+in (?P<file>\S+) on line (?P<line>\d+))?\s*$/i';
     private const PATTERN_NGINX_ERR = '/^(?P<datetime>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>error|warn|notice|info|crit|alert|emerg)\] (?P<pid>\d+)#\d+: \*(?P<tid>\d+) (?P<message>.+)$/i';
     private const PATTERN_NGINX_ACCESS = '/^(?P<ip>[\d\.]+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>\w+) (?P<path>[^\s]+) HTTP\/[\d\.]+" (?P<status>\d+) (?P<size>\d+)/';
@@ -36,7 +36,7 @@ class LogParser
     private const PATTERN_APK_WARNING = '/^WARNING: (?P<message>.+)$/';
     private const PATTERN_APK_OK = '/^OK: (?P<message>.+)$/';
     private const PATTERN_APK_EXEC = '/^Executing (?P<message>.+)$/';
-    private const PATTERN_SYSLOG   = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
+    private const PATTERN_SYSLOG = '/^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
     private const PATTERN_APT_LOG = '/^(?P<datetime>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<message>.+)$/';
     private const PATTERN_SYSTEMD_JOURNAL = '/^(?P<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<process>\S+?)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.+)$/';
 
@@ -70,7 +70,7 @@ class LogParser
             if (preg_match(self::PATTERN_SYSLOG, $line, $m)) {
                 $monthMap = [
                     'Jan' => '01', 'Feb' => '02', 'Mar' => '03', 'Apr' => '04', 'May' => '05', 'Jun' => '06',
-                    'Jul' => '07', 'Aug' => '08', 'Sep' => '09', 'Oct' => '10', 'Nov' => '11', 'Dec' => '12'
+                    'Jul' => '07', 'Aug' => '08', 'Sep' => '09', 'Oct' => '10', 'Nov' => '11', 'Dec' => '12',
                 ];
                 $month = $monthMap[$m['month']] ?? '01';
                 $day = str_pad($m['day'], 2, '0', STR_PAD_LEFT);
@@ -85,7 +85,7 @@ class LogParser
                     'level' => $level,
                     'location' => $location,
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -105,7 +105,7 @@ class LogParser
                     'level' => $level,
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -115,8 +115,11 @@ class LogParser
             if (preg_match(self::PATTERN_NGINX_ACCESS, $line, $m)) {
                 // Convert datetime from 05/Jun/2026:09:00:00 +0000 to 2026-06-05 09:00:00
                 $datetime = preg_replace('/^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}).*/', '$3-$2-$1 $4', $m['datetime']);
-                $datetime = str_replace(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], $datetime);
+                $datetime = str_replace(
+                    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+                    $datetime
+                );
 
                 $level = $m['status'] >= 400 ? 'ERROR' : ($m['status'] >= 300 ? 'WARNING' : 'INFO');
                 $message = sprintf('%s %s - %s %s', $m['method'], $m['path'], $m['status'], $m['size']);
@@ -126,7 +129,7 @@ class LogParser
                     'level' => $level,
                     'location' => $m['ip'],
                     'message' => $message,
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -146,7 +149,7 @@ class LogParser
                     'level' => strtoupper($m['level']),
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -160,7 +163,7 @@ class LogParser
                     'deprecated' => 'NOTICE', 'strict standards' => 'NOTICE',
                     'catchable fatal error' => 'ERROR', 'recoverable fatal error' => 'ERROR',
                 ];
-                $level    = $levelMap[strtolower($m['level'])] ?? 'ERROR';
+                $level = $levelMap[strtolower($m['level'])] ?? 'ERROR';
                 $location = isset($m['file'], $m['line']) && $m['file'] !== '' ? $m['file'] . ':' . $m['line'] : '';
 
                 // Collect stack trace continuation lines
@@ -178,10 +181,10 @@ class LogParser
 
                 $entries[] = [
                     'datetime' => $m['datetime'],
-                    'level'    => $level,
+                    'level' => $level,
                     'location' => $location,
-                    'message'  => $m['message'],
-                    'context'  => $context,
+                    'message' => $m['message'],
+                    'context' => $context,
                 ];
                 $i = $j;
                 continue;
@@ -197,8 +200,8 @@ class LogParser
                     $j++;
                 }
 
-                $context  = [];
-                $message  = trim($rest);
+                $context = [];
+                $message = trim($rest);
                 $location = '';
 
                 $decoded = json_decode(trim($rest), true, 512, JSON_THROW_ON_ERROR);
@@ -213,10 +216,10 @@ class LogParser
 
                 $entries[] = [
                     'datetime' => $m['datetime'],
-                    'level'    => strtoupper($m['level']),
+                    'level' => strtoupper($m['level']),
                     'location' => $location,
-                    'message'  => $message,
-                    'context'  => $context,
+                    'message' => $message,
+                    'context' => $context,
                 ];
                 $i = $j;
                 continue;
@@ -229,7 +232,7 @@ class LogParser
                     'level' => 'INFO',
                     'location' => '',
                     'message' => 'Running apk: ' . $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -243,7 +246,7 @@ class LogParser
                     'level' => $level,
                     'location' => '',
                     'message' => "({$m['num']}/{$m['total']}) {$m['action']} {$m['message']}",
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -256,7 +259,7 @@ class LogParser
                     'level' => 'WARNING',
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -269,7 +272,7 @@ class LogParser
                     'level' => 'INFO',
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -282,7 +285,7 @@ class LogParser
                     'level' => 'INFO',
                     'location' => '',
                     'message' => $m['message'],
-                    'context' => []
+                    'context' => [],
                 ];
                 $i++;
                 continue;
@@ -307,7 +310,7 @@ class LogParser
             if (preg_match(self::PATTERN_SYSTEMD_JOURNAL, $line, $m)) {
                 // Convert ISO 8601 to simple format: 2026-06-07T10:44:33.740726+00:00 -> 2026-06-07 10:44:33
                 $datetime = preg_replace('/T(\d{2}:\d{2}:\d{2})\.\d+[+-]\d{2}:\d{2}/', ' $1', $m['datetime']);
-                $location = $m['hostname'].' '.$m['process'].(isset($m['pid']) ? '['.$m['pid'].']' : '');
+                $location = $m['hostname'] . ' ' . $m['process'] . (isset($m['pid']) ? '[' . $m['pid'] . ']' : '');
 
                 // Try to detect log level from message
                 $level = $this->guessLevel($m['message']);
@@ -344,10 +347,10 @@ class LogParser
     {
         return [
             'datetime' => $m['datetime'],
-            'level'    => strtoupper($m['level']),
+            'level' => strtoupper($m['level']),
             'location' => $m['location'],
-            'message'  => $m['message'],
-            'context'  => isset($m['context']) && $m['context'] !== ''
+            'message' => $m['message'],
+            'context' => isset($m['context']) && $m['context'] !== ''
                 ? (json_decode($m['context'], true, 512, JSON_THROW_ON_ERROR) ?? [])
                 : [],
         ];
@@ -356,10 +359,18 @@ class LogParser
     private function guessLevel(string $message): string
     {
         $lower = strtolower($message);
-        if (str_contains($lower, 'error') || str_contains($lower, 'failed')) return 'ERROR';
-        if (str_contains($lower, 'warning') || str_contains($lower, 'warn')) return 'WARNING';
-        if (str_contains($lower, 'debug')) return 'DEBUG';
-        if (str_contains($lower, 'critical') || str_contains($lower, 'fatal')) return 'CRITICAL';
+        if (str_contains($lower, 'error') || str_contains($lower, 'failed')) {
+            return 'ERROR';
+        }
+        if (str_contains($lower, 'warning') || str_contains($lower, 'warn')) {
+            return 'WARNING';
+        }
+        if (str_contains($lower, 'debug')) {
+            return 'DEBUG';
+        }
+        if (str_contains($lower, 'critical') || str_contains($lower, 'fatal')) {
+            return 'CRITICAL';
+        }
         return 'INFO';
     }
 }

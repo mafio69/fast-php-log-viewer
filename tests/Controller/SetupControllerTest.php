@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Controller;
 
-use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Service\SetupWizard;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
@@ -61,7 +61,7 @@ class SetupControllerTest extends TestCase
         $data = [
             'step' => 'generate_keys',
             'data' => [],
-            'skip' => true
+            'skip' => true,
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -81,7 +81,7 @@ class SetupControllerTest extends TestCase
         $data = [
             'step' => 'unknown_step',
             'data' => [],
-            'skip' => false
+            'skip' => false,
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -103,9 +103,9 @@ class SetupControllerTest extends TestCase
                 [
                     'name' => 'Test SSH',
                     'ssh_host' => 'example.com',
-                    'ssh_user' => 'testuser'
-                ]
-            ]
+                    'ssh_user' => 'testuser',
+                ],
+            ],
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -128,7 +128,7 @@ class SetupControllerTest extends TestCase
             'data' => [],
             'skip' => true,
             'unknown_field' => 'should_be_ignored',
-            'another_unknown' => 123
+            'another_unknown' => 123,
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();

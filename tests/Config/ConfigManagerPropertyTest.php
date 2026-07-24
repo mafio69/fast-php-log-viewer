@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Config;
 
-use Eris\TestTrait;
-use Mariusz\LogViewer\Config\ConfigManager;
-use PHPUnit\Framework\TestCase;
 use function Eris\Generator\associative;
 use function Eris\Generator\bool;
 use function Eris\Generator\int;
 use function Eris\Generator\oneOf;
 use function Eris\Generator\string;
 use function Eris\Generator\vector;
+
+use Eris\TestTrait;
+use Mariusz\LogViewer\Config\ConfigManager;
+use PHPUnit\Framework\TestCase;
 
 class ConfigManagerPropertyTest extends TestCase
 {
@@ -49,13 +50,13 @@ class ConfigManagerPropertyTest extends TestCase
         $this->forAll()
             ->then(function () use (&$generatedIds) {
                 $id = $this->configManager->generateInstallationId();
-                
+
                 $this->assertMatchesRegularExpression(
                     '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
                     $id,
                     "Generated ID $id is not a valid UUID v4"
                 );
-                
+
                 $this->assertNotContains($id, $generatedIds, "Generated ID $id is not unique");
                 $generatedIds[] = $id;
             });
@@ -71,10 +72,10 @@ class ConfigManagerPropertyTest extends TestCase
         $this->forAll()
             ->then(function () use (&$generatedKeys) {
                 $key = $this->configManager->generateEncryptionKey();
-                
+
                 $this->assertEquals(64, strlen($key));
                 $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $key);
-                
+
                 $this->assertNotContains($key, $generatedKeys, "Generated key $key is not unique");
                 $generatedKeys[] = $key;
             });
@@ -92,20 +93,20 @@ class ConfigManagerPropertyTest extends TestCase
                 'debug' => bool(),
                 'nested' => associative([
                     'foo' => string(),
-                    'bar' => int()
-                ])
+                    'bar' => int(),
+                ]),
             ])
         )
         ->then(function ($data) {
             $this->configManager->saveConfig($data);
             $loaded = $this->configManager->getConfig();
-            
+
             $this->assertEquals($data, $loaded);
-            
+
             // Sprawdź czy plik JSON jest poprawnie sformatowany
             $content = file_get_contents($this->tempConfig);
             $this->assertStringContainsString("\n", $content); // PRETTY_PRINT
-            
+
             // Sprawdź uprawnienia
             $this->assertEquals(0600, fileperms($this->tempConfig) & 0777);
         });
@@ -124,19 +125,19 @@ class ConfigManagerPropertyTest extends TestCase
                 'public_field' => string(),
                 'ssh_connections' => vector(1, associative([
                     'name' => string(),
-                    'ssh_password' => string()
-                ]))
+                    'ssh_password' => string(),
+                ])),
             ])
         )
         ->then(function ($data) {
             $this->configManager->saveConfig($data);
             $public = $this->configManager->getPublicConfig();
-            
+
             $this->assertEquals('********', $public['ssh_password']);
             $this->assertEquals('********', $public['ssh_key_passphrase']);
             $this->assertEquals('********', $public['encryption_key_raw']);
             $this->assertArrayHasKey('public_field', $public);
-            
+
             // Sprawdź rekursywnie
             if (isset($public['ssh_connections'])) {
                 foreach ($public['ssh_connections'] as $conn) {
@@ -153,7 +154,7 @@ class ConfigManagerPropertyTest extends TestCase
     {
         $this->forAll(
             associative([
-                'foo' => string()
+                'foo' => string(),
             ])
         )
         ->then(function ($data) {
@@ -179,7 +180,9 @@ class ConfigManagerPropertyTest extends TestCase
         )
         ->then(function ($input) {
             if ($input === null) {
-                if (file_exists($this->tempConfig)) unlink($this->tempConfig);
+                if (file_exists($this->tempConfig)) {
+                    unlink($this->tempConfig);
+                }
             } else {
                 file_put_contents($this->tempConfig, is_array($input) ? json_encode($input) : (string)$input);
             }
@@ -189,7 +192,7 @@ class ConfigManagerPropertyTest extends TestCase
                 $expected = true;
             }
 
-            $this->assertEquals($expected, $this->configManager->isSetupComplete(), "Failed for input: " . json_encode($input));
+            $this->assertEquals($expected, $this->configManager->isSetupComplete(), 'Failed for input: ' . json_encode($input));
         });
     }
 
@@ -219,7 +222,7 @@ class ConfigManagerPropertyTest extends TestCase
                     \Eris\Generator\constant('complete'),
                     \Eris\Generator\constant('skipped'),
                     \Eris\Generator\constant('pending')
-                )
+                ),
             ])
         )
         ->then(function ($setupSteps) {
@@ -231,19 +234,22 @@ class ConfigManagerPropertyTest extends TestCase
                     break;
                 }
             }
-            
+
             // Ustaw setup_complete zgodnie z logiką kroków
             $config = [
                 'setup_steps' => $setupSteps,
-                'setup_complete' => $allCompleteOrSkipped
+                'setup_complete' => $allCompleteOrSkipped,
             ];
-            
+
             $this->configManager->saveConfig($config);
-            
+
             // Sprawdź czy isSetupComplete zwraca poprawną wartość
-            $this->assertEquals($allCompleteOrSkipped, $this->configManager->isSetupComplete(), 
-                "isSetupComplete() should return " . ($allCompleteOrSkipped ? 'true' : 'false') . 
-                " for steps: " . json_encode($setupSteps));
+            $this->assertEquals(
+                $allCompleteOrSkipped,
+                $this->configManager->isSetupComplete(),
+                'isSetupComplete() should return ' . ($allCompleteOrSkipped ? 'true' : 'false') .
+                ' for steps: ' . json_encode($setupSteps)
+            );
         });
     }
 }

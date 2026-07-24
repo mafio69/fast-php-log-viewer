@@ -8,7 +8,6 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Slim\App;
-use Slim\Routing\RouteCollectorProxy;
 
 return function (App $app): void {
     // Setup Wizard

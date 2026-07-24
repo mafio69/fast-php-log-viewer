@@ -130,13 +130,13 @@ class LogControllerTest extends TestCase
     public function testGetEntriesWithRelativeDirResolvesViaFallback(): void
     {
         $appRoot = dirname(__DIR__, 2);
-        $testDir = $appRoot.'/logs';
+        $testDir = $appRoot . '/logs';
 
         if (!is_dir($testDir)) {
             mkdir($testDir, 0755, true);
         }
 
-        $testFile = $testDir.'/test-relative-entries.log';
+        $testFile = $testDir . '/test-relative-entries.log';
         $content = "[2024-01-01 10:00:00] [INFO] [test.php:1] test message\n";
         file_put_contents($testFile, $content);
 
@@ -153,7 +153,7 @@ class LogControllerTest extends TestCase
         try {
             $request = (new RequestFactory())->createRequest(
                 'GET',
-                '/api/entries?'.http_build_query([
+                '/api/entries?' . http_build_query([
                     'file' => $testFile,
                     'dir' => 'logs/',
                 ])
@@ -176,14 +176,14 @@ class LogControllerTest extends TestCase
     public function testGetEntriesWithTildeDirResolvesViaFallback(): void
     {
         $originalHome = $_SERVER['HOME'] ?? null;
-        $tmpHome = sys_get_temp_dir().'/log-viewer-home-test-'.uniqid();
-        $testDir = $tmpHome.'/logs';
+        $tmpHome = sys_get_temp_dir() . '/log-viewer-home-test-' . uniqid();
+        $testDir = $tmpHome . '/logs';
 
         if (!is_dir($testDir)) {
             mkdir($testDir, 0755, true);
         }
 
-        $testFile = $testDir.'/test-tilde-entries.log';
+        $testFile = $testDir . '/test-tilde-entries.log';
         $content = "[2024-01-01 10:00:00] [WARNING] [app.php:5] warning message\n";
         file_put_contents($testFile, $content);
 
@@ -202,7 +202,7 @@ class LogControllerTest extends TestCase
         try {
             $request = (new RequestFactory())->createRequest(
                 'GET',
-                '/api/entries?'.http_build_query([
+                '/api/entries?' . http_build_query([
                     'file' => $testFile,
                     'dir' => '~/logs',
                 ])
@@ -235,9 +235,9 @@ class LogControllerTest extends TestCase
 
     public function testGetFilesWithRealGlobLogFinderFindsLogsInTempDir(): void
     {
-        $tmpDir = sys_get_temp_dir().'/log-viewer-getfiles-test-'.uniqid();
+        $tmpDir = sys_get_temp_dir() . '/log-viewer-getfiles-test-' . uniqid();
         mkdir($tmpDir, 0755, true);
-        file_put_contents($tmpDir.'/test.log', "[2024-01-01 10:00:00] [INFO] [test.php:1] test\n");
+        file_put_contents($tmpDir . '/test.log', "[2024-01-01 10:00:00] [INFO] [test.php:1] test\n");
 
         $logConfig = $this->createMock(LogConfig::class);
         $configManager = $this->createMock(ConfigManager::class);
@@ -252,7 +252,7 @@ class LogControllerTest extends TestCase
 
         $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser);
 
-        $request = (new RequestFactory())->createRequest('GET', '/api/files?path='.urlencode($tmpDir));
+        $request = (new RequestFactory())->createRequest('GET', '/api/files?path=' . urlencode($tmpDir));
         $response = (new ResponseFactory())->createResponse();
 
         $result = $controller->getFiles($request, $response);
@@ -262,14 +262,14 @@ class LogControllerTest extends TestCase
         $this->assertCount(1, $body);
         $this->assertStringContainsString('test.log', $body[0]['file']);
 
-        unlink($tmpDir.'/test.log');
+        unlink($tmpDir . '/test.log');
         rmdir($tmpDir);
     }
 
     public function testGetFilesWithRealGlobLogFinderAndRelativePath(): void
     {
         $appRoot = dirname(__DIR__, 2);
-        $logDir = $appRoot.'/logs';
+        $logDir = $appRoot . '/logs';
 
         $logConfig = $this->createMock(LogConfig::class);
         $configManager = $this->createMock(ConfigManager::class);
@@ -297,10 +297,10 @@ class LogControllerTest extends TestCase
     public function testGetFilesWithRealGlobLogFinderAndTildePath(): void
     {
         $originalHome = $_SERVER['HOME'] ?? null;
-        $tmpHome = sys_get_temp_dir().'/log-viewer-tilde-getfiles-'.uniqid();
-        $logDir = $tmpHome.'/logs';
+        $tmpHome = sys_get_temp_dir() . '/log-viewer-tilde-getfiles-' . uniqid();
+        $logDir = $tmpHome . '/logs';
         mkdir($logDir, 0755, true);
-        file_put_contents($logDir.'/user.log', "[2024-01-01 10:00:00] [INFO] [test.php:1] test\n");
+        file_put_contents($logDir . '/user.log', "[2024-01-01 10:00:00] [INFO] [test.php:1] test\n");
 
         $_SERVER['HOME'] = $tmpHome;
 
@@ -327,7 +327,7 @@ class LogControllerTest extends TestCase
         $this->assertCount(1, $body);
         $this->assertStringContainsString('user.log', $body[0]['file']);
 
-        unlink($logDir.'/user.log');
+        unlink($logDir . '/user.log');
         rmdir($logDir);
         rmdir($tmpHome);
         if ($originalHome !== null) {
@@ -344,7 +344,7 @@ class LogControllerTest extends TestCase
             ->willReturn(false);
 
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'logs', 'path' => '/var/log']
+            ['name' => 'logs', 'path' => '/var/log'],
         ]);
 
         $request = (new RequestFactory())->createRequest('GET', '/api/entries?file=/etc/passwd');
@@ -364,7 +364,7 @@ class LogControllerTest extends TestCase
             ->willReturn(false);
 
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'logs', 'path' => '/var/log']
+            ['name' => 'logs', 'path' => '/var/log'],
         ]);
 
         $request = (new RequestFactory())->createRequest('GET', '/api/entries?file=/var/log/../secret/file.txt');
@@ -406,7 +406,7 @@ class LogControllerTest extends TestCase
             ->willReturn(true);
 
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'tmp', 'path' => sys_get_temp_dir()]
+            ['name' => 'tmp', 'path' => sys_get_temp_dir()],
         ]);
 
         $request = (new RequestFactory())->createRequest('GET', '/api/entries?file=' . urlencode($nonExistentFile));
@@ -438,7 +438,7 @@ class LogControllerTest extends TestCase
             ]);
 
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'temp', 'path' => sys_get_temp_dir()]
+            ['name' => 'temp', 'path' => sys_get_temp_dir()],
         ]);
 
         $request = (new RequestFactory())->createRequest('GET', '/api/entries?file=' . $logFile . '&level=WARNING');
@@ -486,7 +486,8 @@ class LogControllerTest extends TestCase
         $controller = $this->createControllerWithDocker($dockerExec);
 
         $request = (new RequestFactory())->createRequest(
-            'GET', '/api/entries?file=/var/log/app.log&container_id=my-app'
+            'GET',
+            '/api/entries?file=/var/log/app.log&container_id=my-app'
         );
         $response = (new ResponseFactory())->createResponse();
 
@@ -508,7 +509,8 @@ class LogControllerTest extends TestCase
         $controller = $this->createControllerWithDocker($dockerExec);
 
         $request = (new RequestFactory())->createRequest(
-            'GET', '/api/entries?file=/var/log/app.log&container_id=nonexistent'
+            'GET',
+            '/api/entries?file=/var/log/app.log&container_id=nonexistent'
         );
         $response = (new ResponseFactory())->createResponse();
 
@@ -529,7 +531,8 @@ class LogControllerTest extends TestCase
         $controller = $this->createControllerWithDocker($dockerExec);
 
         $request = (new RequestFactory())->createRequest(
-            'GET', '/api/entries?file=/var/log/missing.log&container_id=my-app'
+            'GET',
+            '/api/entries?file=/var/log/missing.log&container_id=my-app'
         );
         $response = (new ResponseFactory())->createResponse();
 
@@ -548,7 +551,8 @@ class LogControllerTest extends TestCase
         $controller = $this->createControllerWithDocker($dockerExec);
 
         $request = (new RequestFactory())->createRequest(
-            'GET', '/api/entries?file=/var/log/app.log&container_id=my-app'
+            'GET',
+            '/api/entries?file=/var/log/app.log&container_id=my-app'
         );
         $response = (new ResponseFactory())->createResponse();
 
@@ -565,7 +569,7 @@ class LogControllerTest extends TestCase
         $dockerExec->method('isAvailable')->willReturn(true);
         $dockerExec->method('readFile')
             ->with('my-app', '/var/log/app.log')
-            ->willReturn("content");
+            ->willReturn('content');
 
         $this->logParser->method('parseString')
             ->with('content')
@@ -577,7 +581,8 @@ class LogControllerTest extends TestCase
         $controller = $this->createControllerWithDocker($dockerExec);
 
         $request = (new RequestFactory())->createRequest(
-            'GET', '/api/entries?file=/var/log/app.log&container_id=my-app&level=WARNING'
+            'GET',
+            '/api/entries?file=/var/log/app.log&container_id=my-app&level=WARNING'
         );
         $response = (new ResponseFactory())->createResponse();
 

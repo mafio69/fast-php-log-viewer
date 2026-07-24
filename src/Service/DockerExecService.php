@@ -64,7 +64,7 @@ class DockerExecService
         $output = $this->startExec($execId);
 
         if ($output === '') {
-            throw new RuntimeException("file_not_found");
+            throw new RuntimeException('file_not_found');
         }
 
         return $output;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Controller;
 
-use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Service\LogScanner;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;

@@ -7,7 +7,7 @@ use Mariusz\LogViewer\Routing\LegacyRouter;
 use Slim\Psr7\Factory\ServerRequestFactory;
 
 if (!defined('LOG_DIR')) {
-    define('LOG_DIR', getenv('LOG_DIR') ?: __DIR__.'/../../logs');
+    define('LOG_DIR', getenv('LOG_DIR') ?: __DIR__ . '/../../logs');
 }
 if (!defined('EDITOR_URL')) {
     define('EDITOR_URL', getenv('EDITOR_URL') ?: 'phpstorm://open?file={file}&line={line}');
@@ -54,4 +54,4 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 
 // Render SPA template
-require __DIR__.'/../../templates/viewer.php';
+require __DIR__ . '/../../templates/viewer.php';

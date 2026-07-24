@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Config;
 
-use Mariusz\LogViewer\Service\ErrorContextTrait;
 use Exception;
+use Mariusz\LogViewer\Service\ErrorContextTrait;
 use PDO;
 use PDOException;
 use RuntimeException;
@@ -87,16 +87,16 @@ class LogConfig
     public function addDirectory(array $config): int
     {
         // Check if directory already exists — return existing ID
-        $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
+        $stmt = $this->db->prepare('SELECT id FROM log_directories WHERE path = :path');
         $stmt->execute([':path' => $config['path']]);
         if ($existing = $stmt->fetch()) {
             return (int)$existing['id'];
         }
 
-        $stmt = $this->db->prepare("
+        $stmt = $this->db->prepare('
             INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path)
             VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path)
-        ");
+        ');
 
         $stmt->execute([
             ':name' => $config['name'],
@@ -119,7 +119,7 @@ class LogConfig
      */
     public function getDirectories(): array
     {
-        $stmt = $this->db->query("SELECT * FROM log_directories WHERE is_active = 1 ORDER BY name");
+        $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 1 ORDER BY name');
         return $stmt->fetchAll();
     }
 
@@ -162,12 +162,12 @@ class LogConfig
     {
         $this->db->exec("DELETE FROM log_directories WHERE name LIKE 'allowed_%'");
 
-        $this->db->exec("
+        $this->db->exec('
             DELETE FROM log_directories
             WHERE id NOT IN (
                 SELECT MIN(id) FROM log_directories GROUP BY path
             )
-        ");
+        ');
     }
 
     /**
@@ -189,8 +189,8 @@ class LogConfig
             return false;
         }
 
-        $fields[] = "updated_at = CURRENT_TIMESTAMP";
-        $sql = "UPDATE log_directories SET " . implode(', ', $fields) . " WHERE id = :id";
+        $fields[] = 'updated_at = CURRENT_TIMESTAMP';
+        $sql = 'UPDATE log_directories SET ' . implode(', ', $fields) . ' WHERE id = :id';
 
         $stmt = $this->db->prepare($sql);
         $result = $stmt->execute($params);
@@ -206,7 +206,7 @@ class LogConfig
      */
     public function deleteDirectory(int $id): bool
     {
-        $stmt = $this->db->prepare("DELETE FROM log_directories WHERE id = :id");
+        $stmt = $this->db->prepare('DELETE FROM log_directories WHERE id = :id');
         $result = $stmt->execute([':id' => $id]);
         if ($result) {
             $this->exportBackup();
@@ -220,7 +220,7 @@ class LogConfig
      */
     public function hasConfigurations(): bool
     {
-        $stmt = $this->db->query("SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1");
+        $stmt = $this->db->query('SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1');
         $result = $stmt->fetch();
         return ($result['count'] ?? 0) > 0;
     }
@@ -264,7 +264,7 @@ class LogConfig
             }, $dirs);
 
             $json = json_encode($safeDirs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            $backupPath = dirname($this->dbPath).'/logviewer_backup.json';
+            $backupPath = dirname($this->dbPath) . '/logviewer_backup.json';
 
             $encrypted = $this->encryptData($json);
             file_put_contents($backupPath, $encrypted);
@@ -272,7 +272,7 @@ class LogConfig
             // Restrict file to owner read/write only
             chmod($backupPath, 0600);
         } catch (Exception $e) {
-            error_log('LogConfig backup failed: '.$e->getMessage());
+            error_log('LogConfig backup failed: ' . $e->getMessage());
         }
     }
 
@@ -286,7 +286,7 @@ class LogConfig
             return;
         }
 
-        $backupPath = dirname($this->dbPath).'/logviewer_backup.json';
+        $backupPath = dirname($this->dbPath) . '/logviewer_backup.json';
         if (!file_exists($backupPath)) {
             return;
         }
@@ -300,7 +300,7 @@ class LogConfig
         try {
             $json = $this->decryptData($raw);
         } catch (Exception $e) {
-            error_log('LogConfig: backup decryption failed, trying plain JSON: '.$e->getMessage());
+            error_log('LogConfig: backup decryption failed, trying plain JSON: ' . $e->getMessage());
             $json = $raw;
         }
 
@@ -311,17 +311,17 @@ class LogConfig
 
         foreach ($dirs as $dir) {
             try {
-                $stmt = $this->db->prepare("SELECT id FROM log_directories WHERE path = :path");
+                $stmt = $this->db->prepare('SELECT id FROM log_directories WHERE path = :path');
                 $stmt->execute([':path' => $dir['path']]);
                 if ($stmt->fetch()) {
                     continue;
                 }
 
                 $stmt = $this->db->prepare(
-                    "
+                    '
                     INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path)
                     VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path)
-                "
+                '
                 );
                 $stmt->execute([
                     ':name' => $dir['name'],
@@ -333,7 +333,7 @@ class LogConfig
                     ':ssh_key_path' => $dir['ssh_key_path'] ?? null,
                 ]);
             } catch (Exception $e) {
-                error_log('LogConfig restore failed for '.($dir['name'] ?? '?').': '.$e->getMessage());
+                error_log('LogConfig restore failed for ' . ($dir['name'] ?? '?') . ': ' . $e->getMessage());
             }
         }
     }
@@ -354,10 +354,10 @@ class LogConfig
 
         $ciphertext = openssl_encrypt($plaintext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
         if ($ciphertext === false) {
-            throw new RuntimeException("(\$ciphertext === false) Encryption failed" . $this->getLastErrorMessage());
+            throw new RuntimeException('($ciphertext === false) Encryption failed' . $this->getLastErrorMessage());
         }
 
-        return base64_encode($iv.$tag.$ciphertext);
+        return base64_encode($iv . $tag . $ciphertext);
     }
 
     /**
@@ -374,7 +374,7 @@ class LogConfig
 
         $raw = base64_decode($encoded, true);
         if ($raw === false || strlen($raw) <= $ivLen + $tagLen) {
-            throw new RuntimeException("(\$raw === false || strlen(\$raw) <= \$ivLen + \$tagLen) Invalid encrypted data (encoded length: " . (is_string($encoded) ? strlen($encoded) : 0) . ")" . $this->getLastErrorMessage());
+            throw new RuntimeException('($raw === false || strlen($raw) <= $ivLen + $tagLen) Invalid encrypted data (encoded length: ' . (is_string($encoded) ? strlen($encoded) : 0) . ')' . $this->getLastErrorMessage());
         }
 
         $iv = substr($raw, 0, $ivLen);
@@ -383,7 +383,7 @@ class LogConfig
 
         $plaintext = openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
         if ($plaintext === false) {
-            throw new RuntimeException("(\$plaintext === false) Decryption failed — wrong key or corrupted data" . $this->getLastErrorMessage());
+            throw new RuntimeException('($plaintext === false) Decryption failed — wrong key or corrupted data' . $this->getLastErrorMessage());
         }
 
         return $plaintext;
@@ -398,12 +398,12 @@ class LogConfig
     {
         $hex = getenv('BACKUP_ENCRYPTION_KEY');
         if (empty($hex)) {
-            throw new RuntimeException("(empty(\$hex)) BACKUP_ENCRYPTION_KEY is not set in environment");
+            throw new RuntimeException('(empty($hex)) BACKUP_ENCRYPTION_KEY is not set in environment');
         }
 
         $key = hex2bin($hex);
         if ($key === false || strlen($key) !== 32) {
-            throw new RuntimeException("(\$key === false || strlen(\$key) !== 32) BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes) (hex: " . (is_string($hex) ? $hex : 'null') . ")");
+            throw new RuntimeException('($key === false || strlen($key) !== 32) BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes) (hex: ' . (is_string($hex) ? $hex : 'null') . ')');
         }
 
         return $key;

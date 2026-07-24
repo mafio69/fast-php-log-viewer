@@ -159,7 +159,7 @@ class SSHControllerTest extends TestCase
             'ssh_user' => 'testuser',
             'ssh_port' => 22,
             'ssh_auth_method' => 'password',
-            'ssh_password' => 'testpass'
+            'ssh_password' => 'testpass',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -183,7 +183,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 22,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'testpass',
-            'path' => '/var/log'
+            'path' => '/var/log',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -207,7 +207,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 22,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'testpass',
-            'path' => '/var/log/test.log'
+            'path' => '/var/log/test.log',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -231,7 +231,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 22,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'testpass',
-            'path' => '/var/log/test.log'
+            'path' => '/var/log/test.log',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -278,7 +278,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 10137,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test'
+            'path' => '/home/frog/test',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -305,7 +305,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 10137,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test/php_errors.log'
+            'path' => '/home/frog/test/php_errors.log',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -332,7 +332,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 10137,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test/php_errors.log'
+            'path' => '/home/frog/test/php_errors.log',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
@@ -363,7 +363,7 @@ class SSHControllerTest extends TestCase
             'ssh_port' => 10137,
             'ssh_auth_method' => 'password',
             'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test/nginx_error.log'
+            'path' => '/home/frog/test/nginx_error.log',
         ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();

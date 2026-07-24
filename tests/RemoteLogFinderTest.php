@@ -51,7 +51,7 @@ class RemoteLogFinderTest extends TestCase
         $this->mockSsh->method('exec')->willReturn(
             "/var/log/existing.log\n/var/log/nonexistent.log\n"
         );
-        $this->mockSsh->method('fileExists')->willReturnCallback(function($path) {
+        $this->mockSsh->method('fileExists')->willReturnCallback(function ($path) {
             return $path === '/var/log/existing.log';
         });
         $this->mockSsh->method('fileSize')->willReturn(1024);

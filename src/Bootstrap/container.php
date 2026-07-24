@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Bootstrap;
 
+use function DI\autowire;
+
 use DI\ContainerBuilder;
 use Mariusz\Logger\DualLogger;
 use Mariusz\LogViewer\Config\ConfigManager;
@@ -25,7 +27,6 @@ use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SetupWizard;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
-use function DI\autowire;
 
 return function (ContainerBuilder $containerBuilder): void {
     // Define constants as container parameters

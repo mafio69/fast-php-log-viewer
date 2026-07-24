@@ -54,7 +54,7 @@ class PathResolverTest extends TestCase
     public function testResolveDirPathFromDb(): void
     {
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'my_logs', 'path' => '/custom/path']
+            ['name' => 'my_logs', 'path' => '/custom/path'],
         ]);
 
         $this->assertSame('/custom/path', $this->resolver->resolveDirPath('my_logs'));

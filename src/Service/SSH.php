@@ -70,7 +70,7 @@ class SSH
         }
 
         if (!$keyPath || !file_exists($keyPath)) {
-            throw new RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
+            throw new RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . ' (keyPath: ' . ($keyPath ?? 'null') . '). Tip: Inside docker use /home/www-data/.ssh/ path.');
         }
     }
 
@@ -106,14 +106,14 @@ class SSH
         $keyPath = $this->config['ssh_key_path'] ?? $this->findDefaultKeyPath();
 
         if (!$keyPath || !file_exists($keyPath)) {
-            throw new RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . " (keyPath: " . ($keyPath ?? 'null') . "). Tip: Inside docker use /home/www-data/.ssh/ path.");
+            throw new RuntimeException("(!$keyPath || !file_exists($keyPath)) SSH key file not found: " . ($keyPath ?? 'default paths') . ' (keyPath: ' . ($keyPath ?? 'null') . '). Tip: Inside docker use /home/www-data/.ssh/ path.');
         }
 
         // Check permissions (SSH2 extension is sensitive to this)
         $perms = fileperms($keyPath) & 0777;
         if ($perms > 0600 && PHP_OS_FAMILY !== 'Windows') {
             // Log warning but continue, as Docker volumes might have fixed permissions
-            error_log("SSH Warning: Key file $keyPath has loose permissions (" . decoct($perms) . "). Expected 600.");
+            error_log("SSH Warning: Key file $keyPath has loose permissions (" . decoct($perms) . '). Expected 600.');
         }
 
         // Try without passphrase first

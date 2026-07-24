@@ -83,7 +83,7 @@ class RemoteLogFinder
         $files = array_values(array_unique($files, SORT_REGULAR));
 
         // Sort by name
-        usort($files, fn($a, $b) => strcmp($b['name'], $a['name']));
+        usort($files, fn ($a, $b) => strcmp($b['name'], $a['name']));
 
         return $files;
     }

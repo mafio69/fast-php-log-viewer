@@ -1,5 +1,7 @@
 /vendor/
 /.phpunit.result.cache
+/.php-cs-fixer.cache
+/var/
 /.idea/
 /.env
 /composer.phar
@@ -18,3 +20,6 @@
 /TODO.md
 /TODO_JUTRO.md
 /docs/TODO-*.md
+node_modules
+playwright-report
+/test-results/.last-run.json

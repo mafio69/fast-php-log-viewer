@@ -64,7 +64,7 @@ class FileAccessValidatorTest extends TestCase
         file_put_contents($tmpFile, 'test');
 
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'app', 'path' => $tmpDir]
+            ['name' => 'app', 'path' => $tmpDir],
         ]);
 
         $result = $this->validator->isFileAllowed($tmpFile, null);
@@ -77,7 +77,7 @@ class FileAccessValidatorTest extends TestCase
     public function testDeniesFileOutsideAllowedDirs(): void
     {
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'safe', 'path' => '/var/log']
+            ['name' => 'safe', 'path' => '/var/log'],
         ]);
 
         $this->assertFalse($this->validator->isFileAllowed('/etc/passwd', null));
@@ -95,7 +95,7 @@ class FileAccessValidatorTest extends TestCase
         file_put_contents($siblingFile, 'test');
 
         $this->logConfig->method('getDirectories')->willReturn([
-            ['name' => 'safe', 'path' => $tmpDir]
+            ['name' => 'safe', 'path' => $tmpDir],
         ]);
 
         $this->assertFalse($this->validator->isFileAllowed($siblingFile, null));

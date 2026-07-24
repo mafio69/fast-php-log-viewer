@@ -10,18 +10,18 @@ use PHPUnit\Framework\TestCase;
 class LegacyRouterTest extends TestCase
 {
     private const EXPECTED_MAP = [
-        'directories'        => '/api/directories',
-        'files'              => '/api/files',
-        'entries'            => '/api/entries',
-        'config-add-dir'     => '/api/config/directories',
-        'ssh-test-connection'=> '/api/ssh/test-connection',
-        'ssh-list-files'     => '/api/ssh/list-files',
-        'ssh-read-file'      => '/api/ssh/read-file',
-        'ssh-download-file'  => '/api/ssh/download-file',
-        'setup-status'       => '/api/setup/status',
-        'setup-step'         => '/api/setup/step',
-        'setup-migrate-ssh'  => '/api/setup/migrate-ssh',
-        'app-config'         => '/api/app-config',
+        'directories' => '/api/directories',
+        'files' => '/api/files',
+        'entries' => '/api/entries',
+        'config-add-dir' => '/api/config/directories',
+        'ssh-test-connection' => '/api/ssh/test-connection',
+        'ssh-list-files' => '/api/ssh/list-files',
+        'ssh-read-file' => '/api/ssh/read-file',
+        'ssh-download-file' => '/api/ssh/download-file',
+        'setup-status' => '/api/setup/status',
+        'setup-step' => '/api/setup/step',
+        'setup-migrate-ssh' => '/api/setup/migrate-ssh',
+        'app-config' => '/api/app-config',
     ];
 
     public function testActionMapContainsAllExpectedEntries(): void

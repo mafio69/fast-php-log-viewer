@@ -1,0 +1,13 @@
+grumphp:
+    stop_on_failure: true
+    tasks:
+        phpstan:
+            configuration: phpstan.neon
+            ignore_patterns: [tests/, templates/]
+        phpunit:
+            always_execute: false
+        phpcsfixer2:
+            config: .php-cs-fixer.dist.php
+            verbose: true
+            diff: true
+            triggered_by: [php]

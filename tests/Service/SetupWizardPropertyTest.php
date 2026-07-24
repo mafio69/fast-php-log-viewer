@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Service;
 
-use Eris\TestTrait;
-use Mariusz\LogViewer\Config\ConfigManager;
-use Mariusz\LogViewer\Config\LogConfig;
-use Mariusz\LogViewer\Service\SetupWizard;
-use PHPUnit\Framework\TestCase;
 use function Eris\Generator\associative;
 use function Eris\Generator\int;
 use function Eris\Generator\oneOf;
 use function Eris\Generator\string;
 use function Eris\Generator\vector;
+
+use Eris\TestTrait;
+use Mariusz\LogViewer\Config\ConfigManager;
+use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\SetupWizard;
+use PHPUnit\Framework\TestCase;
 
 class SetupWizardPropertyTest extends TestCase
 {
@@ -56,18 +57,25 @@ class SetupWizardPropertyTest extends TestCase
             $this->forAll(
                 associative([
                     'random_field' => string(),
-                    'another_field' => int()
+                    'another_field' => int(),
                 ])
             )
             ->then(function ($data) use ($step) {
                 $result = $this->wizard->processStep($step, $data, true);
 
-                $this->assertArrayHasKey('warning', $result,
-                    "Step $step with skip=true should return warning");
-                $this->assertNotEmpty($result['warning'],
-                    "Warning for step $step should not be empty");
-                $this->assertIsString($result['warning'],
-                    "Warning for step $step should be a string");
+                $this->assertArrayHasKey(
+                    'warning',
+                    $result,
+                    "Step $step with skip=true should return warning"
+                );
+                $this->assertNotEmpty(
+                    $result['warning'],
+                    "Warning for step $step should not be empty"
+                );
+                $this->assertIsString(
+                    $result['warning'],
+                    "Warning for step $step should be a string"
+                );
 
                 // Dla local_directories sprawdź czy zawiera ścieżkę do logs
                 if ($step === 'local_directories') {
@@ -87,14 +95,16 @@ class SetupWizardPropertyTest extends TestCase
             associative([
                 'ssh_user' => string(),
                 'ssh_port' => int(),
-                'random_field' => string()
+                'random_field' => string(),
             ])
         )
         ->then(function ($data) {
             $result = $this->wizard->processStep('ssh_config', $data, false);
 
-            $this->assertFalse($result['success'], 
-                "Should fail when ssh_host is missing");
+            $this->assertFalse(
+                $result['success'],
+                'Should fail when ssh_host is missing'
+            );
             $this->assertEquals('missing_fields', $result['error']);
             $this->assertContains('ssh_host', $result['fields']);
         });
@@ -104,14 +114,16 @@ class SetupWizardPropertyTest extends TestCase
             associative([
                 'ssh_host' => string(),
                 'ssh_port' => int(),
-                'random_field' => string()
+                'random_field' => string(),
             ])
         )
         ->then(function ($data) {
             $result = $this->wizard->processStep('ssh_config', $data, false);
 
-            $this->assertFalse($result['success'], 
-                "Should fail when ssh_user is missing");
+            $this->assertFalse(
+                $result['success'],
+                'Should fail when ssh_user is missing'
+            );
             $this->assertEquals('missing_fields', $result['error']);
             $this->assertContains('ssh_user', $result['fields']);
         });
@@ -120,14 +132,16 @@ class SetupWizardPropertyTest extends TestCase
         $this->forAll(
             associative([
                 'ssh_port' => int(),
-                'random_field' => string()
+                'random_field' => string(),
             ])
         )
         ->then(function ($data) {
             $result = $this->wizard->processStep('ssh_config', $data, false);
 
-            $this->assertFalse($result['success'], 
-                "Should fail when both ssh_host and ssh_user are missing");
+            $this->assertFalse(
+                $result['success'],
+                'Should fail when both ssh_host and ssh_user are missing'
+            );
             $this->assertEquals('missing_fields', $result['error']);
             $this->assertContains('ssh_host', $result['fields']);
             $this->assertContains('ssh_user', $result['fields']);
@@ -139,14 +153,16 @@ class SetupWizardPropertyTest extends TestCase
                 'ssh_host' => \Eris\Generator\constant('example.com'),
                 'ssh_user' => \Eris\Generator\constant('testuser'),
                 'ssh_port' => int(),
-                'random_field' => string()
+                'random_field' => string(),
             ])
         )
         ->then(function ($data) {
             $result = $this->wizard->processStep('ssh_config', $data, false);
 
-            $this->assertTrue($result['success'],
-                "Should succeed when both ssh_host and ssh_user are present");
+            $this->assertTrue(
+                $result['success'],
+                'Should succeed when both ssh_host and ssh_user are present'
+            );
         });
     }
 
@@ -165,13 +181,13 @@ class SetupWizardPropertyTest extends TestCase
                     'type' => oneOf(
                         \Eris\Generator\constant('local'),
                         \Eris\Generator\constant('ssh')
-                    )
+                    ),
                 ])
             )
         )
         ->then(function ($directories) {
             $this->configManager->saveConfig([
-                'ssh_enabled' => false
+                'ssh_enabled' => false,
             ]);
 
             // Symuluj filtrowanie jak w LogController
@@ -198,13 +214,13 @@ class SetupWizardPropertyTest extends TestCase
                     'type' => oneOf(
                         \Eris\Generator\constant('local'),
                         \Eris\Generator\constant('ssh')
-                    )
+                    ),
                 ])
             )
         )
         ->then(function ($directories) {
             $this->configManager->saveConfig([
-                'ssh_enabled' => true
+                'ssh_enabled' => true,
             ]);
 
             // Gdy ssh_enabled=true, wszystkie katalogi powinny być dostępne

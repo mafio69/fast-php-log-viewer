@@ -23,8 +23,8 @@ class GlobLogFinder implements LogFinderInterface
         }
 
         // Używamy glob do znalezienia plików .log i .php
-        $logFiles = glob($path.'/*.log') ?: [];
-        $phpFiles = glob($path.'/*.php') ?: [];
+        $logFiles = glob($path . '/*.log') ?: [];
+        $phpFiles = glob($path . '/*.php') ?: [];
         $allFilePaths = array_merge($logFiles, $phpFiles);
 
         $this->logger?->debug('GlobLogFinder::findAll glob results', [

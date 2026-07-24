@@ -35,7 +35,7 @@ class LogController
         $dirs = $this->logConfig->getValidDirectories();
 
         if (!$this->configManager->isSshEnabled()) {
-            $dirs = array_filter($dirs, fn($d) => ($d['type'] ?? 'local') !== 'ssh');
+            $dirs = array_filter($dirs, fn ($d) => ($d['type'] ?? 'local') !== 'ssh');
         }
 
         return $this->json($response, array_values($dirs));
@@ -52,7 +52,7 @@ class LogController
                 $absPath = $this->pathResolver->resolvePath($path);
                 $files = $this->logFinder->findAll($absPath);
                 $basePath = rtrim($absPath, '/');
-                $result = array_map(fn($f) => [
+                $result = array_map(fn ($f) => [
                     'file' => $basePath . '/' . $f['file'],
                     'date' => $f['date'],
                     'size' => $f['size'],
@@ -79,7 +79,7 @@ class LogController
 
             $files = $this->logFinder->findAll($dir['path']);
             $basePath = rtrim($dir['path'], '/');
-            $result = array_map(fn($f) => [
+            $result = array_map(fn ($f) => [
                 'file' => $basePath . '/' . $f['file'],
                 'date' => $f['date'],
                 'size' => $f['size'],
@@ -128,7 +128,7 @@ class LogController
         $entries = $this->logParser->parseFile($filePath);
 
         if ($level) {
-            $entries = array_values(array_filter($entries, fn($e) => strtoupper($e['level']) === strtoupper($level)));
+            $entries = array_values(array_filter($entries, fn ($e) => strtoupper($e['level']) === strtoupper($level)));
         }
 
         return $this->json($response, $entries);
@@ -161,7 +161,7 @@ class LogController
 
         $level = $request->getQueryParams()['level'] ?? null;
         if ($level) {
-            $entries = array_values(array_filter($entries, fn($e) => strtoupper($e['level']) === strtoupper($level)));
+            $entries = array_values(array_filter($entries, fn ($e) => strtoupper($e['level']) === strtoupper($level)));
         }
 
         return $this->json($response, $entries);

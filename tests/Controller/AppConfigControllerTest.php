@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Controller;
 
-use Mariusz\LogViewer\Controller\AppConfigController;
 use Mariusz\LogViewer\Config\ConfigManager;
+use Mariusz\LogViewer\Controller\AppConfigController;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -41,7 +41,7 @@ class AppConfigControllerTest extends TestCase
         $this->configManager->saveConfig([
             'app_name' => 'Test App',
             'ssh_password' => 'secret',
-            'setup_complete' => true
+            'setup_complete' => true,
         ]);
 
         $requestFactory = new RequestFactory();

@@ -56,10 +56,10 @@ class ConfigManagerTest extends TestCase
     {
         $config = ['test' => 'value'];
         $this->configManager->saveConfig($config);
-        
+
         $this->assertFileExists($this->tempConfig);
         $this->assertEquals($config, json_decode(file_get_contents($this->tempConfig), true));
-        
+
         // Check permissions (0600)
         $this->assertEquals('0600', substr(sprintf('%o', fileperms($this->tempConfig)), -4));
     }
@@ -68,17 +68,17 @@ class ConfigManagerTest extends TestCase
     {
         $this->configManager->saveConfig([
             'a' => ['b' => 1],
-            'c' => 2
+            'c' => 2,
         ]);
 
         $this->configManager->updateConfig([
             'a' => ['d' => 3],
-            'c' => 4
+            'c' => 4,
         ]);
 
         $expected = [
             'a' => ['b' => 1, 'd' => 3],
-            'c' => 4
+            'c' => 4,
         ];
         $this->assertEquals($expected, $this->configManager->getConfig());
     }
@@ -89,8 +89,8 @@ class ConfigManagerTest extends TestCase
             'ssh_password' => 'secret',
             'ssh_user' => 'admin',
             'nested' => [
-                'encryption_key' => 'very-secret'
-            ]
+                'encryption_key' => 'very-secret',
+            ],
         ];
         $this->configManager->saveConfig($config);
 
@@ -111,7 +111,7 @@ class ConfigManagerTest extends TestCase
     {
         $key = str_repeat('a', 64);
         $result = $this->configManager->saveEncryptionKeyToEnv($key);
-        
+
         $this->assertTrue($result);
         $this->assertStringContainsString("BACKUP_ENCRYPTION_KEY=$key", file_get_contents($this->tempEnv));
     }
@@ -136,10 +136,10 @@ class ConfigManagerTest extends TestCase
     public function testGetSetupStateTransitions(): void
     {
         $this->assertEquals('not_started', $this->configManager->getSetupState());
-        
+
         $this->configManager->saveConfig(['some' => 'data']);
         $this->assertEquals('in_progress', $this->configManager->getSetupState());
-        
+
         $this->configManager->markSetupComplete();
         $this->assertEquals('complete', $this->configManager->getSetupState());
     }
