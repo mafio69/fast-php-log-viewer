@@ -104,18 +104,9 @@ window.FPLV = window.FPLV || {};
     Vue.watch(() => store.fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
 
     // Computed
-    const mergedDirectories = computed(() => {
-        const sshItems = store.directories.filter(d => d.key.startsWith('ssh:'));
-        const savedItems = store.directories.filter(d => !d.key.startsWith('ssh:'));
-        const groups = {
-            defaults: {label: 'Domyślne', items: store.defaultDirectories},
-            saved: {label: 'Zapisane', items: savedItems},
-        };
-        if (sshItems.length) {
-            groups.ssh = {label: 'SSH', items: sshItems};
-        }
-        return groups;
-    });
+    const mergedDirectories = computed(() => ({
+        defaults: {label: 'Domyślne', items: store.defaultDirectories},
+    }));
 
     const levelCounts = computed(() => {
         const c = {};

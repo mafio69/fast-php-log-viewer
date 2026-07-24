@@ -22,7 +22,7 @@ window.FPLV.components = window.FPLV.components || [];
                     <span v-if="store.selectedFile">{{ store.selectedFile.split('/').pop() }}</span>
                 </div>
             </div>
-            <div v-if="store.defaultDirectories.length || store.directories.length" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
+            <div v-if="store.defaultDirectories.length" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
                 <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
                 <div class="flex gap-2">
                     <select v-model="store.selectedDir" @change="$emit('change-dir')" class="flex-1 rounded px-2 py-1 text-xs crt-input" style="min-width:0;">
