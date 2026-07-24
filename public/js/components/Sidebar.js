@@ -25,9 +25,9 @@ window.FPLV.components = window.FPLV.components || [];
             <div v-if="store.defaultDirectories.length || store.directories.length" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
                 <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
                 <div class="flex gap-2">
-                    <select v-model="store.selectedDir" @change="$emit('change-dir')" class="flex-1 rounded px-2 py-1 text-xs crt-input">
+                    <select v-model="store.selectedDir" @change="$emit('change-dir')" class="flex-1 rounded px-2 py-1 text-xs crt-input" style="min-width:0;">
                         <optgroup v-for="(group, gkey) in mergedDirectories" :key="gkey" :label="group.label">
-                            <option v-for="d in group.items" :key="d.key" :value="d.key">{{ d.key }}</option>
+                            <option v-for="d in group.items" :key="d.key" :value="d.key" :title="d.key">{{ formatDirLabel(d.key) }}</option>
                         </optgroup>
                     </select>
                     <button v-if="store.selectedDir && store.selectedDir.startsWith('ssh:')" @click="$emit('refresh-ssh-dir', store.selectedDir)" class="px-2 py-1 text-xs crt-button" title="Odśwież">↻</button>
@@ -80,6 +80,7 @@ window.FPLV.components = window.FPLV.components || [];
                 mergedDirectories: F.mergedDirectories,
                 formatDate: F.formatDate,
                 formatSize: F.formatSize,
+                formatDirLabel: F.formatDirLabel,
             };
         }
     });

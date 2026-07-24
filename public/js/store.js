@@ -184,6 +184,13 @@ window.FPLV = window.FPLV || {};
         return (b / 1048576).toFixed(1) + ' MB';
     }
 
+    function formatDirLabel(key, max = 40) {
+        if (!key || key.length <= max) return key;
+        const head = Math.ceil((max - 1) * 0.4);
+        const tail = (max - 1) - head;
+        return key.slice(0, head) + '…' + key.slice(key.length - tail);
+    }
+
     function formatDate(dateStr) {
         if (!dateStr) return '';
         try {
@@ -829,7 +836,7 @@ window.FPLV = window.FPLV || {};
         store,
         mergedDirectories, levelCounts, tableSortedData, tableTotalPages, tablePaginatedData,
         tableStartRow, tableEndRow, LEVELS, levelColor, levelDot, rowBg, hasContext,
-        openInEditor, formatSize, formatDate, bookmarkKey, fetchJson,
+        openInEditor, formatSize, formatDate, formatDirLabel, bookmarkKey, fetchJson,
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
         loadDefaultDirectories, loadDirectories, syncSSHDirs, refreshSSHDir,
         applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,

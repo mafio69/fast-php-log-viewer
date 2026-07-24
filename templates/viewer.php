@@ -1,3 +1,12 @@
+<?php
+function asset_version(string $relativePath): string
+{
+    $path = __DIR__ . '/../public/' . $relativePath;
+    $mtime = @filemtime($path);
+
+    return $relativePath . '?v=' . ($mtime !== false ? $mtime : '0');
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +16,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23000'/><text x='32' y='46' text-anchor='middle' font-size='38' font-family='monospace' fill='%2300ff00'>⚡</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="<?= asset_version('css/style.css') ?>">
     <script nonce="<?= CSP_NONCE ?>">
         window.FPLV_CONFIG = {
             editorUrl: <?= json_encode(EDITOR_URL) ?>
@@ -20,13 +29,13 @@
     <v-app></v-app>
 </div>
 
-<script src="js/store.js"></script>
-<script src="js/components/SetupWizard.js"></script>
-<script src="js/components/Sidebar.js"></script>
-<script src="js/components/SSHModal.js"></script>
-<script src="js/components/Toolbar.js"></script>
-<script src="js/components/DataTable.js"></script>
-<script src="js/components/VApp.js"></script>
-<script src="js/app.js"></script>
+<script src="<?= asset_version('js/store.js') ?>"></script>
+<script src="<?= asset_version('js/components/SetupWizard.js') ?>"></script>
+<script src="<?= asset_version('js/components/Sidebar.js') ?>"></script>
+<script src="<?= asset_version('js/components/SSHModal.js') ?>"></script>
+<script src="<?= asset_version('js/components/Toolbar.js') ?>"></script>
+<script src="<?= asset_version('js/components/DataTable.js') ?>"></script>
+<script src="<?= asset_version('js/components/VApp.js') ?>"></script>
+<script src="<?= asset_version('js/app.js') ?>"></script>
 </body>
 </html>
