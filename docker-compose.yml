@@ -13,9 +13,9 @@ services:
     volumes:
       - .:/var/www/html
       - ./logs:/var/www/html/logs
+      - ./docker-logs/nginx:/var/log/nginx
       - ~/.ssh:/home/www-data/.ssh
       - ./data:/var/www/html/data
       - /var/log:/host/var/log
       - ~/logs:/host/home/logs
-      - /home/${USER}:/host/home/${USER}:ro
       - /var/run/docker.sock:/var/run/docker.sock
