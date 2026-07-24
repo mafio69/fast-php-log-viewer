@@ -1,0 +1,77 @@
+name: Auto-merge develop -> master
+
+# Po kazdym pushu do develop: jesli phpunit ORAZ docker-smoke-test przejda na zielono,
+# automatycznie robi FAST-FORWARD merge develop -> master i push.
+# Celowo tylko fast-forward (--ff-only) - jesli master i develop sie rozjada (np. ktos
+# scommitowal cos bezposrednio na master), merge PRZERYWA sie z bledem zamiast probowac
+# cokolwiek automatycznie rozwiazywac. Zero automatycznego rozwiazywania konfliktow bez
+# czlowieka - to jest tu najwazniejsza zasada bezpieczenstwa.
+#
+# Hamulec bezpieczenstwa: obecnosc pliku .ci/DEPLOY_PAUSED w repo wstrzymuje merge
+# (testy i tak sie odpala, ale merge/deploy nie).
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  phpunit:
+    uses: ./.github/workflows/phpunit.yml
+
+  docker-smoke-test:
+    uses: ./.github/workflows/docker-smoke-test.yml
+
+  security-scan:
+    uses: ./.github/workflows/security-scan.yml
+
+  check-safety-switch:
+    runs-on: ubuntu-latest
+    outputs:
+      paused: ${{ steps.check.outputs.paused }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: check
+        run: |
+          if [ -f .ci/DEPLOY_PAUSED ]; then
+            echo "paused=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::.ci/DEPLOY_PAUSED istnieje - auto-merge do master WSTRZYMANY."
+          else
+            echo "paused=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  merge-to-master:
+    needs: [phpunit, docker-smoke-test, security-scan, check-safety-switch]
+    if: needs.check-safety-switch.outputs.paused != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      # DEPLOY_PAT musi byc Personal Access Token (classic) z uprawnieniem `repo`
+      # nalezacym do uzytkownika, ktory ma prawo omijania regul ochrony galezi
+      # (branch protection bypass) na galezia master. Bez tego tokenu push do
+      # mastera bedzie blokowany przez regule wymagajaca recenzji PR.
+      # Konfiguracja: Settings -> Secrets -> Actions -> New repository secret -> DEPLOY_PAT
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: develop
+          token: ${{ secrets.DEPLOY_PAT || github.token }}
+
+      - name: Konfiguracja gita
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fast-forward merge develop -> master
+        run: |
+          git fetch origin master
+          git checkout master
+          git merge --ff-only origin/develop
+          git push origin master
+
+      # Zmiana z 2026-07-22 (decyzja uzytkownika): deploy.yml juz NIE jest odpalany
+      # automatycznie stad. Merge do master zostaje automatyczny (po zielonym CI),
+      # ale wdrozenie na serwer wymaga swiadomego, recznego triggera - patrz
+      # deploy.yml (workflow_dispatch) - "Run workflow" w GitHub Actions albo
+      # `gh workflow run deploy.yml --ref master`.

@@ -1,0 +1,62 @@
+name: Docker build + smoke test
+
+# Buduje obraz Dockera tak jak na prawdziwym serwerze i sprawdza, czy kontener
+# faktycznie wstaje (nie wpada w restart loop) i odpowiada na zapytanie HTTP.
+# PHPUnit tego nie lapie, bo nie buduje obrazu Dockera - to osobna bramka.
+
+on:
+  push:
+    branches: [master, develop]
+    paths:
+      - "docker/**"
+      - "docker-compose.yml"
+      - "composer.json"
+      - "composer.lock"
+      - ".github/workflows/docker-smoke-test.yml"
+  pull_request:
+    paths:
+      - "docker/**"
+      - "docker-compose.yml"
+      - "composer.json"
+      - "composer.lock"
+      - ".github/workflows/docker-smoke-test.yml"
+  workflow_call: {} # pozwala wywolac ten workflow z auto-merge-to-master.yml (zawsze, bez wzgledu na paths)
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Przygotuj .env do builda testowego
+        run: |
+          cp .env.example .env
+          sed -i "s/^BACKUP_ENCRYPTION_KEY=.*/BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)/" .env
+
+      - name: Zbuduj i uruchom kontener
+        run: docker compose up -d --build
+
+      - name: Poczekaj i sprawdz czy kontener nie wpadl w restart loop
+        run: |
+          sleep 15
+          CID=$(docker compose ps -q php)
+          STATUS=$(docker inspect -f '{{.State.Status}}' "$CID")
+          RESTARTS=$(docker inspect -f '{{.RestartCount}}' "$CID")
+          echo "Status: $STATUS, RestartCount: $RESTARTS"
+          if [ "$STATUS" != "running" ] || [ "$RESTARTS" -gt 1 ]; then
+            echo "::error::Kontener nie dziala stabilnie (status=$STATUS, restarts=$RESTARTS)"
+            docker compose logs php --tail 100
+            exit 1
+          fi
+
+      - name: Sprawdz czy appka odpowiada
+        run: |
+          curl -f -s -o /dev/null -w "HTTP status: %{http_code}\n" http://127.0.0.1:9123/api/config/default-directories
+
+      - name: Logi kontenera (zawsze, do debugowania)
+        if: always()
+        run: docker compose logs php --tail 100 || true
+
+      - name: Posprzataj
+        if: always()
+        run: docker compose down -v || true

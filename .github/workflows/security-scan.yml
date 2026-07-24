@@ -1,0 +1,29 @@
+name: Security scan (gitleaks)
+
+# Audyt 2026-07-22: pipeline (phpunit + docker-smoke-test + auto-merge + deploy z
+# rollbackiem) byl dojrzaly, ale bez zadnego kroku statycznej analizy bezpieczenstwa /
+# skanu sekretow - znalezisko 1.1 tego samego audytu (osłabiony limiter.ai_api w
+# rate_limiter.yaml) pokazalo ze zwykla zmiana konfiguracyjna oslabiajaca
+# zabezpieczenie moze przejsc CI niezauwazona. Ten workflow skanuje diff/historie
+# gita pod katem przypadkowo scommitowanych sekretow (API keys, tokeny, prywatne
+# klucze) - tani, szybki gate, niezalezny od phpunit/docker-smoke-test.
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+  workflow_call: {} # pozwala wywolac ten workflow z auto-merge-to-master.yml
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # gitleaks skanuje pelna historie, nie tylko ostatni commit
+
+      - name: Uruchom gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
