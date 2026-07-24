@@ -236,6 +236,7 @@ class LogConfig
     {
         return [
             ['key' => 'docker:/var/log',   'path' => '/var/log',       'type' => 'docker',     'name' => 'Kontener (Docker)'],
+            ['key' => 'docker:/var/log/nginx', 'path' => '/var/log/nginx', 'type' => 'docker', 'name' => 'Kontener (nginx)'],
             ['key' => 'host:/var/log',     'path' => '/host/var/log',   'type' => 'host',       'name' => 'Host (Ubuntu)'],
             ['key' => 'host-home:~/logs',  'path' => '/host/home/logs', 'type' => 'home',       'name' => 'Host (~/logs)'],
             ['key' => 'repository:logs',   'path' => 'logs/',           'type' => 'repository', 'name' => 'Aplikacja (logs/)'],
