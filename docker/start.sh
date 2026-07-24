@@ -22,6 +22,16 @@ if [ "$DOCKER_GID" != "0" ]; then
     addgroup www-data docker_host 2>/dev/null || true
 fi
 
+# Add www-data to the host user's group so it can traverse the bind-mounted
+# home directory (typically mode 750, unreadable by other users otherwise)
+for d in /host/home/*/; do
+    HOME_GID=$(stat -c '%g' "$d" 2>/dev/null || echo "0")
+    if [ "$HOME_GID" != "0" ]; then
+        addgroup -g "$HOME_GID" "hostuser_$HOME_GID" 2>/dev/null || true
+        addgroup www-data "hostuser_$HOME_GID" 2>/dev/null || true
+    fi
+done
+
 echo "[start] Testing nginx configuration..."
 nginx -t
 
