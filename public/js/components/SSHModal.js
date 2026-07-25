@@ -18,6 +18,10 @@ window.FPLV.components = window.FPLV.components || [];
                     <h3 class="text-sm font-bold crt-glow">SSH Connections</h3>
                     <button @click="$emit('close')" class="text-xs crt-button">✕</button>
                 </div>
+                <div v-if="store.sshStatusMessage" class="mb-4 p-2 text-xs rounded"
+                    :style="store.sshStatusType === 'error' ? 'border:1px solid #ff0000;color:#ff6666;background:#110000;' : 'border:1px solid #00ff00;color:#00ff00;background:#001100;'">
+                    {{ store.sshStatusMessage }}
+                </div>
                 <div class="mb-4 p-3" style="background:#001100;border:1px solid #00ff00;">
                     <h4 class="text-xs font-bold mb-2 crt-text">{{ store.editingIndex >= 0 ? 'Edit SSH Connection' : 'Add New SSH Connection' }}</h4>
                     <div class="flex flex-col gap-2">

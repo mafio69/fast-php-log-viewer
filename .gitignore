@@ -16,6 +16,7 @@
 /data/app_*.json
 /data/logviewer_backup.json
 /data/2026/
+/data/downloaded_*.log
 /.ai/
 /TODO.md
 /TODO_JUTRO.md

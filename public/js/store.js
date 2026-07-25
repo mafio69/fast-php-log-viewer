@@ -85,6 +85,8 @@ window.FPLV = window.FPLV || {};
         // entries (performPendingSshRead) - set alongside pendingSshRead.
         passwordModalPurpose: 'connect',
         pendingSshRead: null, // {connName, path} while passwordModalPurpose === 'read'
+        sshStatusMessage: '', // inline, non-blocking feedback for the SSH panel (test/save/connect)
+        sshStatusType: 'success', // 'success' | 'error'
         editingIndex: -1,
         sshForm: {...window.FPLV_CONFIG?.sshFormDefaults || {
             name: '', host: '', user: '', port: '22',
@@ -187,6 +189,27 @@ window.FPLV = window.FPLV || {};
         store.connectingConnectionIndex = -1;
         store.passwordForConnection = '';
         store.manualFilePath = '';
+    }
+
+    let sshStatusTimer = null;
+
+    /**
+     * Non-blocking replacement for alert() in the SSH connection flow (test/save/
+     * connect). Native alert()/confirm() block the whole page's JS thread until
+     * dismissed, which made this panel confusing to use (unclear what happened
+     * behind the dialog) and broke browser-automation testing outright (CDP
+     * commands time out while a dialog is open). Success messages auto-clear;
+     * errors stay until the next action replaces them.
+     */
+    function setSshStatus(type, message) {
+        clearTimeout(sshStatusTimer);
+        store.sshStatusType = type;
+        store.sshStatusMessage = message;
+        if (type === 'success') {
+            sshStatusTimer = setTimeout(() => {
+                if (store.sshStatusMessage === message) store.sshStatusMessage = '';
+            }, 4000);
+        }
     }
 
     const levelColor = l => LEVEL_COLORS[l] ?? '#9ca3af';
@@ -626,8 +649,17 @@ window.FPLV = window.FPLV || {};
     async function loadEntries() {
         if (!store.selectedFile) return;
         if (store.selectedDir && store.selectedDir.startsWith('ssh:')) {
-            await loadSshFileEntries(store.selectedDir.replace('ssh:', ''), store.selectedFile);
-            return;
+            const connName = store.selectedDir.replace('ssh:', '');
+            const fileEntry = (store.sshFiles[connName] || []).find(f => f.file === store.selectedFile);
+            // "Download File" saves a LOCAL copy first (fileEntry.sshLocal) and its
+            // path should still go through the plain local-file read below (which
+            // FileAccessValidator's ssh: dirKey branch already handles via
+            // realpath()) - only entries from live directory listings (no local
+            // copy) are remote paths that need fetching over SSH on demand.
+            if (!fileEntry || !fileEntry.sshLocal) {
+                await loadSshFileEntries(connName, store.selectedFile);
+                return;
+            }
         }
         store.loading = true;
         clearExpanded();
@@ -928,19 +960,19 @@ window.FPLV = window.FPLV || {};
             });
             const data = await res.json();
             if (data.success) {
-                alert('SSH connection successful!');
+                setSshStatus('success', 'SSH connection successful!');
             } else {
-                alert('SSH connection failed: ' + (data.error || 'Unknown error'));
+                setSshStatus('error', 'SSH connection failed: ' + (data.error || 'Unknown error'));
             }
         } catch (e) {
-            alert('SSH connection failed: ' + e.message);
+            setSshStatus('error', 'SSH connection failed: ' + e.message);
         }
     }
 
     function addSSHConnection() {
         const form = store.sshForm;
         if (!form.name || !form.host || !form.user) {
-            alert('Please fill in name, host, and user');
+            setSshStatus('error', 'Please fill in name, host, and user');
             return;
         }
         const conn = {
@@ -950,10 +982,10 @@ window.FPLV = window.FPLV || {};
         };
         if (store.editingIndex >= 0) {
             store.sshConnections[store.editingIndex] = conn;
-            alert('SSH connection updated!');
+            setSshStatus('success', 'SSH connection updated!');
         } else {
             store.sshConnections.push(conn);
-            alert('SSH connection saved!');
+            setSshStatus('success', 'SSH connection saved!');
         }
         localStorage.setItem('fplv_ssh_connections', JSON.stringify(store.sshConnections));
         store.editingIndex = -1;
@@ -981,6 +1013,11 @@ window.FPLV = window.FPLV || {};
     function cancelEdit() {
         store.editingIndex = -1;
         Object.assign(store.sshForm, SSH_FORM_DEFAULTS);
+    }
+
+    function openSSHModal() {
+        store.showSSHModal = true;
+        store.sshStatusMessage = '';
     }
 
     function connectSSH(idx) {
@@ -1070,7 +1107,7 @@ window.FPLV = window.FPLV || {};
             }
             store.showSSHModal = false;
         } catch (e) {
-            alert('SSH connection failed: ' + e.message);
+            setSshStatus('error', 'SSH connection failed: ' + e.message);
         } finally {
             store.loading = false;
         }
@@ -1082,7 +1119,7 @@ window.FPLV = window.FPLV || {};
         const password = store.passwordForConnection;
         store.showPasswordModal = false;
         if (conn.authMethod === 'password' && !password) {
-            alert('SSH password is required for this connection');
+            setSshStatus('error', 'SSH password is required for this connection');
             resetConnectionState();
             return;
         }
@@ -1107,7 +1144,7 @@ window.FPLV = window.FPLV || {};
                 applyFilters();
             } catch (e) {
                 delete store.sshActiveCredentials[connName];
-                alert('Błąd odczytu pliku SSH: ' + e.message);
+                setSshStatus('error', 'Błąd odczytu pliku SSH: ' + e.message);
             } finally {
                 store.loading = false;
             }
@@ -1116,7 +1153,7 @@ window.FPLV = window.FPLV || {};
 
         const conn = store.sshConnections.find(c => c.name === connName);
         if (!conn) {
-            alert('Nieznane połączenie SSH: ' + connName);
+            setSshStatus('error', 'Nieznane połączenie SSH: ' + connName);
             return;
         }
 
@@ -1129,13 +1166,16 @@ window.FPLV = window.FPLV || {};
                 store.filtered = store.entries;
                 applyFilters();
             } catch (e) {
-                alert('Błąd odczytu pliku SSH: ' + e.message);
+                setSshStatus('error', 'Błąd odczytu pliku SSH: ' + e.message);
             } finally {
                 store.loading = false;
             }
             return;
         }
 
+        // Same requirement as connectSSH(): <ssh-modal> (host of the password
+        // dialog's template) only mounts when store.showSSHModal is true.
+        store.showSSHModal = true;
         store.pendingSshRead = {connName, path};
         store.passwordModalPurpose = 'read';
         store.passwordForConnection = '';
@@ -1152,7 +1192,7 @@ window.FPLV = window.FPLV || {};
         const conn = store.sshConnections.find(c => c.name === pending.connName);
         if (!conn) return;
         if (!password) {
-            alert('SSH password is required for this connection');
+            setSshStatus('error', 'SSH password is required for this connection');
             return;
         }
 
@@ -1164,7 +1204,7 @@ window.FPLV = window.FPLV || {};
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
-            alert('Błąd odczytu pliku SSH: ' + e.message);
+            setSshStatus('error', 'Błąd odczytu pliku SSH: ' + e.message);
         } finally {
             store.loading = false;
             store.passwordForConnection = '';
@@ -1203,11 +1243,11 @@ window.FPLV = window.FPLV || {};
         const password = store.passwordForConnection;
         let filePath = store.manualFilePath;
         if (!filePath) {
-            alert('Please enter a file path');
+            setSshStatus('error', 'Please enter a file path');
             return;
         }
         if (conn.authMethod === 'password' && !password) {
-            alert('SSH password is required for this connection');
+            setSshStatus('error', 'SSH password is required for this connection');
             return;
         }
         if (!filePath.startsWith('/')) filePath = '/' + filePath;
@@ -1224,7 +1264,7 @@ window.FPLV = window.FPLV || {};
             });
             const downloadData = await downloadRes.json();
             if (!downloadData.success) {
-                alert('Failed to download file: ' + (downloadData.error || 'Unknown error'));
+                setSshStatus('error', 'Failed to download file: ' + (downloadData.error || 'Unknown error'));
                 return;
             }
             if (!store.sshFiles[conn.name]) store.sshFiles[conn.name] = [];
@@ -1232,7 +1272,8 @@ window.FPLV = window.FPLV || {};
                 store.sshFiles[conn.name].push({
                     file: downloadData.localPath,
                     date: new Date().toISOString().split('T')[0],
-                    size: downloadData.size
+                    size: downloadData.size,
+                    sshLocal: true,
                 });
             }
             const sshKey = 'ssh:' + conn.name;
@@ -1243,9 +1284,9 @@ window.FPLV = window.FPLV || {};
             store.files = store.sshFiles[conn.name];
             store.selectedFile = downloadData.localPath;
             await loadEntries();
-            alert(`File ${filePath} downloaded successfully!\nSaved as: ${downloadData.localPath}\nSize: ${downloadData.size} bytes\nLoaded ${store.filtered.length} log entries`);
+            setSshStatus('success', `Pobrano ${filePath} (${downloadData.size} B), ${store.filtered.length} wpisów`);
         } catch (e) {
-            alert('SSH operation failed: ' + e.message);
+            setSshStatus('error', 'SSH operation failed: ' + e.message);
         } finally {
             resetConnectionState();
         }
@@ -1287,7 +1328,7 @@ window.FPLV = window.FPLV || {};
         removeBookmark, goToBookmark, validateBookmarks,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
-        cancelEdit, connectSSH, executeSSHConnection, submitPasswordModal, cancelPasswordModal,
+        cancelEdit, openSSHModal, connectSSH, executeSSHConnection, submitPasswordModal, cancelPasswordModal,
         addManualSSHFile, executeManualFileAdd, cancelManualFileModal, proceedStep,
         openDirManager, deleteDirectoryEntry, deferDirectoryEntry, restoreDirectoryEntry,
         deleteAllowedContainerEntry, deleteAllowedPathEntry,
