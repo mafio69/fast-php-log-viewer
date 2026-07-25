@@ -33,6 +33,25 @@ jobs:
           cp .env.example .env
           sed -i "s/^BACKUP_ENCRYPTION_KEY=.*/BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)/" .env
 
+      - name: Zainstaluj vendor/ na hoscie
+        # docker-compose.yml bind-mountuje ".:/var/www/html" (wygodne przy lokalnym
+        # dev - kod zywy bez rebuildu obrazu), co NADPISUJE vendor/ zbudowany w obrazie
+        # przez Dockerfile zawartoscia hosta. Na czystym checkout (bez lokalnie
+        # zainstalowanego vendor/, tak jak tu) to zostawia kontener bez autoloadera.
+        # Uzywamy oficjalnego obrazu composer, zeby nie musiec dopasowywac wersji PHP
+        # i rozszerzen (ext-ssh2 itp.) na samym runnerze - liczy sie tylko wynikowe
+        # drzewo plikow, kod i tak wykonuje sie wewnatrz kontenera aplikacji.
+        run: docker run --rm -v "$PWD":/app -w /app composer:2 install --no-dev --optimize-autoloader --ignore-platform-reqs
+
+      - name: Upewnij sie, ze data/ i logs/ sa zapisywalne dla www-data w kontenerze
+        # Ten sam bind-mount co wyzej sprawia, ze uprawnienia data/ i logs/ WEWNATRZ
+        # kontenera pochodza z hosta, a nie z "chown www-data" w Dockerfile. Na swiezym
+        # checkout (UID hosta != UID www-data w kontenerze) PDO SQLite nie moze
+        # utworzyc data/logviewer.db - stad chmod 777 tylko na potrzeby tego testu.
+        run: |
+          mkdir -p data logs
+          chmod -R 777 data logs
+
       - name: Zbuduj i uruchom kontener
         run: docker compose up -d --build
 
