@@ -20,6 +20,8 @@ window.FPLV = window.FPLV || {};
         directFilePath: '',
         directFileMode: 'docker',
         containerId: '',
+        containerCheckStatus: '', // '' | 'checking' | 'ok' | 'not_found' | 'not_allowed' | 'path_not_allowed' | 'error'
+        selectedFileContainerId: '', // container_id the currently selected/listed files came from, '' for local/host
 
         // Filter state
         filterText: '',
@@ -103,6 +105,7 @@ window.FPLV = window.FPLV || {};
 
     // Watchers
     Vue.watch(() => store.fontSize, v => localStorage.setItem('fplv_fontsize', String(v)));
+    Vue.watch(() => [store.containerId, store.directFilePath, store.directFileMode], () => scheduleContainerCheck());
 
     // Computed
     const mergedDirectories = computed(() => ({
@@ -253,26 +256,28 @@ window.FPLV = window.FPLV || {};
     async function loadDirectFile() {
         const path = store.directFilePath.trim();
         if (!path) {
-            alert('Wpisz ścieżkę do pliku');
+            alert('Wpisz ścieżkę do ' + (store.directFileMode === 'docker' ? 'katalogu' : 'pliku'));
             return;
         }
-        const containerId = store.containerId.trim();
-        let resolvedPath = path;
-        if (!containerId && store.directFileMode === 'host') {
-            resolvedPath = '/host' + path;
+
+        if (store.directFileMode === 'docker') {
+            await loadDirectDockerFiles(path);
+            return;
         }
+
+        await loadDirectHostFile(path);
+    }
+
+    async function loadDirectHostFile(path) {
+        const resolvedPath = '/host' + path;
         store.selectedFile = path;
         try {
             store.loading = true;
-            let url = '/api/entries?file=' + encodeURIComponent(resolvedPath);
-            if (containerId) {
-                url += '&container_id=' + encodeURIComponent(containerId);
-            }
-            store.entries = await fetchJson(url);
+            store.entries = await fetchJson('/api/entries?file=' + encodeURIComponent(resolvedPath));
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
-            if (!containerId && e.message.includes('access_denied')) {
+            if (e.message.includes('access_denied')) {
                 const parentDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
                 if (parentDir) {
                     try {
@@ -283,20 +288,116 @@ window.FPLV = window.FPLV || {};
                         return;
                     } catch (e2) {
                         alert('Nie udało się dodać katalogu: ' + e2.message);
+                        return;
                     }
                 }
-            } else if (e.message.includes('file_not_found')) {
+            }
+            if (e.message.includes('file_not_found')) {
                 alert('Plik nie istnieje: ' + path);
-            } else if (e.message.includes('container_not_found')) {
-                alert('Kontener nie znaleziony: ' + containerId);
-            } else if (e.message.includes('docker_unavailable')) {
-                alert('Docker niedostępny. Zamontuj /var/run/docker.sock.');
             } else {
                 alert('Błąd ładowania pliku: ' + e.message);
             }
             console.error('Load direct file error:', e);
         } finally {
             store.loading = false;
+        }
+    }
+
+    async function loadDirectDockerFiles(dirPath) {
+        const containerId = store.containerId.trim();
+        try {
+            store.loading = true;
+            let url = '/api/files?path=' + encodeURIComponent(dirPath);
+            if (containerId) {
+                url += '&container_id=' + encodeURIComponent(containerId);
+            }
+            const files = await fetchJson(url);
+
+            store.selectedDir = '';
+            store.selectedFileContainerId = containerId;
+            store.files = files;
+            if (files.length) {
+                store.selectedFile = files[0].file;
+                await loadEntries();
+            } else {
+                store.selectedFile = '';
+                store.entries = [];
+                store.filtered = [];
+            }
+
+            if (containerId) {
+                await saveDirectoryShortcut({
+                    name: containerId + ':' + dirPath,
+                    path: dirPath,
+                    type: 'docker',
+                    container_id: containerId,
+                });
+            }
+        } catch (e) {
+            if (e.message.includes('container_not_found')) {
+                alert('Kontener nie znaleziony: ' + containerId);
+            } else if (e.message.includes('container_not_allowed')) {
+                alert('Kontener nie jest na liście dozwolonych: ' + containerId);
+            } else if (e.message.includes('path_not_allowed')) {
+                alert('Ścieżka niedozwolona: ' + dirPath);
+            } else if (e.message.includes('docker_unavailable')) {
+                alert('Docker niedostępny. Zamontuj /var/run/docker.sock.');
+            } else {
+                alert('Błąd ładowania katalogu: ' + e.message);
+            }
+            console.error('Load direct docker directory error:', e);
+        } finally {
+            store.loading = false;
+        }
+    }
+
+    let containerCheckTimer = null;
+
+    function scheduleContainerCheck() {
+        clearTimeout(containerCheckTimer);
+        const containerId = store.containerId.trim();
+        const path = store.directFilePath.trim();
+        if (store.directFileMode !== 'docker' || !containerId || !path) {
+            store.containerCheckStatus = '';
+            return;
+        }
+        store.containerCheckStatus = 'checking';
+        containerCheckTimer = setTimeout(checkContainerPath, 500);
+    }
+
+    async function checkContainerPath() {
+        const containerId = store.containerId.trim();
+        const path = store.directFilePath.trim();
+        if (!containerId || !path) return;
+        try {
+            await fetchJson('/api/files?container_id=' + encodeURIComponent(containerId) + '&path=' + encodeURIComponent(path));
+            store.containerCheckStatus = 'ok';
+        } catch (e) {
+            if (e.message.includes('container_not_found')) store.containerCheckStatus = 'not_found';
+            else if (e.message.includes('container_not_allowed')) store.containerCheckStatus = 'not_allowed';
+            else if (e.message.includes('path_not_allowed')) store.containerCheckStatus = 'path_not_allowed';
+            else store.containerCheckStatus = 'error';
+        }
+    }
+
+    /**
+     * Silently persists a directory shortcut to the "Zapisane" list (log_directories
+     * table), refreshing store.directories so it shows up without a page reload.
+     * Unlike addAllowedDir(), this doesn't alert() - it's a background convenience
+     * save after a successful browse, not a user-initiated "add directory" action.
+     */
+    async function saveDirectoryShortcut(config) {
+        try {
+            const res = await fetch('/api/config/directories', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+            const data = await res.json();
+            if (data.success) {
+                await loadDirectories();
+            }
+        } catch (e) {
+            console.error('Failed to save directory shortcut:', e);
         }
     }
 
@@ -338,6 +439,7 @@ window.FPLV = window.FPLV || {};
         store.selectedFile = '';
         store.entries = [];
         store.filtered = [];
+        store.selectedFileContainerId = '';
         await loadFiles();
     }
 
@@ -351,9 +453,15 @@ window.FPLV = window.FPLV || {};
         store.loading = true;
         clearExpanded();
         try {
-            const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
-            const dirParam = def ? def.path : store.selectedDir;
-            const url = '/api/entries?file=' + encodeURIComponent(store.selectedFile) + '&dir=' + encodeURIComponent(dirParam);
+            let url;
+            if (store.selectedFileContainerId) {
+                url = '/api/entries?file=' + encodeURIComponent(store.selectedFile)
+                    + '&container_id=' + encodeURIComponent(store.selectedFileContainerId);
+            } else {
+                const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
+                const dirParam = def ? def.path : store.selectedDir;
+                url = '/api/entries?file=' + encodeURIComponent(store.selectedFile) + '&dir=' + encodeURIComponent(dirParam);
+            }
             store.entries = await fetchJson(url);
             applyFilters();
         } finally {

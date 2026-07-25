@@ -87,9 +87,13 @@ class DockerExecService
         $this->assertContainerAllowed($containerId);
         $this->assertPathAllowed($dirPath);
 
+        // A literal tab byte, not the two-char "\t", is embedded directly in the
+        // format string: BusyBox stat (Alpine images) doesn't interpret "\t" as an
+        // escape sequence the way GNU stat does - it would print a literal
+        // backslash+t instead of a tab, breaking the parseListing() regex below.
         $execId = $this->createExec($containerId, [
             'find', $dirPath, '-maxdepth', '1', '-type', 'f',
-            '-exec', 'stat', '-c', '%Y\t%s\t%n', '{}', ';',
+            '-exec', 'stat', '-c', "%Y\t%s\t%n", '{}', ';',
         ]);
         $output = $this->startExec($execId);
 
@@ -168,7 +172,10 @@ class DockerExecService
     private function assertPathAllowed(string $filePath): void
     {
         foreach ($this->allowedPathPrefixes as $prefix) {
-            if (str_starts_with($filePath, $prefix)) {
+            // A bare directory like "/var/log" (no trailing slash) is a legitimate
+            // input for listFiles() but never satisfies str_starts_with() against
+            // a "/var/log/" prefix - accept an exact match of the prefix itself too.
+            if ($filePath === rtrim($prefix, '/') || str_starts_with($filePath, $prefix)) {
                 return;
             }
         }

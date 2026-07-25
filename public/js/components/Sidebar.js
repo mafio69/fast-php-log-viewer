@@ -50,7 +50,7 @@ window.FPLV.components = window.FPLV.components || [];
                 </div>
             </div>
             <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
-                <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO PLIKU</div>
+                <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO {{ store.directFileMode === 'docker' ? 'KATALOGU' : 'PLIKU' }}</div>
                 <input v-if="store.directFileMode !== 'host'" type="text" v-model="store.containerId" placeholder="container_name (opcjonalnie)"
                     name="fplv_container_id" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2" style="color:#00aacc;">
@@ -62,10 +62,11 @@ window.FPLV.components = window.FPLV.components || [];
                         :style="store.directFileMode === 'host' ? 'background:#0066cc;color:#fff;' : 'background:#001133;color:#0066cc;'"
                         class="flex-1 rounded px-2 py-1 text-xs font-bold">💻 HOST</button>
                 </div>
-                <div v-if="store.containerId" class="text-xs crt-text mb-2" style="color:#00aacc;">
-                    📦 czytanie z kontenera
+                <div v-if="store.containerId && store.containerCheckStatus" class="text-xs mb-2" :style="containerCheckStyle">
+                    {{ containerCheckLabel }}
                 </div>
-                <input type="text" v-model="store.directFilePath" placeholder="/var/log/php/php_errors.log"
+                <input type="text" v-model="store.directFilePath"
+                    :placeholder="store.directFileMode === 'docker' ? '/var/log' : '/var/log/php/php_errors.log'"
                     name="fplv_direct_file_path" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
                 <button @click="$emit('load-direct-file')" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">⚡ ZAŁADUJ</button>
@@ -75,12 +76,31 @@ window.FPLV.components = window.FPLV.components || [];
             </div>
         </aside>
         `,
-        setup() {
+        setup(props) {
+            const CONTAINER_CHECK_LABELS = {
+                checking: '⏳ sprawdzam...',
+                ok: '✅ kontener OK',
+                not_found: '❌ kontener nie znaleziony',
+                not_allowed: '❌ kontener niedozwolony',
+                path_not_allowed: '❌ ścieżka niedozwolona',
+                error: '❌ błąd sprawdzania',
+            };
+            const CONTAINER_CHECK_COLORS = {
+                checking: '#cccc00',
+                ok: '#00ff00',
+                not_found: '#ff6600',
+                not_allowed: '#ff6600',
+                path_not_allowed: '#ff6600',
+                error: '#ff6600',
+            };
+
             return {
                 mergedDirectories: F.mergedDirectories,
                 formatDate: F.formatDate,
                 formatSize: F.formatSize,
                 formatDirLabel: F.formatDirLabel,
+                containerCheckLabel: Vue.computed(() => CONTAINER_CHECK_LABELS[props.store.containerCheckStatus] || ''),
+                containerCheckStyle: Vue.computed(() => 'color:' + (CONTAINER_CHECK_COLORS[props.store.containerCheckStatus] || '#00aacc') + ';'),
             };
         }
     });

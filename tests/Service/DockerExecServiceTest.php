@@ -180,6 +180,19 @@ class DockerExecServiceTest extends TestCase
         $service->listFiles('allowed-container', '/etc');
     }
 
+    public function testListFilesAcceptsBareDirectoryMatchingPrefixWithoutTrailingSlash(): void
+    {
+        // Users naturally type "/var/log" without a trailing slash when browsing
+        // a directory; it must match the "/var/log/" allow-list prefix too, not
+        // just paths that already have a trailing slash.
+        $service = new DockerExecService(['allowed-container'], ['/var/log/']);
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('assertPathAllowed');
+
+        $method->invoke($service, '/var/log');
+        $this->addToAssertionCount(1);
+    }
+
     public function testParseListingParsesStatOutput(): void
     {
         $service = new DockerExecService();
