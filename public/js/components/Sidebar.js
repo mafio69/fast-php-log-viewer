@@ -54,7 +54,7 @@ window.FPLV.components = window.FPLV.components || [];
                 <input v-if="store.directFileMode !== 'host'" type="text" v-model="store.containerId" placeholder="container_name (opcjonalnie)"
                     name="fplv_container_id" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2" style="color:#00aacc;">
-                <div v-if="!store.containerId" class="flex gap-1 mb-2">
+                <div class="flex gap-1 mb-2">
                     <button @click="store.directFileMode = 'docker'"
                         :style="store.directFileMode === 'docker' ? 'background:#00aa00;color:#000;' : 'background:#002200;color:#00aa00;'"
                         class="flex-1 rounded px-2 py-1 text-xs font-bold">🐳 DOCKER</button>
