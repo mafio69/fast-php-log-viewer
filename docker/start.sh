@@ -5,6 +5,14 @@ set -eu
 touch /var/log/nginx/access.log /var/log/nginx/error.log 2>/dev/null || true
 chmod 666 /var/log/nginx/access.log /var/log/nginx/error.log 2>/dev/null || true
 
+# php-errors.ini points error_log at logs/php-error/php_errors.log, but that
+# directory lives under the ".:/var/www/html" bind mount - on a clean checkout
+# it doesn't exist yet, so PHP-FPM has nowhere to write it. Create it here (at
+# container runtime, after the bind mount is already in effect) rather than in
+# the Dockerfile, whose own mkdir would just get shadowed by the mount.
+mkdir -p /var/www/html/logs/php-error 2>/dev/null || true
+chown www-data:www-data /var/www/html/logs/php-error 2>/dev/null || true
+
 # Add www-data to adm group for log access
 addgroup www-data adm 2>/dev/null || true
 
