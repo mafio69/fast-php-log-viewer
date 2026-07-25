@@ -25,8 +25,14 @@ window.FPLV.components = window.FPLV.components || [];
                 @load-direct-file="loadDirectFile"
                 @refresh-ssh-dir="refreshSSHDir"
                 @open-ssh-modal="store.showSSHModal = true"
+                @open-dir-manager="openDirManager"
                 @cancel-edit="cancelEdit"
             ></sidebar>
+            <dir-manager-modal
+                v-if="store.showDirManager"
+                :store="store"
+                @close="store.showDirManager = false"
+            ></dir-manager-modal>
             <ssh-modal
                 v-if="store.showSSHModal"
                 :store="store"
@@ -76,6 +82,7 @@ window.FPLV.components = window.FPLV.components || [];
                 changeDir: F.changeDir,
                 loadDirectFile: F.loadDirectFile,
                 refreshSSHDir: F.refreshSSHDir,
+                openDirManager: F.openDirManager,
                 cancelEdit: F.cancelEdit,
                 testSSHConnection: F.testSSHConnection,
                 addSSHConnection: F.addSSHConnection,

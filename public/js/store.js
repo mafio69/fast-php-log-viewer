@@ -23,6 +23,12 @@ window.FPLV = window.FPLV || {};
         containerCheckStatus: '', // '' | 'checking' | 'ok' | 'not_found' | 'not_allowed' | 'path_not_allowed' | 'error'
         selectedFileContainerId: '', // container_id the currently selected/listed files came from, '' for local/host
 
+        // Directory/container management panel (Zapisane / Odłożone / Config)
+        showDirManager: false,
+        dirManagerTab: 'saved', // 'saved' | 'deferred' | 'config'
+        deferredDirectories: [],
+        allowedContainersList: [],
+
         // Filter state
         filterText: '',
         excludedLevels: [],
@@ -108,9 +114,19 @@ window.FPLV = window.FPLV || {};
     Vue.watch(() => [store.containerId, store.directFilePath, store.directFileMode], () => scheduleContainerCheck());
 
     // Computed
-    const mergedDirectories = computed(() => ({
-        defaults: {label: 'Domyślne', items: store.defaultDirectories},
-    }));
+    const mergedDirectories = computed(() => {
+        const groups = {
+            defaults: {label: 'Domyślne', items: store.defaultDirectories},
+            saved: {label: 'Zapisane', items: store.directories},
+        };
+        // Vue 3 evaluates v-if before v-for on the same element, so an empty
+        // group can't be skipped in the template (group would be undefined
+        // there) - filtering here is the option that actually works.
+        for (const key of Object.keys(groups)) {
+            if (!groups[key].items.length) delete groups[key];
+        }
+        return groups;
+    });
 
     const levelCounts = computed(() => {
         const c = {};
@@ -203,9 +219,22 @@ window.FPLV = window.FPLV || {};
         return entry.datetime + '|' + entry.message.slice(0, 80);
     }
 
+    // A "Zapisane" entry of type docker needs container_id+path, not the dir=
+    // lookup that works for local/ssh saved entries - findSavedDockerDir() is
+    // the single place that decides this, shared by filesApiUrl() and loadFiles()
+    // so bookmark validation (which also calls filesApiUrl()) gets it right too.
+    function findSavedDockerDir() {
+        const saved = store.directories.find(d => d.key === store.selectedDir);
+        return (saved && saved.type === 'docker' && saved.container_id) ? saved : null;
+    }
+
     function filesApiUrl() {
         const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
         if (def) return '?path=' + encodeURIComponent(def.path);
+        const dockerDir = findSavedDockerDir();
+        if (dockerDir) {
+            return '?container_id=' + encodeURIComponent(dockerDir.container_id) + '&path=' + encodeURIComponent(dockerDir.path);
+        }
         if (store.selectedDir) return '?dir=' + encodeURIComponent(store.selectedDir);
         return '';
     }
@@ -242,6 +271,8 @@ window.FPLV = window.FPLV || {};
             }
             return;
         }
+        const dockerDir = findSavedDockerDir();
+        store.selectedFileContainerId = dockerDir ? dockerDir.container_id : '';
         store.files = await fetchJson('/api/files' + filesApiUrl());
         if (store.files.length) {
             store.selectedFile = store.files[0].file;
@@ -337,7 +368,9 @@ window.FPLV = window.FPLV || {};
             if (e.message.includes('container_not_found')) {
                 alert('Kontener nie znaleziony: ' + containerId);
             } else if (e.message.includes('container_not_allowed')) {
-                alert('Kontener nie jest na liście dozwolonych: ' + containerId);
+                if (confirm(containerNotAllowedExplanation(containerId))) {
+                    await allowContainerAndRetry(containerId, dirPath);
+                }
             } else if (e.message.includes('path_not_allowed')) {
                 alert('Ścieżka niedozwolona: ' + dirPath);
             } else if (e.message.includes('docker_unavailable')) {
@@ -349,6 +382,35 @@ window.FPLV = window.FPLV || {};
         } finally {
             store.loading = false;
         }
+    }
+
+    function containerNotAllowedExplanation(containerId) {
+        return 'Kontener "' + containerId + '" nie jest na liście dozwolonych.\n\n'
+            + 'Dlaczego to pytanie: ta aplikacja ma dostęp do gniazda Dockera (docker.sock) i działa '
+            + 'jako serwer WWW bez logowania. Bez tej listy dowolna złośliwa strona otwarta w tej samej '
+            + 'przeglądarce mogłaby po cichu (CSRF, przez localhost) odczytać pliki z DOWOLNEGO kontenera '
+            + 'na tym hoście - nie tylko z tego, który właśnie chcesz przejrzeć.\n\n'
+            + 'Dodanie kontenera do listy to świadoma decyzja, że mu ufasz. Zostaje zapamiętana w aplikacji, '
+            + 'nie trzeba tego powtarzać.\n\n'
+            + 'Dodać "' + containerId + '" do dozwolonych i spróbować ponownie?';
+    }
+
+    async function allowContainerAndRetry(containerId, dirPath) {
+        try {
+            const res = await fetch('/api/config/allowed-containers', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({container_id: containerId})
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert('Nie udało się dodać kontenera: ' + (data.error || 'unknown'));
+                return;
+            }
+        } catch (e) {
+            alert('Błąd dodawania kontenera: ' + e.message);
+            return;
+        }
+        await loadDirectDockerFiles(dirPath);
     }
 
     let containerCheckTimer = null;
@@ -399,6 +461,56 @@ window.FPLV = window.FPLV || {};
         } catch (e) {
             console.error('Failed to save directory shortcut:', e);
         }
+    }
+
+    // ---- Directory/container management panel ----
+
+    async function openDirManager() {
+        store.showDirManager = true;
+        store.dirManagerTab = 'saved';
+        await Promise.all([loadDeferredDirectories(), loadAllowedContainersList()]);
+    }
+
+    async function loadDeferredDirectories() {
+        try {
+            store.deferredDirectories = await fetchJson('/api/config/directories/deferred');
+        } catch (e) {
+            console.error('Failed to load deferred directories:', e);
+        }
+    }
+
+    async function loadAllowedContainersList() {
+        try {
+            store.allowedContainersList = await fetchJson('/api/config/allowed-containers');
+        } catch (e) {
+            console.error('Failed to load allowed containers:', e);
+        }
+    }
+
+    async function deleteDirectoryEntry(id) {
+        await fetch('/api/config/directories/' + id, {method: 'DELETE'});
+        await Promise.all([loadDirectories(), loadDeferredDirectories()]);
+    }
+
+    async function deferDirectoryEntry(id) {
+        await fetch('/api/config/directories/' + id, {
+            method: 'PUT', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({is_active: 0})
+        });
+        await Promise.all([loadDirectories(), loadDeferredDirectories()]);
+    }
+
+    async function restoreDirectoryEntry(id) {
+        await fetch('/api/config/directories/' + id, {
+            method: 'PUT', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({is_active: 1})
+        });
+        await Promise.all([loadDirectories(), loadDeferredDirectories()]);
+    }
+
+    async function deleteAllowedContainerEntry(id) {
+        await fetch('/api/config/allowed-containers/' + id, {method: 'DELETE'});
+        await loadAllowedContainersList();
     }
 
     async function addAllowedDir(dir) {
@@ -964,5 +1076,7 @@ window.FPLV = window.FPLV || {};
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
         cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal,
         addManualSSHFile, executeManualFileAdd, cancelManualFileModal, proceedStep,
+        openDirManager, deleteDirectoryEntry, deferDirectoryEntry, restoreDirectoryEntry,
+        deleteAllowedContainerEntry,
     });
 })();

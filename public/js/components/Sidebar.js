@@ -10,7 +10,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'Sidebar',
         props: ['store'],
-        emits: ['select-file', 'change-dir', 'load-direct-file', 'refresh-ssh-dir', 'open-ssh-modal', 'cancel-edit'],
+        emits: ['select-file', 'change-dir', 'load-direct-file', 'refresh-ssh-dir', 'open-ssh-modal', 'open-dir-manager', 'cancel-edit'],
         template: `
         <aside style="width:350px;min-width:350px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
             <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
@@ -23,7 +23,7 @@ window.FPLV.components = window.FPLV.components || [];
                 </div>
             </div>
             <div v-if="store.defaultDirectories.length" class="px-3 py-2" style="border-bottom:1px solid #00ff00;">
-                <div class="text-xs font-semibold mb-1 crt-dim">KATALOG</div>
+                <div class="text-xs font-semibold mb-1 crt-dim">KATALOG (szybki dostęp)</div>
                 <div class="flex gap-2">
                     <select v-model="store.selectedDir" @change="$emit('change-dir')" class="flex-1 rounded px-2 py-1 text-xs crt-input" style="min-width:0;">
                         <optgroup v-for="(group, gkey) in mergedDirectories" :key="gkey" :label="group.label">
@@ -31,6 +31,7 @@ window.FPLV.components = window.FPLV.components || [];
                         </optgroup>
                     </select>
                     <button v-if="store.selectedDir && store.selectedDir.startsWith('ssh:')" @click="$emit('refresh-ssh-dir', store.selectedDir)" class="px-2 py-1 text-xs crt-button" title="Odśwież">↻</button>
+                    <button @click="$emit('open-dir-manager')" class="px-2 py-1 text-xs crt-button" title="Zarządzaj zapisanymi katalogami i kontenerami">⚙</button>
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto" style="flex:6;">
