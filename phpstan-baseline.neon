@@ -79,31 +79,13 @@ parameters:
 			path: src/Config/LogConfig.php
 
 		-
-			message: '#^Method Mariusz\\LogViewer\\Config\\LogConfig\:\:getValidDirectories\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Config/LogConfig.php
-
-		-
 			message: '#^Method Mariusz\\LogViewer\\Config\\LogConfig\:\:updateDirectory\(\) has parameter \$config with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Config/LogConfig.php
 
 		-
-			message: '#^Method Mariusz\\LogViewer\\Controller\\AppConfigController\:\:json\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controller/AppConfigController.php
-
-		-
 			message: '#^Method Mariusz\\LogViewer\\Controller\\DirectoryController\:\:delete\(\) has parameter \$args with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controller/DirectoryController.php
-
-		-
-			message: '#^Method Mariusz\\LogViewer\\Controller\\DirectoryController\:\:json\(\) has parameter \$data with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Controller/DirectoryController.php
@@ -113,12 +95,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Controller/DirectoryController.php
-
-		-
-			message: '#^Method Mariusz\\LogViewer\\Controller\\LogController\:\:json\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controller/LogController.php
 
 		-
 			message: '#^Method Mariusz\\LogViewer\\Controller\\SSHController\:\:extractSSHData\(\) has parameter \$data with no value type specified in iterable type array\.$#'
@@ -131,18 +107,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Controller/SSHController.php
-
-		-
-			message: '#^Method Mariusz\\LogViewer\\Controller\\SSHController\:\:json\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controller/SSHController.php
-
-		-
-			message: '#^Method Mariusz\\LogViewer\\Controller\\SetupController\:\:json\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controller/SetupController.php
 
 		-
 			message: '#^Method Mariusz\\LogViewer\\Routing\\LegacyRouter\:\:getActionMap\(\) return type has no value type specified in iterable type array\.$#'

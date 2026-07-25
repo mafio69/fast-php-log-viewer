@@ -10,6 +10,7 @@ use DI\ContainerBuilder;
 use Mariusz\Logger\DualLogger;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Controller\AllowedContainerController;
 use Mariusz\LogViewer\Controller\AppConfigController;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Controller\LogController;
@@ -128,9 +129,15 @@ return function (ContainerBuilder $containerBuilder): void {
             return new SecurityService();
         },
 
-        // DockerExecService - brak zależności
-        DockerExecService::class => function () {
-            return new DockerExecService();
+        // DockerExecService - allow-lista kontenerow to suma env (LOG_VIEWER_ALLOWED_CONTAINERS,
+        // ustawiane raz, np. w produkcji) i tego, co user dopisal w runtime przez UI (przechowywane
+        // w LogConfig - patrz AllowedContainerController), zeby dodanie kontenera nie wymagalo
+        // edycji .env ani restartu.
+        DockerExecService::class => function ($c) {
+            $fromEnv = DockerExecService::containersFromEnv();
+            $fromDb = $c->get(LogConfig::class)->getAllowedContainers();
+
+            return new DockerExecService(array_values(array_unique(array_merge($fromEnv, $fromDb))));
         },
 
         // DirectoryController - wstrzykuje LogConfig i LogScanner
@@ -139,6 +146,11 @@ return function (ContainerBuilder $containerBuilder): void {
                 $c->get(LogConfig::class),
                 $c->get(LogScanner::class)
             );
+        },
+
+        // AllowedContainerController - wstrzykuje LogConfig
+        AllowedContainerController::class => function ($c) {
+            return new AllowedContainerController($c->get(LogConfig::class));
         },
 
         // SSHController - wstrzykuje LogParser i SecurityService

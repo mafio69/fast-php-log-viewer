@@ -86,4 +86,41 @@ class LogConfigTest extends TestCase
         $this->assertSame('my-container', $byName['with-container']['container_id']);
         $this->assertFalse($byName['without-container']['valid']);
     }
+
+    public function testAddAllowedContainerIsIdempotent(): void
+    {
+        $this->config->addAllowedContainer('my-container');
+        $this->config->addAllowedContainer('my-container');
+
+        $this->assertSame(['my-container'], $this->config->getAllowedContainers());
+    }
+
+    public function testGetAllowedContainersReturnsEmptyByDefault(): void
+    {
+        $this->assertSame([], $this->config->getAllowedContainers());
+    }
+
+    public function testDeleteAllowedContainerRemovesEntry(): void
+    {
+        $this->config->addAllowedContainer('my-container');
+        $id = $this->config->getAllowedContainersDetailed()[0]['id'];
+
+        $result = $this->config->deleteAllowedContainer($id);
+
+        $this->assertTrue($result);
+        $this->assertSame([], $this->config->getAllowedContainers());
+    }
+
+    public function testGetDeferredDirectoriesReturnsOnlyInactiveOnes(): void
+    {
+        $this->config->addDirectory(['name' => 'active-dir', 'path' => '/var/log/active', 'type' => 'local']);
+        $deferredId = $this->config->addDirectory(['name' => 'deferred-dir', 'path' => '/var/log/deferred', 'type' => 'local']);
+        $this->config->updateDirectory($deferredId, ['is_active' => 0]);
+
+        $deferred = $this->config->getDeferredDirectories();
+
+        $this->assertCount(1, $deferred);
+        $this->assertSame('deferred-dir', $deferred[0]['name']);
+        $this->assertCount(1, $this->config->getDirectories());
+    }
 }

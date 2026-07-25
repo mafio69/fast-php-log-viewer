@@ -29,16 +29,28 @@ class DockerExecService
      */
     public function __construct(?array $allowedContainers = null, ?array $allowedPathPrefixes = null)
     {
-        $this->allowedContainers = $allowedContainers ?? $this->parseEnvList('LOG_VIEWER_ALLOWED_CONTAINERS');
+        $this->allowedContainers = $allowedContainers ?? self::containersFromEnv();
 
-        $envPathPrefixes = $this->parseEnvList('LOG_VIEWER_ALLOWED_CONTAINER_PATHS');
+        $envPathPrefixes = self::envList('LOG_VIEWER_ALLOWED_CONTAINER_PATHS');
         $this->allowedPathPrefixes = $allowedPathPrefixes ?? ($envPathPrefixes ?: self::DEFAULT_ALLOWED_PATH_PREFIXES);
+    }
+
+    /**
+     * Exposed so callers (e.g. DI wiring) can merge the env-configured allow-list
+     * with a runtime-editable one (e.g. from LogConfig::getAllowedContainers())
+     * without duplicating the env-parsing rules.
+     *
+     * @return string[]
+     */
+    public static function containersFromEnv(): array
+    {
+        return self::envList('LOG_VIEWER_ALLOWED_CONTAINERS');
     }
 
     /**
      * @return string[]
      */
-    private function parseEnvList(string $name): array
+    private static function envList(string $name): array
     {
         $value = getenv($name);
         if ($value === false || trim($value) === '') {

@@ -35,7 +35,7 @@ class LogController
         $dirs = $this->logConfig->getValidDirectories();
 
         if (!$this->configManager->isSshEnabled()) {
-            $dirs = array_filter($dirs, fn ($d) => ($d['type'] ?? 'local') !== 'ssh');
+            $dirs = array_filter($dirs, fn ($d) => $d['type'] !== 'ssh');
         }
 
         return $this->json($response, array_values($dirs));

@@ -17,6 +17,22 @@ class DockerExecServiceTest extends TestCase
         $this->assertIsBool($service->isAvailable());
     }
 
+    public function testContainersFromEnvParsesCommaSeparatedList(): void
+    {
+        putenv('LOG_VIEWER_ALLOWED_CONTAINERS=container-a, container-b ,container-c');
+        try {
+            $this->assertSame(['container-a', 'container-b', 'container-c'], DockerExecService::containersFromEnv());
+        } finally {
+            putenv('LOG_VIEWER_ALLOWED_CONTAINERS');
+        }
+    }
+
+    public function testContainersFromEnvReturnsEmptyWhenUnset(): void
+    {
+        putenv('LOG_VIEWER_ALLOWED_CONTAINERS');
+        $this->assertSame([], DockerExecService::containersFromEnv());
+    }
+
     public function testReadFileThrowsOnInvalidContainerId(): void
     {
         $service = new DockerExecService();

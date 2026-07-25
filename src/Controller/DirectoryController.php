@@ -60,6 +60,11 @@ class DirectoryController
         return $this->json($response, $dirs);
     }
 
+    public function getDeferredDirectories(Request $request, Response $response): Response
+    {
+        return $this->json($response, $this->logConfig->getDeferredDirectories());
+    }
+
     public function scanDirectories(Request $request, Response $response): Response
     {
         $dirs = $this->logScanner->scanCommonDirectories();

@@ -77,6 +77,12 @@ class LogConfig
                 UNIQUE(directory_id, file_path)
             );
 
+            CREATE TABLE IF NOT EXISTS allowed_containers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                container_id TEXT NOT NULL UNIQUE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_log_files_path ON log_files(file_path);
             CREATE INDEX IF NOT EXISTS idx_log_directories_active ON log_directories(is_active);
         ");
@@ -173,13 +179,35 @@ class LogConfig
     }
 
     /**
+     * The "Odłożone" list: directories soft-deactivated by enforceActiveDirectoryLimit()
+     * or by an explicit "odłóż" action, kept around so they can be restored.
+     *
+     * @return array<int, array{id: int, key: string, name: string, path: string, type: string, container_id: ?string, valid: bool}>
+     */
+    public function getDeferredDirectories(): array
+    {
+        $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 0 ORDER BY name');
+        return $this->withValidFlag($stmt->fetchAll());
+    }
+
+    /**
      * Returns directories with a 'valid' flag.
      * Local: checks if path exists and is readable.
      * SSH: checks if the SSH profile still exists in ConfigManager.
+     *
+     * @return array<int, array{id: int, key: string, name: string, path: string, type: string, container_id: ?string, valid: bool}>
      */
     public function getValidDirectories(): array
     {
-        $dirs = $this->getDirectories();
+        return $this->withValidFlag($this->getDirectories());
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $dirs
+     * @return array<int, array{id: int, key: string, name: string, path: string, type: string, container_id: ?string, valid: bool}>
+     */
+    private function withValidFlag(array $dirs): array
+    {
         $result = [];
 
         foreach ($dirs as $dir) {
@@ -193,11 +221,9 @@ class LogConfig
                 default => is_dir($dir['path']) && is_readable($dir['path']),
             };
 
-            $key = $dir['name'];
-
             $result[] = [
                 'id' => $dir['id'],
-                'key' => $key,
+                'key' => $dir['name'],
                 'name' => $dir['name'],
                 'path' => $dir['path'],
                 'type' => $type,
@@ -281,6 +307,45 @@ class LogConfig
         $stmt = $this->db->query('SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1');
         $result = $stmt->fetch();
         return ($result['count'] ?? 0) > 0;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getAllowedContainers(): array
+    {
+        $stmt = $this->db->query('SELECT container_id FROM allowed_containers ORDER BY created_at');
+        return array_column($stmt->fetchAll(), 'container_id');
+    }
+
+    /**
+     * Idempotent: adding an already-allowed container is a no-op, not an error.
+     */
+    public function addAllowedContainer(string $containerId): void
+    {
+        $stmt = $this->db->prepare('INSERT OR IGNORE INTO allowed_containers (container_id) VALUES (:container_id)');
+        $stmt->execute([':container_id' => $containerId]);
+    }
+
+    /**
+     * For the "Config" management tab: same data as getAllowedContainers() but
+     * with the row id, needed to target a single entry for deletion.
+     *
+     * @return array<int, array{id: int, container_id: string}>
+     */
+    public function getAllowedContainersDetailed(): array
+    {
+        $stmt = $this->db->query('SELECT id, container_id FROM allowed_containers ORDER BY created_at');
+        return array_map(
+            fn ($row) => ['id' => (int)$row['id'], 'container_id' => $row['container_id']],
+            $stmt->fetchAll()
+        );
+    }
+
+    public function deleteAllowedContainer(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM allowed_containers WHERE id = :id');
+        return $stmt->execute([':id' => $id]);
     }
 
     /**

@@ -8,6 +8,9 @@ use Psr\Http\Message\ResponseInterface as Response;
 
 trait JsonResponseTrait
 {
+    /**
+     * @param array<mixed> $data
+     */
     private function json(Response $response, array $data, int $status = 200): Response
     {
         $response->getBody()->write(json_encode($data));

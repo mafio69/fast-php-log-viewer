@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Mariusz\LogViewer\Controller\AllowedContainerController;
 use Mariusz\LogViewer\Controller\AppConfigController;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Controller\LogController;
@@ -31,9 +32,18 @@ return function (App $app): void {
     $app->post('/api/config/directories', [DirectoryController::class, 'add']);
     $app->put('/api/config/directories/{id}', [DirectoryController::class, 'update']);
     $app->delete('/api/config/directories/{id}', [DirectoryController::class, 'delete']);
+    $app->get('/api/config/directories/deferred', [DirectoryController::class, 'getDeferredDirectories']);
 
     // Scan
     $app->get('/api/scan/directories', [DirectoryController::class, 'scanDirectories']);
+
+    // Allowed containers (runtime-editable, on top of LOG_VIEWER_ALLOWED_CONTAINERS).
+    // Deliberately no PUT/edit - the only way to add a container is by actually
+    // browsing it (see the container_not_allowed confirm flow in store.js);
+    // this management view can only review the list and remove entries.
+    $app->get('/api/config/allowed-containers', [AllowedContainerController::class, 'list']);
+    $app->post('/api/config/allowed-containers', [AllowedContainerController::class, 'add']);
+    $app->delete('/api/config/allowed-containers/{id}', [AllowedContainerController::class, 'delete']);
 
     // SSH
     $app->post('/api/ssh/test-connection', [SSHController::class, 'testConnection']);

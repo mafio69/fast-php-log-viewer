@@ -115,4 +115,22 @@ class DirectoryControllerTest extends TestCase
         $this->assertSame('logs/', $body[4]['path']);
     }
 
+    public function testGetDeferredDirectoriesReturnsLogConfigResult(): void
+    {
+        $this->logConfig->method('getDeferredDirectories')->willReturn([
+            ['id' => 1, 'key' => 'old-dir', 'name' => 'old-dir', 'path' => '/var/log/old', 'type' => 'local', 'container_id' => null, 'valid' => true],
+        ]);
+
+        $requestFactory = new RequestFactory();
+        $request = $requestFactory->createRequest('GET', '/api/config/directories/deferred');
+        $responseFactory = new ResponseFactory();
+        $response = $responseFactory->createResponse();
+
+        $result = $this->controller->getDeferredDirectories($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertCount(1, $body);
+        $this->assertSame('old-dir', $body[0]['name']);
+    }
 }
