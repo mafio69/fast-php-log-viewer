@@ -10,9 +10,21 @@ name: Auto-merge develop -> master
 # Hamulec bezpieczenstwa: obecnosc pliku .ci/DEPLOY_PAUSED w repo wstrzymuje merge
 # (testy i tak sie odpala, ale merge/deploy nie).
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [develop]
+
+# Kolejkuje przebiegi zamiast pozwalac im nachodzic na siebie - dwa rownolegle
+# fast-forward merge -> push do master (np. przy dwoch szybkich pushach pod rzad)
+# moglyby sie wyscigowo nadpisywac. cancel-in-progress: false celowo - przerwanie
+# w trakcie "git push origin master" mialoby mieszac stan bardziej niz po prostu
+# zaczekanie na zakonczenie poprzedniego przebiegu.
+concurrency:
+  group: auto-merge-to-master
+  cancel-in-progress: false
 
 jobs:
   phpunit:
@@ -26,10 +38,14 @@ jobs:
 
   check-safety-switch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       paused: ${{ steps.check.outputs.paused }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - id: check
         run: |
           if [ -f .ci/DEPLOY_PAUSED ]; then
@@ -45,17 +61,21 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write
     steps:
       # DEPLOY_PAT musi byc Personal Access Token (classic) z uprawnieniem `repo`
       # nalezacym do uzytkownika, ktory ma prawo omijania regul ochrony galezi
       # (branch protection bypass) na galezia master. Bez tego tokenu push do
       # mastera bedzie blokowany przez regule wymagajaca recenzji PR.
       # Konfiguracja: Settings -> Secrets -> Actions -> New repository secret -> DEPLOY_PAT
+      #
+      # ref/merge celowo wskazuja na ${{ github.sha }} (konkretny commit z tego
+      # przebiegu), nie na branch "develop" - develop mogl ruszyc dalej w trakcie
+      # gdy phpunit/docker-smoke-test/security-scan sie wykonywaly (kilkadziesiat
+      # sekund), a merge ma trafic dokladnie to, co przeszlo CI, nie to co najnowsze.
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: develop
+          ref: ${{ github.sha }}
           token: ${{ secrets.DEPLOY_PAT || github.token }}
 
       - name: Konfiguracja gita
@@ -65,9 +85,13 @@ jobs:
 
       - name: Fast-forward merge develop -> master
         run: |
-          git fetch origin master
+          git fetch origin develop master
+          if [ "$(git rev-parse origin/develop)" != "${{ github.sha }}" ]; then
+            echo "::error::origin/develop przesunela sie z ${{ github.sha }} na $(git rev-parse origin/develop) w trakcie przebiegu CI - przerywam, zeby nie zmergowac czegos, co nie przeszlo tych konkretnych testow."
+            exit 1
+          fi
           git checkout master
-          git merge --ff-only origin/develop
+          git merge --ff-only ${{ github.sha }}
           git push origin master
 
       # Zmiana z 2026-07-22 (decyzja uzytkownika): deploy.yml juz NIE jest odpalany
