@@ -48,6 +48,21 @@ class DockerExecService
     }
 
     /**
+     * The path-prefix baseline before any runtime (DB-backed) additions: env
+     * override if set, otherwise the built-in common log locations. Exposed for
+     * the same reason as containersFromEnv() - DI wiring merges this with
+     * LogConfig::getAllowedContainerPaths() without duplicating the env/default
+     * fallback rule.
+     *
+     * @return string[]
+     */
+    public static function defaultPathPrefixes(): array
+    {
+        $envPathPrefixes = self::envList('LOG_VIEWER_ALLOWED_CONTAINER_PATHS');
+        return $envPathPrefixes ?: self::DEFAULT_ALLOWED_PATH_PREFIXES;
+    }
+
+    /**
      * @return string[]
      */
     private static function envList(string $name): array

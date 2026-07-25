@@ -66,6 +66,13 @@ window.FPLV.components = window.FPLV.components || [];
                         <div class="text-xs crt-text truncate" :title="c.container_id" style="max-width:280px;">🐳 {{ c.container_id }}</div>
                         <button @click="deleteAllowedContainerEntry(c.id)" class="crt-button px-2 py-1 text-xs rounded flex-shrink-0" style="border-color:#ff0000;color:#ff0000;">🗑 Usuń</button>
                     </div>
+
+                    <div class="text-xs font-semibold mt-4 mb-2 crt-dim">Dozwolone ścieżki (w obrębie kontenera)</div>
+                    <div v-if="store.allowedPathsList.length === 0" class="text-xs crt-dim">Brak dozwolonych ścieżek</div>
+                    <div v-for="p in store.allowedPathsList" :key="p.id" class="mb-2 p-2 flex justify-between items-center" style="background:#001100;border:1px solid #002200;">
+                        <div class="text-xs crt-text truncate" :title="p.path_prefix" style="max-width:280px;">📁 {{ p.path_prefix }}</div>
+                        <button @click="deleteAllowedPathEntry(p.id)" class="crt-button px-2 py-1 text-xs rounded flex-shrink-0" style="border-color:#ff0000;color:#ff0000;">🗑 Usuń</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -77,6 +84,7 @@ window.FPLV.components = window.FPLV.components || [];
                 restoreDirectoryEntry: F.restoreDirectoryEntry,
                 deleteDirectoryEntry: F.deleteDirectoryEntry,
                 deleteAllowedContainerEntry: F.deleteAllowedContainerEntry,
+                deleteAllowedPathEntry: F.deleteAllowedPathEntry,
             };
         }
     });

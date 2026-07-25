@@ -83,6 +83,12 @@ class LogConfig
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS allowed_container_paths (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path_prefix TEXT NOT NULL UNIQUE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_log_files_path ON log_files(file_path);
             CREATE INDEX IF NOT EXISTS idx_log_directories_active ON log_directories(is_active);
         ");
@@ -345,6 +351,46 @@ class LogConfig
     public function deleteAllowedContainer(int $id): bool
     {
         $stmt = $this->db->prepare('DELETE FROM allowed_containers WHERE id = :id');
+        return $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getAllowedContainerPaths(): array
+    {
+        $stmt = $this->db->query('SELECT path_prefix FROM allowed_container_paths ORDER BY created_at');
+        return array_column($stmt->fetchAll(), 'path_prefix');
+    }
+
+    /**
+     * Idempotent: adding an already-allowed prefix is a no-op, not an error.
+     * $prefix is normalized to end with '/' so it behaves as a directory prefix
+     * for str_starts_with() matching in DockerExecService::assertPathAllowed()
+     * (which separately accepts the bare, slash-less form as an exact match).
+     */
+    public function addAllowedContainerPath(string $prefix): void
+    {
+        $prefix = rtrim($prefix, '/') . '/';
+        $stmt = $this->db->prepare('INSERT OR IGNORE INTO allowed_container_paths (path_prefix) VALUES (:path_prefix)');
+        $stmt->execute([':path_prefix' => $prefix]);
+    }
+
+    /**
+     * @return array<int, array{id: int, path_prefix: string}>
+     */
+    public function getAllowedContainerPathsDetailed(): array
+    {
+        $stmt = $this->db->query('SELECT id, path_prefix FROM allowed_container_paths ORDER BY created_at');
+        return array_map(
+            fn ($row) => ['id' => (int)$row['id'], 'path_prefix' => $row['path_prefix']],
+            $stmt->fetchAll()
+        );
+    }
+
+    public function deleteAllowedContainerPath(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM allowed_container_paths WHERE id = :id');
         return $stmt->execute([':id' => $id]);
     }
 

@@ -123,4 +123,24 @@ class LogConfigTest extends TestCase
         $this->assertSame('deferred-dir', $deferred[0]['name']);
         $this->assertCount(1, $this->config->getDirectories());
     }
+
+    public function testAddAllowedContainerPathNormalizesTrailingSlash(): void
+    {
+        $this->config->addAllowedContainerPath('/app/var/log');
+        $this->config->addAllowedContainerPath('/app/var/log/');
+
+        // Both calls should be the same normalized entry, not two different ones.
+        $this->assertSame(['/app/var/log/'], $this->config->getAllowedContainerPaths());
+    }
+
+    public function testDeleteAllowedContainerPathRemovesEntry(): void
+    {
+        $this->config->addAllowedContainerPath('/app/var/log');
+        $id = $this->config->getAllowedContainerPathsDetailed()[0]['id'];
+
+        $result = $this->config->deleteAllowedContainerPath($id);
+
+        $this->assertTrue($result);
+        $this->assertSame([], $this->config->getAllowedContainerPaths());
+    }
 }

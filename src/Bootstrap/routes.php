@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Mariusz\LogViewer\Controller\AllowedContainerController;
+use Mariusz\LogViewer\Controller\AllowedContainerPathController;
 use Mariusz\LogViewer\Controller\AppConfigController;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Controller\LogController;
@@ -44,6 +45,12 @@ return function (App $app): void {
     $app->get('/api/config/allowed-containers', [AllowedContainerController::class, 'list']);
     $app->post('/api/config/allowed-containers', [AllowedContainerController::class, 'add']);
     $app->delete('/api/config/allowed-containers/{id}', [AllowedContainerController::class, 'delete']);
+
+    // Allowed container path prefixes (defense in depth even for an allowed
+    // container - same "add only by browsing, delete-only in UI" rule as above).
+    $app->get('/api/config/allowed-container-paths', [AllowedContainerPathController::class, 'list']);
+    $app->post('/api/config/allowed-container-paths', [AllowedContainerPathController::class, 'add']);
+    $app->delete('/api/config/allowed-container-paths/{id}', [AllowedContainerPathController::class, 'delete']);
 
     // SSH
     $app->post('/api/ssh/test-connection', [SSHController::class, 'testConnection']);

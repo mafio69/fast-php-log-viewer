@@ -11,6 +11,7 @@ use Mariusz\Logger\DualLogger;
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\AllowedContainerController;
+use Mariusz\LogViewer\Controller\AllowedContainerPathController;
 use Mariusz\LogViewer\Controller\AppConfigController;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Controller\LogController;
@@ -129,15 +130,23 @@ return function (ContainerBuilder $containerBuilder): void {
             return new SecurityService();
         },
 
-        // DockerExecService - allow-lista kontenerow to suma env (LOG_VIEWER_ALLOWED_CONTAINERS,
-        // ustawiane raz, np. w produkcji) i tego, co user dopisal w runtime przez UI (przechowywane
-        // w LogConfig - patrz AllowedContainerController), zeby dodanie kontenera nie wymagalo
-        // edycji .env ani restartu.
+        // DockerExecService - allow-listy kontenerow i sciezek to suma env (ustawiane raz, np.
+        // w produkcji) i tego, co user dopisal w runtime przez UI (przechowywane w LogConfig -
+        // patrz AllowedContainerController / AllowedContainerPathController), zeby dodanie
+        // kontenera lub sciezki nie wymagalo edycji .env ani restartu.
         DockerExecService::class => function ($c) {
-            $fromEnv = DockerExecService::containersFromEnv();
-            $fromDb = $c->get(LogConfig::class)->getAllowedContainers();
+            $logConfig = $c->get(LogConfig::class);
 
-            return new DockerExecService(array_values(array_unique(array_merge($fromEnv, $fromDb))));
+            $containers = array_values(array_unique(array_merge(
+                DockerExecService::containersFromEnv(),
+                $logConfig->getAllowedContainers()
+            )));
+            $paths = array_values(array_unique(array_merge(
+                DockerExecService::defaultPathPrefixes(),
+                $logConfig->getAllowedContainerPaths()
+            )));
+
+            return new DockerExecService($containers, $paths);
         },
 
         // DirectoryController - wstrzykuje LogConfig i LogScanner
@@ -151,6 +160,11 @@ return function (ContainerBuilder $containerBuilder): void {
         // AllowedContainerController - wstrzykuje LogConfig
         AllowedContainerController::class => function ($c) {
             return new AllowedContainerController($c->get(LogConfig::class));
+        },
+
+        // AllowedContainerPathController - wstrzykuje LogConfig
+        AllowedContainerPathController::class => function ($c) {
+            return new AllowedContainerPathController($c->get(LogConfig::class));
         },
 
         // SSHController - wstrzykuje LogParser i SecurityService

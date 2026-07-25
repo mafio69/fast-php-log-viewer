@@ -28,6 +28,7 @@ window.FPLV = window.FPLV || {};
         dirManagerTab: 'saved', // 'saved' | 'deferred' | 'config'
         deferredDirectories: [],
         allowedContainersList: [],
+        allowedPathsList: [],
 
         // Filter state
         filterText: '',
@@ -372,7 +373,9 @@ window.FPLV = window.FPLV || {};
                     await allowContainerAndRetry(containerId, dirPath);
                 }
             } else if (e.message.includes('path_not_allowed')) {
-                alert('Ścieżka niedozwolona: ' + dirPath);
+                if (confirm(pathNotAllowedExplanation(dirPath))) {
+                    await allowPathAndRetry(dirPath);
+                }
             } else if (e.message.includes('docker_unavailable')) {
                 alert('Docker niedostępny. Zamontuj /var/run/docker.sock.');
             } else {
@@ -408,6 +411,35 @@ window.FPLV = window.FPLV || {};
             }
         } catch (e) {
             alert('Błąd dodawania kontenera: ' + e.message);
+            return;
+        }
+        await loadDirectDockerFiles(dirPath);
+    }
+
+    function pathNotAllowedExplanation(dirPath) {
+        return 'Ścieżka "' + dirPath + '" nie jest na liście dozwolonych ścieżek.\n\n'
+            + 'Dlaczego to pytanie: dozwolony kontener to nie to samo co dozwolona ścieżka. Nawet w kontenerze, '
+            + 'któremu ufasz, nieograniczony dostęp do dowolnej ścieżki pozwoliłby złośliwej stronie (przez ten sam '
+            + 'CSRF/localhost co przy kontenerach) odczytać cokolwiek w nim jest - np. /etc/passwd czy klucze w '
+            + '/root/.ssh - a nie tylko logi, po które faktycznie tu przyszedłeś.\n\n'
+            + 'Dodanie tej ścieżki do listy to świadoma decyzja. Zostaje zapamiętana w aplikacji, nie trzeba tego '
+            + 'powtarzać dla tego samego katalogu.\n\n'
+            + 'Dodać "' + dirPath + '" do dozwolonych ścieżek i spróbować ponownie?';
+    }
+
+    async function allowPathAndRetry(dirPath) {
+        try {
+            const res = await fetch('/api/config/allowed-container-paths', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path_prefix: dirPath})
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert('Nie udało się dodać ścieżki: ' + (data.error || 'unknown'));
+                return;
+            }
+        } catch (e) {
+            alert('Błąd dodawania ścieżki: ' + e.message);
             return;
         }
         await loadDirectDockerFiles(dirPath);
@@ -468,7 +500,7 @@ window.FPLV = window.FPLV || {};
     async function openDirManager() {
         store.showDirManager = true;
         store.dirManagerTab = 'saved';
-        await Promise.all([loadDeferredDirectories(), loadAllowedContainersList()]);
+        await Promise.all([loadDeferredDirectories(), loadAllowedContainersList(), loadAllowedPathsList()]);
     }
 
     async function loadDeferredDirectories() {
@@ -484,6 +516,14 @@ window.FPLV = window.FPLV || {};
             store.allowedContainersList = await fetchJson('/api/config/allowed-containers');
         } catch (e) {
             console.error('Failed to load allowed containers:', e);
+        }
+    }
+
+    async function loadAllowedPathsList() {
+        try {
+            store.allowedPathsList = await fetchJson('/api/config/allowed-container-paths');
+        } catch (e) {
+            console.error('Failed to load allowed container paths:', e);
         }
     }
 
@@ -511,6 +551,11 @@ window.FPLV = window.FPLV || {};
     async function deleteAllowedContainerEntry(id) {
         await fetch('/api/config/allowed-containers/' + id, {method: 'DELETE'});
         await loadAllowedContainersList();
+    }
+
+    async function deleteAllowedPathEntry(id) {
+        await fetch('/api/config/allowed-container-paths/' + id, {method: 'DELETE'});
+        await loadAllowedPathsList();
     }
 
     async function addAllowedDir(dir) {
@@ -1077,6 +1122,6 @@ window.FPLV = window.FPLV || {};
         cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal,
         addManualSSHFile, executeManualFileAdd, cancelManualFileModal, proceedStep,
         openDirManager, deleteDirectoryEntry, deferDirectoryEntry, restoreDirectoryEntry,
-        deleteAllowedContainerEntry,
+        deleteAllowedContainerEntry, deleteAllowedPathEntry,
     });
 })();
