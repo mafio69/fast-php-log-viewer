@@ -76,6 +76,15 @@ window.FPLV = window.FPLV || {};
         connectingConnectionIndex: -1,
         sshConnections: JSON.parse(localStorage.getItem('fplv_ssh_connections') || '[]'),
         sshFiles: {},
+        // In-memory only (never persisted): { [connName]: {host,user,port,authMethod,password?,keyPath?,keyPassphrase?} },
+        // cached after a successful connect/read so re-opening a file from the same
+        // connection later in the session doesn't need the password again.
+        sshActiveCredentials: {},
+        // What submitting the (shared) password modal should do: 'connect' opens a
+        // directory listing (executeSSHConnection), 'read' fetches one file's
+        // entries (performPendingSshRead) - set alongside pendingSshRead.
+        passwordModalPurpose: 'connect',
+        pendingSshRead: null, // {connName, path} while passwordModalPurpose === 'read'
         editingIndex: -1,
         sshForm: {...window.FPLV_CONFIG?.sshFormDefaults || {
             name: '', host: '', user: '', port: '22',
@@ -261,14 +270,23 @@ window.FPLV = window.FPLV || {};
     async function loadFiles() {
         if (store.selectedDir && store.selectedDir.startsWith('ssh:')) {
             const connName = store.selectedDir.replace('ssh:', '');
-            store.files = store.sshFiles[connName] || [];
-            if (store.files.length) {
-                store.selectedFile = store.files[0].file;
+            const cached = store.sshFiles[connName];
+            store.selectedFileContainerId = '';
+            if (cached && cached.length) {
+                store.files = cached;
+                store.selectedFile = cached[0].file;
                 await loadEntries();
             } else {
+                // Nothing fetched yet this session (fresh page load, or this ssh:
+                // entry only exists because a saved profile was synced into
+                // store.directories) - prompt to connect instead of showing an
+                // empty list with no way forward.
+                store.files = [];
                 store.selectedFile = '';
                 store.entries = [];
                 store.filtered = [];
+                const idx = store.sshConnections.findIndex(c => c.name === connName);
+                if (idx >= 0) connectSSH(idx);
             }
             return;
         }
@@ -607,6 +625,10 @@ window.FPLV = window.FPLV || {};
 
     async function loadEntries() {
         if (!store.selectedFile) return;
+        if (store.selectedDir && store.selectedDir.startsWith('ssh:')) {
+            await loadSshFileEntries(store.selectedDir.replace('ssh:', ''), store.selectedFile);
+            return;
+        }
         store.loading = true;
         clearExpanded();
         try {
@@ -962,9 +984,96 @@ window.FPLV = window.FPLV || {};
     }
 
     function connectSSH(idx) {
+        // <ssh-modal> (which hosts the password modal's own template) is only
+        // mounted in VApp when store.showSSHModal is true - previously a safe
+        // assumption since Connect only lived inside that already-open panel,
+        // but connectSSH() is now also called from outside it (picking an
+        // un-fetched ssh: entry in KATALOG), so it must open the host modal
+        // itself or showPasswordModal=true renders nothing.
+        store.showSSHModal = true;
         store.connectingConnectionIndex = idx;
         store.passwordForConnection = '';
+        store.passwordModalPurpose = 'connect';
+        store.pendingSshRead = null;
         store.showPasswordModal = true;
+    }
+
+    function credsFromConn(conn, password) {
+        return {
+            host: conn.host, user: conn.user, port: parseInt(conn.port) || 22,
+            authMethod: conn.authMethod,
+            password: conn.authMethod === 'password' ? password : undefined,
+            keyPath: conn.authMethod === 'key' ? conn.keyPath : undefined,
+            keyPassphrase: conn.authMethod === 'key' ? conn.keyPassphrase : undefined,
+        };
+    }
+
+    function sshRequestPayload(creds, extra) {
+        return {
+            ssh_host: creds.host, ssh_user: creds.user, ssh_port: creds.port,
+            ssh_auth_method: creds.authMethod,
+            ssh_password: creds.authMethod === 'password' ? creds.password : undefined,
+            ssh_key_path: creds.authMethod === 'key' ? creds.keyPath : undefined,
+            ssh_key_passphrase: creds.authMethod === 'key' ? creds.keyPassphrase : undefined,
+            ...extra,
+        };
+    }
+
+    async function performSshListing(creds, conn) {
+        const res = await fetch('/api/ssh/list-files', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(sshRequestPayload(creds, {path: conn.remotePath, allFiles: conn.allFiles || false}))
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'unknown');
+        return data.files.map(f => ({file: f.path, date: new Date().toISOString().split('T')[0], size: f.size || 0}));
+    }
+
+    /**
+     * Fetches one remote file's parsed entries on demand via /api/ssh/read-file
+     * (no local download step - unlike the "Download File" flow). Throws with the
+     * server's error message on failure.
+     */
+    async function fetchSshEntries(creds, path) {
+        const res = await fetch('/api/ssh/read-file', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(sshRequestPayload(creds, {path}))
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'unknown');
+        return data.entries;
+    }
+
+    /**
+     * Connects, lists conn.remotePath, and loads the first file's entries - the
+     * single place that turns "I have credentials" into "the viewer shows
+     * something", used by both the initial Connect button and the ↻ refresh.
+     */
+    async function connectAndList(idx, password) {
+        const conn = store.sshConnections[idx];
+        const creds = credsFromConn(conn, password);
+        store.loading = true;
+        try {
+            const files = await performSshListing(creds, conn);
+            store.sshActiveCredentials[conn.name] = creds;
+            store.sshFiles[conn.name] = files;
+            store.selectedDir = 'ssh:' + conn.name;
+            store.selectedFileContainerId = '';
+            store.files = files;
+            if (files.length) {
+                store.selectedFile = files[0].file;
+                await loadSshFileEntries(conn.name, store.selectedFile);
+            } else {
+                store.selectedFile = '';
+                store.entries = [];
+                store.filtered = [];
+            }
+            store.showSSHModal = false;
+        } catch (e) {
+            alert('SSH connection failed: ' + e.message);
+        } finally {
+            store.loading = false;
+        }
     }
 
     async function executeSSHConnection() {
@@ -977,45 +1086,108 @@ window.FPLV = window.FPLV || {};
             resetConnectionState();
             return;
         }
-        try {
-            const payload = {
-                ssh_host: conn.host,
-                ssh_user: conn.user,
-                ssh_port: parseInt(conn.port) || 22,
-                ssh_auth_method: conn.authMethod,
-                ssh_password: password || undefined,
-                ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
-                ssh_key_passphrase: conn.keyPassphrase || undefined,
-                path: conn.remotePath,
-                allFiles: conn.allFiles || false,
-            };
-            const res = await fetch('/api/ssh/list-files', {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (data.success) {
-                alert(`Found ${data.files.length} log files on ${conn.name}`);
-                data.files.forEach(file => {
-                    if (!store.files.some(f => f.file === file.path)) {
-                        store.files.push({
-                            file: file.path,
-                            date: new Date().toISOString().split('T')[0],
-                            size: file.size || 0
-                        });
-                    }
-                });
-            } else {
-                alert('Failed to list files: ' + (data.error || 'Unknown error'));
+        await connectAndList(idx, password);
+        resetConnectionState();
+    }
+
+    /**
+     * Loads a file's entries for an ssh: selected directory. Reuses cached
+     * credentials from a prior connect/read this session when available; for
+     * key auth, no interactive secret is needed so it connects directly; for
+     * password auth with no cache, opens the shared password modal in 'read'
+     * mode (performPendingSshRead completes the flow once submitted).
+     */
+    async function loadSshFileEntries(connName, path) {
+        const cached = store.sshActiveCredentials[connName];
+        if (cached) {
+            store.loading = true;
+            try {
+                store.entries = await fetchSshEntries(cached, path);
+                store.filtered = store.entries;
+                applyFilters();
+            } catch (e) {
+                delete store.sshActiveCredentials[connName];
+                alert('Błąd odczytu pliku SSH: ' + e.message);
+            } finally {
+                store.loading = false;
             }
+            return;
+        }
+
+        const conn = store.sshConnections.find(c => c.name === connName);
+        if (!conn) {
+            alert('Nieznane połączenie SSH: ' + connName);
+            return;
+        }
+
+        if (conn.authMethod === 'key') {
+            const creds = credsFromConn(conn, '');
+            store.loading = true;
+            try {
+                store.entries = await fetchSshEntries(creds, path);
+                store.sshActiveCredentials[connName] = creds;
+                store.filtered = store.entries;
+                applyFilters();
+            } catch (e) {
+                alert('Błąd odczytu pliku SSH: ' + e.message);
+            } finally {
+                store.loading = false;
+            }
+            return;
+        }
+
+        store.pendingSshRead = {connName, path};
+        store.passwordModalPurpose = 'read';
+        store.passwordForConnection = '';
+        store.showPasswordModal = true;
+    }
+
+    async function performPendingSshRead() {
+        const pending = store.pendingSshRead;
+        const password = store.passwordForConnection;
+        store.showPasswordModal = false;
+        store.pendingSshRead = null;
+        if (!pending) return;
+
+        const conn = store.sshConnections.find(c => c.name === pending.connName);
+        if (!conn) return;
+        if (!password) {
+            alert('SSH password is required for this connection');
+            return;
+        }
+
+        const creds = credsFromConn(conn, password);
+        store.loading = true;
+        try {
+            store.entries = await fetchSshEntries(creds, pending.path);
+            store.sshActiveCredentials[pending.connName] = creds;
+            store.filtered = store.entries;
+            applyFilters();
         } catch (e) {
-            alert('SSH connection failed: ' + e.message);
+            alert('Błąd odczytu pliku SSH: ' + e.message);
         } finally {
-            resetConnectionState();
+            store.loading = false;
+            store.passwordForConnection = '';
+        }
+    }
+
+    /**
+     * Bound to the shared password modal's submit action - dispatches to the
+     * 'connect' (directory listing) or 'read' (single file) flow depending on
+     * why the modal was opened.
+     */
+    async function submitPasswordModal() {
+        if (store.passwordModalPurpose === 'read') {
+            await performPendingSshRead();
+        } else {
+            await executeSSHConnection();
         }
     }
 
     function cancelPasswordModal() {
         store.showPasswordModal = false;
+        store.pendingSshRead = null;
+        store.passwordModalPurpose = 'connect';
         resetConnectionState();
     }
 
@@ -1084,27 +1256,23 @@ window.FPLV = window.FPLV || {};
         resetConnectionState();
     }
 
+    /**
+     * Re-lists the remote directory from the server (not just a re-read of the
+     * local cache, which was this function's previous, misleading behavior).
+     * Reuses cached credentials from this session if available; otherwise opens
+     * the connect modal, same as picking an un-fetched ssh: entry in KATALOG.
+     */
     async function refreshSSHDir(dirKey) {
         if (!dirKey || !dirKey.startsWith('ssh:')) return;
         const connName = dirKey.replace('ssh:', '');
-        const conn = store.sshConnections.find(c => c.name === connName);
-        if (!conn) return;
-        try {
-            store.loading = true;
-            store.files = store.sshFiles[connName] || [];
-            if (store.files.length > 0) {
-                store.selectedFile = store.files[0].file;
-                await loadEntries();
-            } else {
-                store.selectedFile = '';
-                store.entries = [];
-                store.filtered = [];
-            }
-        } catch (e) {
-            alert('Błąd odświeżania: ' + e.message);
-        } finally {
-            store.loading = false;
+        const idx = store.sshConnections.findIndex(c => c.name === connName);
+        if (idx < 0) return;
+        const creds = store.sshActiveCredentials[connName];
+        if (!creds) {
+            connectSSH(idx);
+            return;
         }
+        await connectAndList(idx, creds.password || '');
     }
 
     // Expose store and functions
@@ -1119,7 +1287,7 @@ window.FPLV = window.FPLV || {};
         removeBookmark, goToBookmark, validateBookmarks,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,
         testSSHConnection, addSSHConnection, deleteSSHConnection, editSSHConnection,
-        cancelEdit, connectSSH, executeSSHConnection, cancelPasswordModal,
+        cancelEdit, connectSSH, executeSSHConnection, submitPasswordModal, cancelPasswordModal,
         addManualSSHFile, executeManualFileAdd, cancelManualFileModal, proceedStep,
         openDirManager, deleteDirectoryEntry, deferDirectoryEntry, restoreDirectoryEntry,
         deleteAllowedContainerEntry, deleteAllowedPathEntry,

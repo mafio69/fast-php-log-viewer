@@ -67,16 +67,20 @@ window.FPLV.components = window.FPLV.components || [];
         <div v-if="store.showPasswordModal" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.8);">
             <div class="rounded shadow-lg p-4" style="background:#000;border:1px solid #00ff00;width:400px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-sm font-bold crt-glow">SSH Password</h3>
+                    <h3 class="text-sm font-bold crt-glow">{{ store.passwordModalPurpose === 'read' ? 'SSH Password - odczyt pliku' : 'SSH Password' }}</h3>
                     <button @click="$emit('cancel-password')" class="text-xs crt-button">✕</button>
                 </div>
                 <div class="mb-4">
-                    <label class="block text-xs crt-text mb-2">Enter SSH password (or leave empty for key auth):</label>
+                    <label v-if="store.passwordModalPurpose === 'read'" class="block text-xs crt-text mb-2">
+                        Podaj hasło SSH dla "{{ store.pendingSshRead ? store.pendingSshRead.connName : '' }}", żeby odczytać:<br>
+                        <span class="crt-dim">{{ store.pendingSshRead ? store.pendingSshRead.path : '' }}</span>
+                    </label>
+                    <label v-else class="block text-xs crt-text mb-2">Enter SSH password (or leave empty for key auth):</label>
                     <input v-model="store.passwordForConnection" type="password" placeholder="Password" class="crt-input px-2 py-1 text-xs rounded w-full" @keyup.enter="$emit('execute-connection')">
                 </div>
                 <div class="flex gap-2">
                     <button @click="$emit('cancel-password')" class="flex-1 crt-button py-1 text-xs rounded" style="border-color:#ff0000;color:#ff0000;">Cancel</button>
-                    <button @click="$emit('execute-connection')" class="flex-1 crt-button py-1 text-xs rounded">Connect</button>
+                    <button @click="$emit('execute-connection')" class="flex-1 crt-button py-1 text-xs rounded">{{ store.passwordModalPurpose === 'read' ? 'Odczytaj' : 'Connect' }}</button>
                 </div>
             </div>
         </div>

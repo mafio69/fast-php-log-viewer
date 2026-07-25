@@ -89,7 +89,7 @@ window.FPLV.components = window.FPLV.components || [];
                 deleteSSHConnection: F.deleteSSHConnection,
                 editSSHConnection: F.editSSHConnection,
                 connectSSH: F.connectSSH,
-                executeSSHConnection: F.executeSSHConnection,
+                executeSSHConnection: F.submitPasswordModal,
                 cancelPasswordModal: F.cancelPasswordModal,
                 addManualSSHFile: F.addManualSSHFile,
                 executeManualFileAdd: F.executeManualFileAdd,
