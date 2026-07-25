@@ -61,7 +61,7 @@ class DockerExecService
         $this->assertContainerAllowed($containerId);
         $this->assertPathAllowed($filePath);
 
-        $execId = $this->createExec($containerId, $filePath);
+        $execId = $this->createExec($containerId, ['cat', $filePath]);
         $output = $this->startExec($execId);
 
         if ($output === '') {
@@ -69,6 +69,52 @@ class DockerExecService
         }
 
         return $output;
+    }
+
+    /**
+     * Lists regular files directly inside $dirPath (non-recursive) in an allowed container.
+     * Uses `find -exec stat` as a single argv command (no shell involved - $dirPath is passed
+     * as a distinct Cmd array element, never interpolated into a shell string), so it carries
+     * the same traversal/allow-list protection as readFile() without any injection risk.
+     *
+     * @return array<int, array{file: string, date: string, size: int}>
+     */
+    public function listFiles(string $containerId, string $dirPath): array
+    {
+        $this->validateContainerId($containerId);
+        $this->validateFilePath($dirPath);
+        $dirPath = $this->normalizePath($dirPath);
+        $this->assertContainerAllowed($containerId);
+        $this->assertPathAllowed($dirPath);
+
+        $execId = $this->createExec($containerId, [
+            'find', $dirPath, '-maxdepth', '1', '-type', 'f',
+            '-exec', 'stat', '-c', '%Y\t%s\t%n', '{}', ';',
+        ]);
+        $output = $this->startExec($execId);
+
+        return $this->parseListing($output);
+    }
+
+    /**
+     * @return array<int, array{file: string, date: string, size: int}>
+     */
+    private function parseListing(string $output): array
+    {
+        $files = [];
+        foreach (explode("\n", trim($output)) as $line) {
+            if (!preg_match('/^(\d+)\t(\d+)\t(.+)$/', $line, $m)) {
+                continue;
+            }
+            [, $mtime, $size, $path] = $m;
+            $files[] = [
+                'file' => basename($path),
+                'date' => date('Y-m-d H:i:s', (int)$mtime),
+                'size' => (int)$size,
+            ];
+        }
+
+        return $files;
     }
 
     private function validateContainerId(string $containerId): void
@@ -130,12 +176,16 @@ class DockerExecService
         throw new RuntimeException('path_not_allowed');
     }
 
-    private function createExec(string $containerId, string $filePath): string
+    /**
+     * @param string[] $cmd Argv array executed directly in the container - no shell involved,
+     *   so callers don't need to shell-escape individual arguments.
+     */
+    private function createExec(string $containerId, array $cmd): string
     {
         $payload = json_encode([
             'AttachStdout' => true,
             'AttachStderr' => true,
-            'Cmd' => ['cat', $filePath],
+            'Cmd' => $cmd,
         ]);
 
         $path = '/' . self::API_VERSION . '/containers/' . $containerId . '/exec';

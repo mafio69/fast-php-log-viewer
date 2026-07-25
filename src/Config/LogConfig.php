@@ -17,6 +17,8 @@ class LogConfig
 {
     use ErrorContextTrait;
 
+    private const MAX_ACTIVE_DIRECTORIES = 10;
+
     private PDO $db;
     private string $dbPath;
 
@@ -78,6 +80,26 @@ class LogConfig
             CREATE INDEX IF NOT EXISTS idx_log_files_path ON log_files(file_path);
             CREATE INDEX IF NOT EXISTS idx_log_directories_active ON log_directories(is_active);
         ");
+
+        $this->ensureColumn('log_directories', 'container_id', 'TEXT');
+    }
+
+    /**
+     * Additive schema migration: adds $column to $table if it doesn't exist yet.
+     * SQLite has no "ADD COLUMN IF NOT EXISTS", so existence is checked via
+     * PRAGMA table_info() first - this runs on every request (LogConfig has no
+     * persistent migration history), so it must stay a cheap no-op once applied.
+     */
+    private function ensureColumn(string $table, string $column, string $type): void
+    {
+        $stmt = $this->db->query("PRAGMA table_info({$table})");
+        foreach ($stmt->fetchAll() as $col) {
+            if ($col['name'] === $column) {
+                return;
+            }
+        }
+
+        $this->db->exec("ALTER TABLE {$table} ADD COLUMN {$column} {$type}");
     }
 
     /**
@@ -86,16 +108,20 @@ class LogConfig
      */
     public function addDirectory(array $config): int
     {
-        // Check if directory already exists — return existing ID
-        $stmt = $this->db->prepare('SELECT id FROM log_directories WHERE path = :path');
-        $stmt->execute([':path' => $config['path']]);
+        $containerId = $config['container_id'] ?? null;
+
+        // Check if directory already exists — return existing ID. Path alone isn't unique
+        // across containers (two containers can both have "/var/log"), so container_id is
+        // part of the identity check too (NULL-safe via IS, since it's null for non-docker).
+        $stmt = $this->db->prepare('SELECT id FROM log_directories WHERE path = :path AND container_id IS :container_id');
+        $stmt->execute([':path' => $config['path'], ':container_id' => $containerId]);
         if ($existing = $stmt->fetch()) {
             return (int)$existing['id'];
         }
 
         $stmt = $this->db->prepare('
-            INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path)
-            VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path)
+            INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path, container_id)
+            VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path, :container_id)
         ');
 
         $stmt->execute([
@@ -106,12 +132,35 @@ class LogConfig
             ':ssh_user' => $config['ssh_user'] ?? null,
             ':ssh_auth_method' => $config['ssh_auth_method'] ?? null,
             ':ssh_key_path' => $config['ssh_key_path'] ?? null,
+            ':container_id' => $containerId,
         ]);
 
         $id = (int)$this->db->lastInsertId();
+        $this->enforceActiveDirectoryLimit();
         $this->exportBackup();
 
         return $id;
+    }
+
+    /**
+     * Keeps the "quick access" (is_active=1) directory list capped at 10 entries.
+     * When adding a new one pushes the count over the limit, the oldest active
+     * entry (by created_at) is soft-deactivated (moved to "Odłożone") rather than
+     * deleted, so it stays recoverable.
+     */
+    private function enforceActiveDirectoryLimit(): void
+    {
+        $count = (int)$this->db->query('SELECT COUNT(*) FROM log_directories WHERE is_active = 1')->fetchColumn();
+        if ($count <= self::MAX_ACTIVE_DIRECTORIES) {
+            return;
+        }
+
+        $this->db->exec('
+            UPDATE log_directories SET is_active = 0
+            WHERE id = (
+                SELECT id FROM log_directories WHERE is_active = 1 ORDER BY created_at ASC LIMIT 1
+            )
+        ');
     }
 
     /**
@@ -134,9 +183,15 @@ class LogConfig
         $result = [];
 
         foreach ($dirs as $dir) {
-            $valid = (($dir['type'] ?? 'local') === 'ssh')
-                ? !empty($dir['ssh_host'])
-                : (is_dir($dir['path']) && is_readable($dir['path']));
+            $type = $dir['type'] ?? 'local';
+            $valid = match ($type) {
+                // Live reachability isn't checked here (would mean a docker exec /
+                // SSH round-trip per row on every directory-list load) - "valid"
+                // only means "has enough config to attempt a connection".
+                'ssh' => !empty($dir['ssh_host']),
+                'docker' => !empty($dir['container_id']),
+                default => is_dir($dir['path']) && is_readable($dir['path']),
+            };
 
             $key = $dir['name'];
 
@@ -145,7 +200,8 @@ class LogConfig
                 'key' => $key,
                 'name' => $dir['name'],
                 'path' => $dir['path'],
-                'type' => $dir['type'] ?? 'local',
+                'type' => $type,
+                'container_id' => $dir['container_id'] ?? null,
                 'valid' => $valid,
             ];
         }
@@ -162,12 +218,14 @@ class LogConfig
     {
         $this->db->exec("DELETE FROM log_directories WHERE name LIKE 'allowed_%'");
 
-        $this->db->exec('
+        // Group by path+container_id, not path alone - two different containers can
+        // both legitimately have e.g. "/var/log" and shouldn't be deduplicated together.
+        $this->db->exec("
             DELETE FROM log_directories
             WHERE id NOT IN (
-                SELECT MIN(id) FROM log_directories GROUP BY path
+                SELECT MIN(id) FROM log_directories GROUP BY path, COALESCE(container_id, '')
             )
-        ');
+        ");
     }
 
     /**
@@ -178,7 +236,7 @@ class LogConfig
         $fields = [];
         $params = [':id' => $id];
 
-        foreach (['name', 'path', 'type', 'ssh_host', 'ssh_user', 'ssh_auth_method', 'ssh_key_path', 'is_active'] as $field) {
+        foreach (['name', 'path', 'type', 'ssh_host', 'ssh_user', 'ssh_auth_method', 'ssh_key_path', 'container_id', 'is_active'] as $field) {
             if (isset($config[$field])) {
                 $fields[] = "$field = :$field";
                 $params[":$field"] = $config[$field];

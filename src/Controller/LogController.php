@@ -47,6 +47,11 @@ class LogController
             $params = $request->getQueryParams();
             $path = $params['path'] ?? null;
             $dirKey = $params['dir'] ?? null;
+            $containerId = $params['container_id'] ?? null;
+
+            if ($containerId !== null && $path) {
+                return $this->getFilesFromContainer($containerId, $path, $response);
+            }
 
             if ($path) {
                 $absPath = $this->pathResolver->resolvePath($path);
@@ -132,6 +137,35 @@ class LogController
         }
 
         return $this->json($response, $entries);
+    }
+
+    private function getFilesFromContainer(string $containerId, string $dirPath, Response $response): Response
+    {
+        if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {
+            return $this->json($response, ['error' => 'docker_unavailable'], 503);
+        }
+
+        try {
+            $files = $this->dockerExec->listFiles($containerId, $dirPath);
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'container_not_found') {
+                return $this->json($response, ['error' => $message], 404);
+            }
+            if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
+                return $this->json($response, ['error' => $message], 403);
+            }
+            return $this->json($response, ['error' => 'docker_exec_failed', 'message' => $message], 500);
+        }
+
+        $basePath = rtrim($dirPath, '/');
+        $result = array_map(fn ($f) => [
+            'file' => $basePath . '/' . $f['file'],
+            'date' => $f['date'],
+            'size' => $f['size'],
+        ], $files);
+
+        return $this->json($response, $result);
     }
 
     private function getEntriesFromContainer(string $containerId, string $filePath, Request $request, Response $response): Response
