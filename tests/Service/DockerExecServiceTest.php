@@ -90,8 +90,9 @@ class DockerExecServiceTest extends TestCase
 
     public function testReadFileDeniesContainerWhenAllowListEmptyByDefault(): void
     {
-        // No allow-list configured (env var unset) => deny by default, fail closed.
-        $service = new DockerExecService();
+        // Explicit empty allow-list (not reliant on LOG_VIEWER_ALLOWED_CONTAINERS
+        // being unset in the ambient environment) => deny by default, fail closed.
+        $service = new DockerExecService([]);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('container_not_allowed');

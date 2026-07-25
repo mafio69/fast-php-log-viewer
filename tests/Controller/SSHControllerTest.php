@@ -28,6 +28,38 @@ class SSHControllerTest extends TestCase
         $this->controller = new SSHController($logParser, $securityService);
     }
 
+    /**
+     * Live SSH integration tests against the real "frog" server are opt-in only:
+     * they never run by default (so the normal test suite / CI never dials out
+     * to a real external server), and credentials come from the environment,
+     * never from this file.
+     *
+     * @return array{ssh_host: string, ssh_user: string, ssh_port: int, ssh_auth_method: string, ssh_password: string}
+     */
+    private function frogConnectionData(): array
+    {
+        if (getenv('RUN_FROG_INTEGRATION_TESTS') !== '1') {
+            $this->markTestSkipped('Set RUN_FROG_INTEGRATION_TESTS=1 plus HOST_FROG/USER_FROG/PORT_FROG/PASS_FROG to run live SSH integration tests against frog.');
+        }
+
+        $host = getenv('HOST_FROG');
+        $user = getenv('USER_FROG');
+        $port = getenv('PORT_FROG');
+        $password = getenv('PASS_FROG');
+
+        if ($host === false || $user === false || $port === false || $password === false) {
+            $this->markTestSkipped('RUN_FROG_INTEGRATION_TESTS=1 is set but HOST_FROG/USER_FROG/PORT_FROG/PASS_FROG are not all present in the environment.');
+        }
+
+        return [
+            'ssh_host' => $host,
+            'ssh_user' => $user,
+            'ssh_port' => (int) $port,
+            'ssh_auth_method' => 'password',
+            'ssh_password' => $password,
+        ];
+    }
+
     public function testExtractSSHDataReturnsExpectedKeys(): void
     {
         $reflection = new \ReflectionMethod(SSHController::class, 'extractSSHData');
@@ -247,15 +279,9 @@ class SSHControllerTest extends TestCase
 
     public function testTestConnectionWithRealFrogConnection(): void
     {
+        $data = $this->frogConnectionData();
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/test-connection');
-        $data = [
-            'ssh_host' => 'frog01.mikr.us',
-            'ssh_user' => 'frog',
-            'ssh_port' => 10137,
-            'ssh_auth_method' => 'password',
-            'ssh_password' => 'GxCdTbACI7',
-        ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
@@ -270,16 +296,9 @@ class SSHControllerTest extends TestCase
 
     public function testListFilesWithRealFrogConnection(): void
     {
+        $data = $this->frogConnectionData() + ['path' => '/home/frog/test'];
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/list-files');
-        $data = [
-            'ssh_host' => 'frog01.mikr.us',
-            'ssh_user' => 'frog',
-            'ssh_port' => 10137,
-            'ssh_auth_method' => 'password',
-            'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test',
-        ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
@@ -297,16 +316,9 @@ class SSHControllerTest extends TestCase
 
     public function testReadFileWithRealFrogConnection(): void
     {
+        $data = $this->frogConnectionData() + ['path' => '/home/frog/test/php_errors.log'];
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
-        $data = [
-            'ssh_host' => 'frog01.mikr.us',
-            'ssh_user' => 'frog',
-            'ssh_port' => 10137,
-            'ssh_auth_method' => 'password',
-            'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test/php_errors.log',
-        ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
@@ -324,16 +336,9 @@ class SSHControllerTest extends TestCase
 
     public function testDownloadFileWithRealFrogConnection(): void
     {
+        $data = $this->frogConnectionData() + ['path' => '/home/frog/test/php_errors.log'];
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/download-file');
-        $data = [
-            'ssh_host' => 'frog01.mikr.us',
-            'ssh_user' => 'frog',
-            'ssh_port' => 10137,
-            'ssh_auth_method' => 'password',
-            'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test/php_errors.log',
-        ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
@@ -355,16 +360,9 @@ class SSHControllerTest extends TestCase
 
     public function testReadFileWithNginxFormat(): void
     {
+        $data = $this->frogConnectionData() + ['path' => '/home/frog/test/nginx_error.log'];
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('POST', '/api/ssh/read-file');
-        $data = [
-            'ssh_host' => 'frog01.mikr.us',
-            'ssh_user' => 'frog',
-            'ssh_port' => 10137,
-            'ssh_auth_method' => 'password',
-            'ssh_password' => 'GxCdTbACI7',
-            'path' => '/home/frog/test/nginx_error.log',
-        ];
         $request = $request->withParsedBody($data);
         $responseFactory = new ResponseFactory();
         $response = $responseFactory->createResponse();
