@@ -14,6 +14,8 @@ class SSH
 {
     use ErrorContextTrait;
 
+    private const TIMEOUT = 10;
+
     private $connection = null;
     private array $config;
 
@@ -181,17 +183,36 @@ class SSH
             throw new RuntimeException("(!$stream) Failed to execute SSH command (command: $command)" . $this->getLastErrorMessage());
         }
 
-        stream_set_blocking($stream, true);
-
-        // Also fetch and drain the stderr stream. Known ext-ssh2/libssh2 gotcha:
-        // if stderr is never read, the SSH channel can report EOF prematurely on
-        // stdout for very short-lived commands (e.g. `cat` on a tiny file),
-        // silently truncating the output to an empty string.
         $stderrStream = ssh2_fetch_stream($stream, SSH2_STREAM_STDERR);
-        stream_set_blocking($stderrStream, true);
 
-        $output = stream_get_contents($stream);
-        stream_get_contents($stderrStream);
+        // Both streams are read concurrently in a non-blocking loop rather than
+        // stdout-then-stderr. Known ext-ssh2/libssh2 gotcha: if stderr is never
+        // read, the SSH channel can report EOF prematurely on stdout for very
+        // short-lived commands. But reading stdout to completion FIRST has the
+        // same problem in reverse for commands with large stderr output: once
+        // libssh2's stderr buffer fills up, the remote side blocks writing to
+        // it, which stalls stdout too - a stdout-then-stderr read would then
+        // hang forever waiting for a stdout EOF that can't happen until stderr
+        // is drained. Interleaving avoids both directions of the deadlock.
+        stream_set_blocking($stream, false);
+        stream_set_blocking($stderrStream, false);
+
+        $output = '';
+        $deadline = microtime(true) + self::TIMEOUT;
+        while (!feof($stream) || !feof($stderrStream)) {
+            $out = stream_get_contents($stream);
+            if ($out !== false && $out !== '') {
+                $output .= $out;
+            }
+            $err = stream_get_contents($stderrStream);
+
+            if (($out === false || $out === '') && ($err === false || $err === '')) {
+                if (microtime(true) > $deadline) {
+                    break;
+                }
+                usleep(10000);
+            }
+        }
 
         fclose($stderrStream);
         fclose($stream);

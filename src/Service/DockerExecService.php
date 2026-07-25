@@ -57,6 +57,7 @@ class DockerExecService
     {
         $this->validateContainerId($containerId);
         $this->validateFilePath($filePath);
+        $filePath = $this->normalizePath($filePath);
         $this->assertContainerAllowed($containerId);
         $this->assertPathAllowed($filePath);
 
@@ -92,6 +93,30 @@ class DockerExecService
         if (!in_array($containerId, $this->allowedContainers, true)) {
             throw new RuntimeException('container_not_allowed');
         }
+    }
+
+    /**
+     * Collapses "." and ".." segments before the allow-list check, so a path
+     * like "/var/log/../../etc/passwd" - which passes a naive str_starts_with()
+     * prefix check against "/var/log/" - is normalized to "/etc/passwd" first
+     * and correctly rejected. The normalized path is also what actually gets
+     * executed (via createExec()), so what's checked matches what runs.
+     */
+    private function normalizePath(string $filePath): string
+    {
+        $normalized = [];
+        foreach (explode('/', $filePath) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+            if ($segment === '..') {
+                array_pop($normalized);
+                continue;
+            }
+            $normalized[] = $segment;
+        }
+
+        return '/' . implode('/', $normalized);
     }
 
     private function assertPathAllowed(string $filePath): void

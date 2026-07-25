@@ -110,6 +110,19 @@ class DockerExecServiceTest extends TestCase
         $service->readFile('allowed-container', '/etc/passwd');
     }
 
+    public function testReadFileDeniesPathTraversalOutsideAllowedPrefix(): void
+    {
+        // "/var/log/../../etc/passwd" passes a naive str_starts_with() check
+        // against "/var/log/" - it must be normalized before the allow-list
+        // check, or this reads arbitrary files from the container.
+        $service = new DockerExecService(['allowed-container'], ['/var/log/']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('path_not_allowed');
+
+        $service->readFile('allowed-container', '/var/log/../../etc/passwd');
+    }
+
     public function testDemuxStreamDemultiplexesStdoutAndStderr(): void
     {
         $service = new DockerExecService();
