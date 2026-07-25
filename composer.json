@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.4",
         "ext-pdo": "*",
         "ext-ssh2": "*",
         "ext-pdo_sqlite": "*",
