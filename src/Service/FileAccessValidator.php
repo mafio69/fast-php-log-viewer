@@ -16,6 +16,11 @@ class FileAccessValidator
     ) {
     }
 
+    /**
+     * @phpstan-impure Result depends on $this->logConfig->getDirectories(), which can
+     * change between calls (e.g. LogController registers a new allowed directory
+     * between two isFileAllowed() calls for the same request).
+     */
     public function isFileAllowed(string $filePath, ?string $dirKey, bool $defaultAllowed = false): bool
     {
         $realPath = realpath($filePath);

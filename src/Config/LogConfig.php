@@ -226,7 +226,7 @@ class LogConfig
     }
 
     /**
-     * Default directories — source of truth for the 4 built-in entries.
+     * Default directories — source of truth for the built-in entries.
      * Each entry has: key (user-friendly label), path (for backend resolution),
      * type (logical group), name (display name).
      *
@@ -404,7 +404,7 @@ class LogConfig
 
         $key = hex2bin($hex);
         if ($key === false || strlen($key) !== 32) {
-            throw new RuntimeException('($key === false || strlen($key) !== 32) BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes) (hex: ' . (is_string($hex) ? $hex : 'null') . ')');
+            throw new RuntimeException('BACKUP_ENCRYPTION_KEY must be a 64-character hex string (32 bytes); got ' . strlen($hex) . ' character(s)');
         }
 
         return $key;

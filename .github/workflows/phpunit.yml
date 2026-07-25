@@ -18,6 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.1 is composer.json's declared floor ("php": ">=8.1"); 8.4 matches
+        # the Dockerfile's base image (mafio69/php-env:8.4-fpm-alpine), i.e.
+        # what actually runs in production. Testing only 8.4 would let the
+        # ">=8.1" claim go unverified.
+        php-version: ["8.1", "8.4"]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -26,7 +34,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: ${{ matrix.php-version }}
           extensions: ctype, iconv, simplexml, pdo, pdo_sqlite, sqlite3, ssh2
           coverage: none
 
@@ -34,8 +42,8 @@ jobs:
         uses: actions/cache@v5
         with:
           path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
+          key: composer-${{ matrix.php-version }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php-version }}-
 
       - name: Zainstaluj zaleznosci
         run: composer install --prefer-dist --no-progress --no-interaction
