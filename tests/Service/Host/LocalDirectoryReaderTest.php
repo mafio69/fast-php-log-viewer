@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer\Tests\Service;
+namespace Mariusz\LogViewer\Tests\Service\Host;
 
-use Mariusz\LogViewer\Service\GlobLogFinder;
+use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use PHPUnit\Framework\TestCase;
 
-class GlobLogFinderTest extends TestCase
+final class LocalDirectoryReaderTest extends TestCase
 {
     private string $tmpDir;
-    private GlobLogFinder $finder;
+    private LocalDirectoryReader $reader;
 
     protected function setUp(): void
     {
-        $this->tmpDir = sys_get_temp_dir() . '/log-glob-finder-test-' . uniqid();
+        $this->tmpDir = sys_get_temp_dir() . '/local-directory-reader-test-' . uniqid();
         mkdir($this->tmpDir, 0755, true);
-        $this->finder = new GlobLogFinder();
+        $this->reader = new LocalDirectoryReader();
     }
 
     protected function tearDown(): void
@@ -26,12 +26,12 @@ class GlobLogFinderTest extends TestCase
 
     public function testFindAllReturnsEmptyForNonExistentPath(): void
     {
-        $this->assertSame([], $this->finder->findAll('/nonexistent/path'));
+        $this->assertSame([], $this->reader->findAll('/nonexistent/path'));
     }
 
     public function testFindAllReturnsEmptyForEmptyDir(): void
     {
-        $this->assertSame([], $this->finder->findAll($this->tmpDir));
+        $this->assertSame([], $this->reader->findAll($this->tmpDir));
     }
 
     public function testFindAllFindsLogFiles(): void
@@ -39,21 +39,24 @@ class GlobLogFinderTest extends TestCase
         file_put_contents($this->tmpDir . '/app.log', 'test');
         file_put_contents($this->tmpDir . '/error.log', 'test');
 
-        $files = $this->finder->findAll($this->tmpDir);
+        $files = $this->reader->findAll($this->tmpDir);
 
         $this->assertCount(2, $files);
-        $this->assertSame('app.log', $files[0]['file']);
-        $this->assertSame('error.log', $files[1]['file']);
+        $names = array_column($files, 'file');
+        $this->assertContains('app.log', $names);
+        $this->assertContains('error.log', $names);
     }
 
-    public function testFindAllFindsPhpFiles(): void
+    public function testFindAllDoesNotGlobPhpFiles(): void
     {
-        file_put_contents($this->tmpDir . '/debug.php', 'test');
+        // Old GlobLogFinder globbed *.php; that risked surfacing source/config
+        // files through the log viewer. LocalDirectoryReader matches only
+        // *.log. This test pins that behavior so the old habit cannot return.
+        file_put_contents($this->tmpDir . '/debug.php', '<?php // secret');
 
-        $files = $this->finder->findAll($this->tmpDir);
+        $files = $this->reader->findAll($this->tmpDir);
 
-        $this->assertCount(1, $files);
-        $this->assertSame('debug.php', $files[0]['file']);
+        $this->assertSame([], $files);
     }
 
     public function testFindAllIgnoresNonLogExtensions(): void
@@ -61,14 +64,14 @@ class GlobLogFinderTest extends TestCase
         file_put_contents($this->tmpDir . '/readme.txt', 'test');
         file_put_contents($this->tmpDir . '/image.jpg', 'test');
 
-        $this->assertSame([], $this->finder->findAll($this->tmpDir));
+        $this->assertSame([], $this->reader->findAll($this->tmpDir));
     }
 
     public function testFindAllWithTrailingSlash(): void
     {
         file_put_contents($this->tmpDir . '/app.log', 'test');
 
-        $files = $this->finder->findAll($this->tmpDir . '/');
+        $files = $this->reader->findAll($this->tmpDir . '/');
 
         $this->assertCount(1, $files);
         $this->assertSame('app.log', $files[0]['file']);
@@ -78,7 +81,7 @@ class GlobLogFinderTest extends TestCase
     {
         file_put_contents($this->tmpDir . '/app.log', 'hello world');
 
-        $files = $this->finder->findAll($this->tmpDir);
+        $files = $this->reader->findAll($this->tmpDir);
 
         $this->assertCount(1, $files);
         $this->assertGreaterThan(0, $files[0]['size']);
@@ -88,7 +91,7 @@ class GlobLogFinderTest extends TestCase
     {
         file_put_contents($this->tmpDir . '/app.log', 'test');
 
-        $files = $this->finder->findAll($this->tmpDir);
+        $files = $this->reader->findAll($this->tmpDir);
 
         $this->assertCount(1, $files);
         $this->assertNotEmpty($files[0]['date']);

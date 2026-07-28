@@ -9,7 +9,7 @@ use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
-use Mariusz\LogViewer\Service\GlobLogFinder;
+use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\PathResolver;
@@ -241,7 +241,7 @@ class LogControllerTest extends TestCase
 
         $logConfig = $this->createMock(LogConfig::class);
         $configManager = $this->createMock(ConfigManager::class);
-        $realFinder = new GlobLogFinder();
+        $realFinder = new LocalDirectoryReader();
         $resolver = $this->createMock(PathResolver::class);
         $validator = $this->createMock(FileAccessValidator::class);
         $parser = $this->createMock(LogParser::class);
@@ -276,7 +276,7 @@ class LogControllerTest extends TestCase
         try {
             $logConfig = $this->createMock(LogConfig::class);
             $configManager = $this->createMock(ConfigManager::class);
-            $realFinder = new GlobLogFinder();
+            $realFinder = new LocalDirectoryReader();
             $resolver = $this->createMock(PathResolver::class);
             $validator = $this->createMock(FileAccessValidator::class);
             $parser = $this->createMock(LogParser::class);
@@ -312,7 +312,7 @@ class LogControllerTest extends TestCase
 
         $logConfig = $this->createMock(LogConfig::class);
         $configManager = $this->createMock(ConfigManager::class);
-        $realFinder = new GlobLogFinder();
+        $realFinder = new LocalDirectoryReader();
         $resolver = $this->createMock(PathResolver::class);
         $validator = $this->createMock(FileAccessValidator::class);
         $parser = $this->createMock(LogParser::class);

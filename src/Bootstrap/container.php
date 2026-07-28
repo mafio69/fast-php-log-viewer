@@ -21,7 +21,7 @@ use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use Mariusz\LogViewer\Service\DefaultLogSourceCollector;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
-use Mariusz\LogViewer\Service\GlobLogFinder;
+use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\LogScanner;
@@ -50,7 +50,7 @@ return function (ContainerBuilder $containerBuilder): void {
         LoggerInterface::class => DualLogger::create(DATA_DIR, LogLevel::DEBUG),
 
         // Service Bindings
-        LogFinderInterface::class => autowire(GlobLogFinder::class),
+        LogFinderInterface::class => autowire(LocalDirectoryReader::class),
         // LogSourceCollector: DefaultLogSourceCollector (host defaults + LogConfig custom dirs)
         LogSourceCollectorInterface::class => autowire(DefaultLogSourceCollector::class),
 
