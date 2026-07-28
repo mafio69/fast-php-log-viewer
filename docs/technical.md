@@ -118,9 +118,8 @@ LogController.getEntries()
   ├─ dirKey = null → brak kontekstu katalogu
   ├─ FileAccessValidator.isFileAllowed('/var/log/nginx/error.log', null)
   │     ├─ sprawdza wszystkie zarejestrowane katalogi w SQLite
-  │     ├─ jesli brak → autoRegisterParentDir('/var/log/nginx')
-  │     │     └─ dodaje do dozwolonych (chyba ze /etc, /root, /proc...)
-  │     └─ ponowna walidacja
+  │     └─ jesli brak → 403 access_denied (katalog trzeba zarejestrowac
+  │                       przez DirectoryController.add, brak backdoor)
   ├─ file_exists('/var/log/nginx/error.log') → TRUE (plik jest w kontenerze)
   └─ LogParser.parseFile() → zwraca sparsowane wpisy
 ```
@@ -241,7 +240,7 @@ Format `prefix:path` uzywany w kluczach katalogow:
 1. **SSH** — jesli `dirKey` zaczyna sie od `ssh:`, sprawdza tylko czy `realpath` nie jest false
 2. **dirKey podany** — rozwiazuje sciezke katalogu (`PathResolver.resolveDirPath()`), sprawdza czy plik jest pod ta sciezka
 3. **Fallback** — sprawdza wszystkie zarejestrowane katalogi w SQLite
-4. **Auto-register** — jesli plik jest `/absolute/sciezka` bez dirKey i walidacja nie przeszla, `autoRegisterParentDir()` dodaje katalog nadrzedny do SQLite (z wyjatkiem `/etc`, `/root`, `/proc`, `/sys`, `/dev`)
+4. **Odmowa** — gdy zadne z powyzszych nie pasuje, `LogController::getEntries` zwraca `403 access_denied`. Katalog trzeba zarejestrowac wprost przez `DirectoryController::add` (gate przez `SetupMiddleware`), a nie po cichu rejestrowac rodzica na zadanie — patrz sekcja 12.1 o dawnym backdoorze
 
 ---
 
@@ -667,3 +666,59 @@ na poczatku). Docker akceptuje znaki `[a-zA-Z0-9][a-zA-Z0-9_.-]*` w nazwach.
 | `EDITOR_URL` | `.env` / definicja PHP | URL edytora (phpstorm://open?file={file}&line={line}) |
 | `BACKUP_ENCRYPTION_KEY` | `.env` | Klucz szyfrowania backupu (generowany przez wizard) |
 | `GIT_ACCES_TOKEN` | `.env` / `.config` | GitHub token (do pobierania prywatnych pakietow Composer) |
+
+---
+
+## 12. Audyt bezpieczenstwa — historia backdoorow
+
+Ten rozdzial dokumentuje usuniete podatnosci bezpieczenstwa, aby zachowac
+slad audytowy i unikac ponownego wprowadzenia tych samych mechanizmow.
+
+### 12.1. `autoRegisterParentDir` (usuniety w commit `6ce1c51`)
+
+**Zakres podatnosci:** `LogController::getEntries` w `src/Controller/LogController.php`.
+
+**Mechanizm (juz nie istniejacy):** gdy klient zadal pliku przez `/api/entries`
+bez parametru `dir` i `FileAccessValidator::isFileAllowed` odmawial, kod
+wywolywal prywatna metode `autoRegisterParentDir($filePath)`. Ta metoda:
+
+- miala tzw. "blocked list" `/etc, /root, /proc, /sys, /dev`;
+- jezeli sciezka nie spelniala zadnego z tych prefiksow, wyliczala
+  `dirname($filePath)` i rejestrowala go w `LogConfig` (SQLite) przez
+  `addDirectory(['name' => 'local:'.$parentDir, 'path' => $parentDir, 'type' => 'local'])`;
+- po tym ponownie wywolywala `isFileAllowed` — ktora teraz zwracala `true`,
+  bo wlasnie dodany katalog byl w allow-liscie.
+
+**Co bylo zle:**
+
+1. **Backdoor omijajacy `SetupMiddleware`** — `SetupMiddleware` blokuje
+   `DirectoryController::add` do czasu zakonczenia setup wizarda, ale
+   `autoRegisterParentDir` wywolywane bylo z wnentrza `LogController::getEntries`,
+   pomijajac gate. Dowolny URL `/api/entries?file=/...` po setupie mogl
+   poszerzyc allow-liste.
+2. **Niekompletna blocked-list** — brakowalo m.in. `/var/lib`, `/srv/secrets`,
+   `/run/secrets`, `~/.ssh`, jakichkolwiek grupek systemowych. Atakujacy
+   mogy prosic o np. `/var/lib/mysql/...` albo `/home/user/.ssh/id_rsa`, a
+   katalog nadrzedny zostalby dodany do allow-listy.
+3. **Brak audit log, brak user consent** — operacja byla cicha, z perspektywy
+   UI i logow wygladalo jak normalny GET loga.
+4. **Niezgodnosc z defensywnym duchem ograniczenia logow do 3 sciezek
+   default** (`/var/log`, `~/logs`, `./logs`). Pojedynczy的男人 request
+   mogl rejestrowac dowolny katalog, co czynilo allow-liste fikcja.
+
+**Naprawa (`6ce1c51`, DevBrain task #132):**
+
+- usunieto metode `autoRegisterParentDir` z `LogController`;
+- usunieto wywolanie z `getEntries`;
+- gdy `isFileAllowed` zwraca `false`, `LogController` natychmiast odpowiada
+  `403 access_denied`, bez zadnej cichej rejestracji;
+- dodany test regresyjny `testGetEntriesNeverAutoRegistersParentDirOnDeniedAccess`
+  w `tests/Controller/LogControllerTest.php` — mock
+  `logConfig->expects($this->never())->method('addDirectory')`, ktory chroni
+  przed przyszlym przypadkowym wprowadzeniem podobnego backdooru.
+
+**Inne note:** Frontend `public/js/store.js:354` wywoluje endpoint
+`DirectoryController` (`addAllowedDir(parentDir)`) — to NIE jest backdoor,
+poniewaz ten endpoint jest chroniony przez `SetupMiddleware` i wlasciwa
+walidacja inputu, nie przez ciche wywolanie z wnentrza innego kontrolera.
+Zachowanie frontu pozostaje bez zmian.
