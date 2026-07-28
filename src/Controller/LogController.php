@@ -8,6 +8,7 @@ use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
+use Mariusz\LogViewer\Service\Host\LocalFileReader;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\PathResolver;
@@ -25,6 +26,7 @@ class LogController
         private readonly PathResolver $pathResolver,
         private readonly FileAccessValidator $accessValidator,
         private readonly LogParser $logParser,
+        private readonly LocalFileReader $localFileReader,
         private readonly ?DockerExecService $dockerExec = null,
     ) {
     }
@@ -115,12 +117,26 @@ class LogController
             return $this->json($response, ['error' => 'access_denied'], 403);
         }
 
-        if (!file_exists($filePath)) {
-            return $this->json($response, ['error' => 'file_not_found'], 404);
+        // Single responsibility split: LocalFileReader reads bytes from disk,
+        // LogParser parses lines. This removes the host branch's old habit of
+        // using LogParser::parseFile (which silently swallowed file-not-found
+        // into [] and permission errors into []). LocalFileReader throws with
+        // a discriminant message; we map that to HTTP status here.
+        try {
+            $content = $this->localFileReader->read($filePath);
+        } catch (\RuntimeException $e) {
+            $message = $e->getMessage();
+            if (str_starts_with($message, 'file_not_found')) {
+                return $this->json($response, ['error' => 'file_not_found'], 404);
+            }
+            if (str_starts_with($message, 'file_not_readable')) {
+                return $this->json($response, ['error' => 'access_denied'], 403);
+            }
+            return $this->json($response, ['error' => 'read_error', 'message' => $message], 500);
         }
 
         $level = $request->getQueryParams()['level'] ?? null;
-        $entries = $this->logParser->parseFile($filePath);
+        $entries = $this->logParser->parseString($content);
 
         if ($level) {
             $entries = array_values(array_filter($entries, fn ($e) => strtoupper($e['level']) === strtoupper($level)));

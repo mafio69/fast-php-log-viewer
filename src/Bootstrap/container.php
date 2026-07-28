@@ -22,6 +22,7 @@ use Mariusz\LogViewer\Service\DefaultLogSourceCollector;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
+use Mariusz\LogViewer\Service\Host\LocalFileReader;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\LogScanner;
@@ -89,7 +90,7 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser, DockerExecService
+        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser, LocalFileReader, DockerExecService
         LogController::class => function ($c) {
             return new LogController(
                 $c->get(LogConfig::class),
@@ -98,7 +99,8 @@ return function (ContainerBuilder $containerBuilder): void {
                 $c->get(PathResolver::class),
                 $c->get(FileAccessValidator::class),
                 $c->get(LogParser::class),
-                $c->get(DockerExecService::class)
+                $c->get(LocalFileReader::class),
+                $c->get(DockerExecService::class),
             );
         },
 

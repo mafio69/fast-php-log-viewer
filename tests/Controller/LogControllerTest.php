@@ -10,6 +10,7 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
+use Mariusz\LogViewer\Service\Host\LocalFileReader;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\PathResolver;
@@ -26,6 +27,7 @@ class LogControllerTest extends TestCase
     private $pathResolver;
     private $accessValidator;
     private $logParser;
+    private LocalFileReader $localFileReader;
 
     protected function setUp(): void
     {
@@ -35,6 +37,7 @@ class LogControllerTest extends TestCase
         $this->pathResolver = $this->createMock(PathResolver::class);
         $this->accessValidator = $this->createMock(FileAccessValidator::class);
         $this->logParser = $this->createMock(LogParser::class);
+        $this->localFileReader = new LocalFileReader();
 
         $this->controller = new LogController(
             $this->logConfig,
@@ -43,6 +46,7 @@ class LogControllerTest extends TestCase
             $this->pathResolver,
             $this->accessValidator,
             $this->logParser,
+            $this->localFileReader,
         );
     }
 
@@ -144,8 +148,7 @@ class LogControllerTest extends TestCase
             ->with($testFile, 'logs/')
             ->willReturn(true);
 
-        $this->logParser->method('parseFile')
-            ->with($testFile)
+        $this->logParser->method('parseString')
             ->willReturn([
                 ['datetime' => '2024-01-01 10:00:00', 'level' => 'INFO', 'location' => 'test.php:1', 'message' => 'test message', 'context' => []],
             ]);
@@ -193,8 +196,7 @@ class LogControllerTest extends TestCase
             ->with($testFile, '~/logs')
             ->willReturn(true);
 
-        $this->logParser->method('parseFile')
-            ->with($testFile)
+        $this->logParser->method('parseString')
             ->willReturn([
                 ['datetime' => '2024-01-01 10:00:00', 'level' => 'WARNING', 'location' => 'app.php:5', 'message' => 'warning message', 'context' => []],
             ]);
@@ -250,7 +252,8 @@ class LogControllerTest extends TestCase
             ->with($tmpDir)
             ->willReturn($tmpDir);
 
-        $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser);
+        $controller = $localFileReader = new LocalFileReader();
+        $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser, $localFileReader);
 
         $request = (new RequestFactory())->createRequest('GET', '/api/files?path=' . urlencode($tmpDir));
         $response = (new ResponseFactory())->createResponse();
@@ -285,7 +288,8 @@ class LogControllerTest extends TestCase
                 ->with('logs/')
                 ->willReturn($logDir);
 
-            $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser);
+            $controller = $localFileReader = new LocalFileReader();
+            $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser, $localFileReader);
 
             $request = (new RequestFactory())->createRequest('GET', '/api/files?path=logs/');
             $response = (new ResponseFactory())->createResponse();
@@ -321,7 +325,8 @@ class LogControllerTest extends TestCase
             ->with('~/logs')
             ->willReturn($logDir);
 
-        $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser);
+        $controller = $localFileReader = new LocalFileReader();
+        $controller = new LogController($logConfig, $configManager, $realFinder, $resolver, $validator, $parser, $localFileReader);
 
         $request = (new RequestFactory())->createRequest('GET', '/api/files?path=~/logs');
         $response = (new ResponseFactory())->createResponse();
@@ -458,8 +463,7 @@ class LogControllerTest extends TestCase
             ->with($logFile, $this->anything())
             ->willReturn(true);
 
-        $this->logParser->method('parseFile')
-            ->with($logFile)
+        $this->logParser->method('parseString')
             ->willReturn([
                 ['datetime' => '2024-01-01 10:00:00', 'level' => 'INFO', 'location' => 'test.php:1', 'message' => 'Info message', 'context' => []],
                 ['datetime' => '2024-01-01 10:01:00', 'level' => 'WARNING', 'location' => 'test.php:2', 'message' => 'Warning message', 'context' => []],
@@ -495,6 +499,7 @@ class LogControllerTest extends TestCase
             $this->pathResolver,
             $this->accessValidator,
             $this->logParser,
+            $this->localFileReader,
             $dockerExec,
         );
     }
