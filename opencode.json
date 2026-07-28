@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "task": "deny",
+    "external_directory": "deny",
+    "webfetch": "ask",
+    "read": {
+      "*": "allow",
+      ".*": "deny",
+      "**/.*": "deny",
+      ".env": "deny",
+      ".env*": "deny",
+      "**/.env": "deny",
+      "**/.env*": "deny",
+      ".local": "allow",
+      ".local/**": "allow",
+      "**/.local": "allow",
+      "**/.local/**": "allow",
+      ".github": "allow",
+      ".github/**": "allow",
+      ".opencode": "allow",
+      ".opencode/**": "allow",
+      "vendor": "deny",
+      "vendor/**": "deny",
+      "**/vendor": "deny",
+      "**/vendor/**": "deny"
+    },
+    "edit": {
+      "*": "allow",
+      ".*": "deny",
+      "**/.*": "deny",
+      ".local": "allow",
+      ".local/**": "allow",
+      "**/.local": "allow",
+      "**/.local/**": "allow",
+      "vendor": "deny",
+      "vendor/**": "deny",
+      "**/vendor": "deny",
+      "**/vendor/**": "deny"
+    },
+    "glob": {
+      "*": "allow",
+      ".*": "deny",
+      "**/.*": "deny",
+      ".local": "allow",
+      ".local/**": "allow",
+      "**/.local": "allow",
+      "**/.local/**": "allow",
+      "vendor": "deny",
+      "vendor/**": "deny",
+      "**/vendor": "deny",
+      "**/vendor/**": "deny"
+    },
+    "grep": {
+      "*": "allow",
+      ".*": "deny",
+      "**/.*": "deny",
+      ".local": "allow",
+      ".local/**": "allow",
+      "**/.local": "allow",
+      "**/.local/**": "allow",
+      "vendor": "deny",
+      "vendor/**": "deny",
+      "**/vendor": "deny",
+      "**/vendor/**": "deny"
+    }
+  }
+}
