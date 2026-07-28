@@ -383,6 +383,30 @@ class LogControllerTest extends TestCase
         $this->assertEquals('access_denied', $body['error']);
     }
 
+    public function testGetEntriesNeverAutoRegistersParentDirOnDeniedAccess(): void
+    {
+        $this->accessValidator->method('isFileAllowed')
+            ->willReturn(false);
+
+        $this->logConfig->method('getDirectories')->willReturn([
+            ['name' => 'logs', 'path' => '/var/log'],
+        ]);
+        $this->logConfig->expects($this->never())
+            ->method('addDirectory');
+
+        $request = (new RequestFactory())->createRequest(
+            'GET',
+            '/api/entries?file=/var/log/nginx/access.log'
+        );
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $this->controller->getEntries($request, $response);
+
+        $this->assertEquals(403, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertEquals('access_denied', $body['error']);
+    }
+
     public function testGetFilesHandlesExceptionFromFinder(): void
     {
         $this->pathResolver->method('resolvePath')

@@ -112,17 +112,7 @@ class LogController
         $dirKey = $request->getQueryParams()['dir'] ?? null;
 
         if (!$this->accessValidator->isFileAllowed($filePath, $dirKey)) {
-            // Direct file path (no dirKey): auto-add parent directory to allowed dirs
-            if ($dirKey === null && str_starts_with($filePath, '/')) {
-                $parentDir = $this->autoRegisterParentDir($filePath);
-                if ($parentDir !== null && $this->accessValidator->isFileAllowed($filePath, $dirKey)) {
-                    // Falls through — continue to parseFile
-                } else {
-                    return $this->json($response, ['error' => 'access_denied'], 403);
-                }
-            } else {
-                return $this->json($response, ['error' => 'access_denied'], 403);
-            }
+            return $this->json($response, ['error' => 'access_denied'], 403);
         }
 
         if (!file_exists($filePath)) {
@@ -199,28 +189,5 @@ class LogController
         }
 
         return $this->json($response, $entries);
-    }
-
-    private function autoRegisterParentDir(string $filePath): ?string
-    {
-        $blockedDirs = ['/etc', '/root', '/proc', '/sys', '/dev'];
-        foreach ($blockedDirs as $blocked) {
-            if (str_starts_with($filePath, $blocked)) {
-                return null;
-            }
-        }
-
-        $parentDir = dirname($filePath);
-        if ($parentDir === '.' || $parentDir === '/') {
-            return null;
-        }
-
-        $this->logConfig->addDirectory([
-            'name' => 'local:' . $parentDir,
-            'path' => $parentDir,
-            'type' => 'local',
-        ]);
-
-        return $parentDir;
     }
 }
