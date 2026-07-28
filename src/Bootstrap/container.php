@@ -18,12 +18,14 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
+use Mariusz\LogViewer\Service\DefaultLogSourceCollector;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\GlobLogFinder;
 use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\LogScanner;
+use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
 use Mariusz\LogViewer\Service\PathResolver;
 use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SetupWizard;
@@ -49,6 +51,8 @@ return function (ContainerBuilder $containerBuilder): void {
 
         // Service Bindings
         LogFinderInterface::class => autowire(GlobLogFinder::class),
+        // LogSourceCollector: DefaultLogSourceCollector (host defaults + LogConfig custom dirs)
+        LogSourceCollectorInterface::class => autowire(DefaultLogSourceCollector::class),
 
         // ConfigManager - singleton
         ConfigManager::class => function () {
@@ -149,11 +153,12 @@ return function (ContainerBuilder $containerBuilder): void {
             return new DockerExecService($containers, $paths);
         },
 
-        // DirectoryController - wstrzykuje LogConfig i LogScanner
+        // DirectoryController - wstrzykuje LogConfig, LogScanner, LogSourceCollectorInterface
         DirectoryController::class => function ($c) {
             return new DirectoryController(
                 $c->get(LogConfig::class),
-                $c->get(LogScanner::class)
+                $c->get(LogScanner::class),
+                $c->get(LogSourceCollectorInterface::class),
             );
         },
 

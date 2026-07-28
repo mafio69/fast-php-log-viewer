@@ -7,6 +7,7 @@ namespace Mariusz\LogViewer\Controller;
 use Exception;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\LogScanner;
+use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -17,6 +18,7 @@ class DirectoryController
     public function __construct(
         private readonly LogConfig $logConfig,
         private readonly LogScanner $logScanner,
+        private readonly LogSourceCollectorInterface $sourceCollector,
     ) {
     }
 
@@ -67,7 +69,26 @@ class DirectoryController
 
     public function scanDirectories(Request $request, Response $response): Response
     {
-        $dirs = $this->logScanner->scanCommonDirectories();
-        return $this->json($response, $dirs);
+        // Two-step pipeline: Collector gathers which directories to look at,
+        // LogScanner reads the file list of each one. Keeping "collect" and
+        // "scan" separate means this controller orchestrates — neither job
+        // lives inside the other.
+        $sources = $this->sourceCollector->collect();
+        $foundDirs = [];
+
+        foreach ($sources as $source) {
+            $files = $this->logScanner->scanDirectory($source->path);
+            if (!empty($files)) {
+                $foundDirs[$source->path] = [
+                    'path' => $source->path,
+                    'name' => basename($source->path),
+                    'type' => $source->type,
+                    'file_count' => count($files),
+                    'files' => array_slice($files, 0, 10), // First 10 files
+                ];
+            }
+        }
+
+        return $this->json($response, $foundDirs);
     }
 }

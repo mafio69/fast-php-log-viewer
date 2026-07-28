@@ -7,6 +7,8 @@ namespace Mariusz\LogViewer\Tests\Controller;
 use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Service\LogScanner;
+use Mariusz\LogViewer\Service\LogSource;
+use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -15,12 +17,14 @@ class DirectoryControllerTest extends TestCase
 {
     private DirectoryController $controller;
     private LogConfig $logConfig;
+    private LogSourceCollectorInterface $collector;
 
     protected function setUp(): void
     {
         $this->logConfig = $this->createMock(LogConfig::class);
         $logScanner = $this->createMock(LogScanner::class);
-        $this->controller = new DirectoryController($this->logConfig, $logScanner);
+        $this->collector = $this->createMock(LogSourceCollectorInterface::class);
+        $this->controller = new DirectoryController($this->logConfig, $logScanner, $this->collector);
     }
 
     public function testAddDirectorySuccess(): void
@@ -132,5 +136,83 @@ class DirectoryControllerTest extends TestCase
         $body = json_decode((string)$result->getBody(), true);
         $this->assertCount(1, $body);
         $this->assertSame('old-dir', $body[0]['name']);
+    }
+
+    public function testScanDirectoriesDelegatesToCollectorThenScanner(): void
+    {
+        // Collector returns one host source; LogScanner returns its file list.
+        // The controller must compose both and emit the existing JSON shape
+        // (path/name/type/file_count/files as the front-end already expects).
+        $collector = $this->createMock(LogSourceCollectorInterface::class);
+        $collector->method('collect')->willReturn([
+            new LogSource('local:/var/log', '/var/log', 'local'),
+        ]);
+
+        $logScanner = $this->createMock(LogScanner::class);
+        $logScanner->method('scanDirectory')
+            ->with('/var/log')
+            ->willReturn([
+                ['path' => '/var/log/syslog', 'name' => 'syslog', 'size' => 1024, 'mtime' => 0, 'extension' => 'log'],
+            ]);
+
+        $controller = new DirectoryController($this->logConfig, $logScanner, $collector);
+        $request = (new RequestFactory())->createRequest('GET', '/api/directories/scan');
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->scanDirectories($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+
+        $this->assertArrayHasKey('/var/log', $body);
+        $entry = $body['/var/log'];
+        $this->assertSame('/var/log', $entry['path']);
+        $this->assertSame('log', $entry['name']);
+        $this->assertSame('local', $entry['type']);
+        $this->assertSame(1, $entry['file_count']);
+        $this->assertCount(1, $entry['files']);
+        $this->assertSame('syslog', $entry['files'][0]['name']);
+    }
+
+    public function testScanDirectoriesOmitsEmptySources(): void
+    {
+        $collector = $this->createMock(LogSourceCollectorInterface::class);
+        $collector->method('collect')->willReturn([
+            new LogSource('local:/var/log', '/var/log', 'local'),
+            new LogSource('local:/empty', '/empty', 'local'),
+        ]);
+
+        $logScanner = $this->createMock(LogScanner::class);
+        $logScanner->method('scanDirectory')
+            ->willReturnCallback(fn ($path) => $path === '/var/log'
+                ? [['path' => '/var/log/syslog', 'name' => 'syslog', 'size' => 1024, 'mtime' => 0, 'extension' => 'log']]
+                : []);
+
+        $controller = new DirectoryController($this->logConfig, $logScanner, $collector);
+        $request = (new RequestFactory())->createRequest('GET', '/api/directories/scan');
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->scanDirectories($request, $response);
+        $body = json_decode((string)$result->getBody(), true);
+
+        $this->assertCount(1, $body);
+        $this->assertArrayHasKey('/var/log', $body);
+        $this->assertArrayNotHasKey('/empty', $body);
+    }
+
+    public function testScanDirectoriesReturnsEmptyForNoSources(): void
+    {
+        $collector = $this->createMock(LogSourceCollectorInterface::class);
+        $collector->method('collect')->willReturn([]);
+
+        $logScanner = $this->createMock(LogScanner::class);
+        $controller = new DirectoryController($this->logConfig, $logScanner, $collector);
+        $request = (new RequestFactory())->createRequest('GET', '/api/directories/scan');
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $controller->scanDirectories($request, $response);
+        $body = json_decode((string)$result->getBody(), true);
+
+        $this->assertSame([], $body);
     }
 }
