@@ -8,21 +8,15 @@ use RuntimeException;
 
 /**
  * Scans directories for log files automatically.
+ *
+ * Reads its default scan paths from {@see DefaultLogSources::DEFAULTS} — the object
+ * does not hold any hardcoded log directory list itself. Hardcoding paths here
+ * would duplicate the single source of truth and risk re-introducing unsafe
+ * defaults like `/tmp` (contains sessions/sockets/secret tmp files).
  */
 class LogScanner
 {
     use ErrorContextTrait;
-
-    private array $commonLogPaths = [
-        '/var/log',
-        '/var/www/html/logs',
-        '/var/log/apache2',
-        '/var/log/nginx',
-        '/var/log/php-fpm',
-        '/tmp',
-        './logs',
-        '../logs',
-    ];
 
     private array $logExtensions = [
         '.log', '.txt', '.php', '.error', '.debug', '.info',
@@ -33,6 +27,20 @@ class LogScanner
         '*error*', '*debug*', '*access*',
         '*php*', '*apache*', '*nginx*', '*fpm*',
     ];
+
+    /**
+     * Directories to scan on the host. Defaults to DefaultLogSources::DEFAULTS.
+     *
+     * @var array<int, string>
+     */
+    private readonly array $commonLogPaths;
+
+    /** @param array<int, string> $commonLogPaths */
+    public function __construct(
+        array $commonLogPaths = DefaultLogSources::DEFAULTS,
+    ) {
+        $this->commonLogPaths = $commonLogPaths;
+    }
 
     /**
      * Scan common log directories for log files

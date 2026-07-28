@@ -120,7 +120,7 @@ return function (ContainerBuilder $containerBuilder): void {
             return new LogParser();
         },
 
-        // LogScanner - brak zależności
+        // LogScanner - domyslne sciezki z DefaultLogSources::DEFAULTS (constructor default)
         LogScanner::class => function () {
             return new LogScanner();
         },

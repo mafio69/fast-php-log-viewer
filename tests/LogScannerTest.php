@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests;
 
+use Mariusz\LogViewer\Service\DefaultLogSources;
 use Mariusz\LogViewer\Service\LogScanner;
 use PHPUnit\Framework\TestCase;
 
@@ -128,6 +129,51 @@ class LogScannerTest extends TestCase
         $found = $this->scanner->scanDirectory($this->tmpDir);
 
         $this->assertNotEmpty($found);
+    }
+
+    public function testNeverScansTmpByDefault(): void
+    {
+        $scanner = new LogScanner();
+        $ref = new \ReflectionProperty(LogScanner::class, 'commonLogPaths');
+        $paths = $ref->getValue($scanner);
+
+        $this->assertNotContains('/tmp', $paths);
+    }
+
+    public function testNeverScansVarWwwHtmlLogsByDefault(): void
+    {
+        $scanner = new LogScanner();
+        $ref = new \ReflectionProperty(LogScanner::class, 'commonLogPaths');
+        $paths = $ref->getValue($scanner);
+
+        $this->assertNotContains('/var/www/html/logs', $paths);
+    }
+
+    public function testNeverScansParentLogsByDefault(): void
+    {
+        $scanner = new LogScanner();
+        $ref = new \ReflectionProperty(LogScanner::class, 'commonLogPaths');
+        $paths = $ref->getValue($scanner);
+
+        $this->assertNotContains('../logs', $paths);
+    }
+
+    public function testUsesDefaultLogSourcesWhenConstructedWithoutArgs(): void
+    {
+        $scanner = new LogScanner();
+        $ref = new \ReflectionProperty(LogScanner::class, 'commonLogPaths');
+        $paths = $ref->getValue($scanner);
+
+        $this->assertSame(DefaultLogSources::DEFAULTS, $paths);
+    }
+
+    public function testAcceptsCustomPaths(): void
+    {
+        $scanner = new LogScanner(['/custom/log/dir']);
+        $ref = new \ReflectionProperty(LogScanner::class, 'commonLogPaths');
+        $paths = $ref->getValue($scanner);
+
+        $this->assertSame(['/custom/log/dir'], $paths);
     }
 
     private function createFile(string $name, string $content = ''): void
