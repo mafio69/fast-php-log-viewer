@@ -41,6 +41,62 @@ Keep AGENTS.md short, specific, and authoritative for AI assistants.
 ## DO NOT READ, ACCESS, OR EXPOSE SECRETS. DO NOT ASK TO EDIT .ENV* FILES. DO NOT OPEN THEM. DO NOT PRINT THEM. ALWAYS REFER TO THE VARIABLE NAME OR TOKEN NAME, NEVER TO THE SECRET VALUE, TOKEN VALUE, OR PASSWORD. USE DUMMY SECRETS FOR TESTS.
 ## DO NOT MODIFY ANYTHING INSIDE vendor/
 
+## Branch & merge workflow (anti-divergence)
+
+This repo has been broken by direct commits to `develop`/`master` and by
+unsynchronised force-pushes. The following procedure is binding:
+
+1. **Never commit directly on `develop` or `master`.** Always work on a
+   branch cut from a freshly fetched `origin/develop`:
+   ```sh
+   git fetch origin
+   git checkout -b feat/<short-topic> origin/develop
+   # or fix/, docs/, chore/
+   ```
+2. **Keep the branch on top of `origin/develop`** — rebase, do not merge
+   develop back into the branch:
+   ```sh
+   git fetch origin
+   git rebase origin/develop
+   ```
+3. **Green before merge.** Before any merge run, in this order:
+   ```sh
+   composer install
+   composer cs-fix        # auto-format
+   composer stan          # PHPStan 6
+   composer test          # PHPUnit
+   # equivalent one-shot:
+   composer grumphp
+   ```
+   If any gate fails, fix the root cause on the branch — never weaken the
+   gate or stash the failure onto `develop`.
+4. **Fast-forward merge into `develop`, then push:**
+   ```sh
+   git checkout develop
+   git merge --ff-only feat/<short-topic>
+   git push origin develop
+   git branch -d feat/<short-topic>
+   ```
+   If `--ff-only` fails, the branch drifted — rebase it on `origin/develop`
+   and retry. Do not create merge commits for routine work.
+5. **No uncoordinated force-push to `develop` or `master`.** If history must
+   be rewritten (e.g. recover from a broken remote), first save a local
+   backup branch so nothing is lost:
+   ```sh
+   git fetch origin <branch>
+   git branch backup/<branch>-<YYYYMMDD> origin/<branch>
+   # ...rewrite, then:
+   git push --force-with-lease=<branch>:origin/<branch> origin <branch>
+   ```
+   Document the rewrite in the PR description or commit body.
+6. **`master` is a promotion of a known-green `develop`.** Do not advance
+   `master` by cherry-picking individual commits — merge a tested develop
+   (or tag a release) so the two branches never diverge silently. Before
+   promoting, confirm `origin/master` is an ancestor of the candidate tip.
+
+The rule behind all of the above: **`develop` must stay linear, green, and
+fast-forward-able from `origin/develop`.**
+
 ## Technical enforcement (this file alone is not enough)
 
 This file is advice to the model, not a technical guarantee — it can be (and has been)
