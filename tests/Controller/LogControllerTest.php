@@ -11,7 +11,6 @@ use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use Mariusz\LogViewer\Service\Host\LocalFileReader;
-use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\PathResolver;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +30,7 @@ class LogControllerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->logFinder = $this->createMock(LogFinderInterface::class);
+        $this->logFinder = $this->createMock(LocalDirectoryReader::class);
         $this->logConfig = $this->createMock(LogConfig::class);
         $this->configManager = $this->createMock(ConfigManager::class);
         $this->pathResolver = $this->createMock(PathResolver::class);

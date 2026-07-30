@@ -25,7 +25,6 @@ use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\HostLogSourceCollector;
 use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use Mariusz\LogViewer\Service\Host\LocalFileReader;
-use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\LogScanner;
 use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
@@ -54,7 +53,8 @@ return function (ContainerBuilder $containerBuilder): void {
         LoggerInterface::class => DualLogger::create(DATA_DIR, LogLevel::DEBUG),
 
         // Service Bindings
-        LogFinderInterface::class => autowire(LocalDirectoryReader::class),
+        // LocalDirectoryReader — replaces LogFinderInterface (removed in G02)
+        LocalDirectoryReader::class => autowire(LocalDirectoryReader::class),
         // LogSourceCollector: HostLogSourceCollector (host defaults + LogConfig custom dirs)
         LogSourceCollectorInterface::class => autowire(HostLogSourceCollector::class),
 
@@ -98,7 +98,7 @@ return function (ContainerBuilder $containerBuilder): void {
             return new LogController(
                 $c->get(LogConfig::class),
                 $c->get(ConfigManager::class),
-                $c->get(LogFinderInterface::class),
+                $c->get(LocalDirectoryReader::class),
                 $c->get(PathResolver::class),
                 $c->get(FileAccessValidator::class),
                 $c->get(LogParser::class),

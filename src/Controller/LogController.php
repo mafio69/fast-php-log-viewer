@@ -9,8 +9,8 @@ use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\Docker\DockerDirectoryReader;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
+use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use Mariusz\LogViewer\Service\Host\LocalFileReader;
-use Mariusz\LogViewer\Service\LogFinderInterface;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\PathResolver;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -23,7 +23,7 @@ class LogController
     public function __construct(
         private readonly LogConfig $logConfig,
         private readonly ConfigManager $configManager,
-        private readonly LogFinderInterface $logFinder,
+        private readonly LocalDirectoryReader $logFinder,
         private readonly PathResolver $pathResolver,
         private readonly FileAccessValidator $accessValidator,
         private readonly LogParser $logParser,
