@@ -43,13 +43,16 @@ class LogParser
     /** @return array<int, array{datetime: string, level: string, location: string, message: string, context: array}> */
     public function parseFile(string $path): array
     {
+        if (!is_file($path)) {
+            throw new RuntimeException("file_not_found: $path");
+        }
         if (!is_readable($path)) {
-            return [];
+            throw new RuntimeException("file_not_readable: $path");
         }
 
-        $content = @file_get_contents($path);
+        $content = file_get_contents($path);
         if ($content === false) {
-            throw new RuntimeException("(\$content === false) Failed to read log file: $path (path: $path)" . $this->getLastErrorMessage());
+            throw new RuntimeException("read_failed: $path" . $this->getLastErrorMessage());
         }
 
         return $this->parseString($content);

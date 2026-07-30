@@ -34,7 +34,7 @@ class ConfigManager
             return false;
         }
 
-        $content = @file_get_contents($this->configPath);
+        $content = file_get_contents($this->configPath);
         if ($content === false) {
             return false;
         }
@@ -110,7 +110,7 @@ class ConfigManager
             return [];
         }
 
-        $content = @file_get_contents($this->configPath);
+        $content = file_get_contents($this->configPath);
         if ($content === false) {
             if ($this->loggingEnabled) {
                 error_log("Failed to read config file: {$this->configPath}");
@@ -180,7 +180,7 @@ class ConfigManager
 
         } catch (Throwable $e) {
             if (file_exists($tmpPath)) {
-                @unlink($tmpPath);
+                unlink($tmpPath);
             }
             throw new RuntimeException("Atomic JSON write failed for $path: " . $e->getMessage());
         }
@@ -237,7 +237,7 @@ class ConfigManager
             $newContent = rtrim($content) . "\n" . $line . "\n";
         }
 
-        if (@file_put_contents($this->envPath, $newContent) === false) {
+        if (file_put_contents($this->envPath, $newContent) === false) {
             return false;
         }
 

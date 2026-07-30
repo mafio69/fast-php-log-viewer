@@ -89,9 +89,12 @@ class LogParserTest extends TestCase
         $this->assertCount(1, $entries);
     }
 
-    public function testParseFileReturnsEmptyForMissingFile(): void
+    public function testParseFileThrowsForMissingFile(): void
     {
-        $this->assertSame([], (new LogParser())->parseFile('/nonexistent/path.log'));
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('file_not_found');
+
+        (new LogParser())->parseFile('/nonexistent/path.log');
     }
 
     public function testParsesNginxErrorLogFormat(): void

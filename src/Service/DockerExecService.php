@@ -303,7 +303,7 @@ class DockerExecService
 
         $response = '';
         while (!feof($fp)) {
-            $chunk = @fread($fp, 32768);
+            $chunk = fread($fp, 32768);
             if ($chunk === false || $chunk === '') {
                 break;
             }

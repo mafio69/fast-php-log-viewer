@@ -49,15 +49,47 @@ final class LocalDirectoryReader implements LogFinderInterface
 
         $files = [];
         foreach ($logFiles as $filePath) {
+            $mtime = $this->safeFilemtime($filePath);
+            $size = $this->safeFilesize($filePath);
             $files[] = [
                 'file' => basename($filePath),
-                'date' => date('Y-m-d H:i:s', @filemtime($filePath) ?: time()),
-                'size' => @filesize($filePath) ?: 0,
+                'date' => date('Y-m-d H:i:s', $mtime),
+                'size' => $size,
             ];
         }
 
         $this->logger?->debug('LocalDirectoryReader::findAll result', ['path' => $path, 'count' => count($files)]);
 
         return $files;
+    }
+
+    private function safeFilemtime(string $filePath): int
+    {
+        try {
+            $mtime = filemtime($filePath);
+            if ($mtime === false) {
+                $this->logger?->warning('LocalDirectoryReader: filemtime failed', ['path' => $filePath]);
+                return time();
+            }
+            return $mtime;
+        } catch (\Throwable $e) {
+            $this->logger?->warning('LocalDirectoryReader: filemtime exception', ['path' => $filePath, 'error' => $e->getMessage()]);
+            return time();
+        }
+    }
+
+    private function safeFilesize(string $filePath): int
+    {
+        try {
+            $size = filesize($filePath);
+            if ($size === false) {
+                $this->logger?->warning('LocalDirectoryReader: filesize failed', ['path' => $filePath]);
+                return 0;
+            }
+            return $size;
+        } catch (\Throwable $e) {
+            $this->logger?->warning('LocalDirectoryReader: filesize exception', ['path' => $filePath, 'error' => $e->getMessage()]);
+            return 0;
+        }
     }
 }
