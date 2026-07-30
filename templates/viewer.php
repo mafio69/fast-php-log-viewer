@@ -30,6 +30,7 @@ function asset_version(string $relativePath): string
 </div>
 
 <script src="<?= asset_version('js/store.js') ?>"></script>
+<script src="<?= asset_version('js/store-docker.js') ?>"></script>
 <script src="<?= asset_version('js/store-ssh.js') ?>"></script>
 <script src="<?= asset_version('js/components/SetupWizard.js') ?>"></script>
 <script src="<?= asset_version('js/components/Sidebar.js') ?>"></script>
