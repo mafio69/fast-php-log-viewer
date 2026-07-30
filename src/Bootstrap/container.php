@@ -168,12 +168,13 @@ return function (ContainerBuilder $containerBuilder): void {
             return new DockerLogSourceCollector($c->get(LogConfig::class));
         },
 
-        // DirectoryController - wstrzykuje LogConfig, LogScanner, LogSourceCollectorInterface
+        // DirectoryController - wstrzykuje LogConfig, LogScanner, LogSourceCollectorInterface, DockerLogSourceCollector
         DirectoryController::class => function ($c) {
             return new DirectoryController(
                 $c->get(LogConfig::class),
                 $c->get(LogScanner::class),
                 $c->get(LogSourceCollectorInterface::class),
+                $c->get(DockerLogSourceCollector::class),
             );
         },
 

@@ -6,6 +6,7 @@ namespace Mariusz\LogViewer\Controller;
 
 use Exception;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\Docker\DockerLogSourceCollector;
 use Mariusz\LogViewer\Service\LogScanner;
 use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -19,6 +20,7 @@ class DirectoryController
         private readonly LogConfig $logConfig,
         private readonly LogScanner $logScanner,
         private readonly LogSourceCollectorInterface $sourceCollector,
+        private readonly ?DockerLogSourceCollector $dockerSourceCollector = null,
     ) {
     }
 
@@ -74,6 +76,12 @@ class DirectoryController
         // "scan" separate means this controller orchestrates — neither job
         // lives inside the other.
         $sources = $this->sourceCollector->collect();
+
+        if ($this->dockerSourceCollector !== null) {
+            $dockerSources = $this->dockerSourceCollector->collect();
+            $sources = array_merge($sources, $dockerSources);
+        }
+
         $foundDirs = [];
 
         foreach ($sources as $source) {

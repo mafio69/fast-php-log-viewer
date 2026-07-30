@@ -48,6 +48,13 @@ final class HostLogSourceCollector implements LogSourceCollectorInterface
 
         foreach ($this->logConfig->getDirectories() as $dir) {
             $type = $dir['type'] ?? 'local';
+
+            // Docker entries belong to DockerLogSourceCollector (E02);
+            // SSH entries stay here until SshLogSourceCollector (F03).
+            if ($type === 'docker') {
+                continue;
+            }
+
             $key = isset($dir['name']) && $dir['name'] !== ''
                 ? $dir['name']
                 : $type . ':' . $dir['path'];

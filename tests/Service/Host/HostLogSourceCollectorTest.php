@@ -107,4 +107,34 @@ final class HostLogSourceCollectorTest extends TestCase
         $this->assertSame('app', $sources[3]->key);
         $this->assertSame('ssh-prod', $sources[4]->key);
     }
+
+    public function testSkipsDockerTypeFromLogConfig(): void
+    {
+        $logConfig = $this->createMock(LogConfig::class);
+        $logConfig->method('getDirectories')->willReturn([
+            ['name' => 'local-dir', 'path' => '/var/log', 'type' => 'local'],
+            ['name' => 'docker-dir', 'path' => '/var/log/app', 'type' => 'docker', 'container_id' => 'ctr'],
+        ]);
+
+        $collector = new HostLogSourceCollector($logConfig);
+        $sources = $collector->collect();
+
+        // 3 defaults + 1 local = 4, docker skipped
+        $this->assertCount(4, $sources);
+        $this->assertSame('local', $sources[3]->type);
+    }
+
+    public function testStillIncludesSshTypeForBackwardCompat(): void
+    {
+        $logConfig = $this->createMock(LogConfig::class);
+        $logConfig->method('getDirectories')->willReturn([
+            ['name' => 'ssh-dir', 'path' => '/var/log', 'type' => 'ssh', 'ssh_host' => 'host1'],
+        ]);
+
+        $collector = new HostLogSourceCollector($logConfig);
+        $sources = $collector->collect();
+
+        $this->assertCount(4, $sources); // 3 defaults + 1 ssh
+        $this->assertSame('ssh', $sources[3]->type);
+    }
 }
