@@ -19,6 +19,7 @@ use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use Mariusz\LogViewer\Service\Docker\DockerDirectoryReader;
+use Mariusz\LogViewer\Service\Docker\DockerLogSourceCollector;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\HostLogSourceCollector;
@@ -160,6 +161,11 @@ return function (ContainerBuilder $containerBuilder): void {
         // DockerDirectoryReader — deleguje listFiles do DockerExecService (socket)
         DockerDirectoryReader::class => function ($c) {
             return new DockerDirectoryReader($c->get(DockerExecService::class));
+        },
+
+        // DockerLogSourceCollector — zbiera dockerowe LogSource-y z LogConfig
+        DockerLogSourceCollector::class => function ($c) {
+            return new DockerLogSourceCollector($c->get(LogConfig::class));
         },
 
         // DirectoryController - wstrzykuje LogConfig, LogScanner, LogSourceCollectorInterface
