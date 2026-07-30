@@ -32,6 +32,7 @@ use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
 use Mariusz\LogViewer\Service\PathResolver;
 use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SetupWizard;
+use Mariusz\LogViewer\Service\Ssh\SshLogSourceCollector;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
@@ -166,6 +167,11 @@ return function (ContainerBuilder $containerBuilder): void {
         // DockerLogSourceCollector — zbiera dockerowe LogSource-y z LogConfig
         DockerLogSourceCollector::class => function ($c) {
             return new DockerLogSourceCollector($c->get(LogConfig::class));
+        },
+
+        // SshLogSourceCollector — zbiera ssh-owe LogSource-y z LogConfig
+        SshLogSourceCollector::class => function ($c) {
+            return new SshLogSourceCollector($c->get(LogConfig::class));
         },
 
         // DirectoryController - wstrzykuje LogConfig, LogScanner, LogSourceCollectorInterface, DockerLogSourceCollector

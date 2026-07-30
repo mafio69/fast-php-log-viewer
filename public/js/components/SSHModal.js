@@ -33,7 +33,6 @@ window.FPLV.components = window.FPLV.components || [];
                             <option value="password">Password Authentication</option>
                             <option value="key">SSH Key Authentication</option>
                         </select>
-                        <input v-if="store.sshForm.authMethod === 'password'" v-model="store.sshForm.password" type="password" placeholder="SSH Password" class="crt-input px-2 py-1 text-xs rounded">
                         <input v-if="store.sshForm.authMethod === 'key'" v-model="store.sshForm.keyPath" placeholder="SSH Key Path (default: ~/.ssh/id_rsa)" class="crt-input px-2 py-1 text-xs rounded">
                         <input v-if="store.sshForm.authMethod === 'key'" v-model="store.sshForm.keyPassphrase" type="password" placeholder="Key Passphrase (optional)" class="crt-input px-2 py-1 text-xs rounded">
                         <input v-model="store.sshForm.remotePath" placeholder="Remote Log Path (e.g., /var/log)" class="crt-input px-2 py-1 text-xs rounded">

@@ -946,12 +946,27 @@ window.FPLV = window.FPLV || {};
 
     // SSH functions
     async function testSSHConnection() {
+        const conn = store.sshForm;
+        if (!conn.host || !conn.user) {
+            setSshStatus('error', 'Please fill in host and user');
+            return;
+        }
+        if (conn.authMethod === 'password') {
+            store.passwordForConnection = '';
+            store.passwordModalPurpose = 'test';
+            store.showPasswordModal = true;
+            return;
+        }
+        await doTestSSHConnection();
+    }
+
+    async function doTestSSHConnection() {
         try {
             const conn = store.sshForm;
             const payload = {
                 ssh_host: conn.host, ssh_user: conn.user, ssh_port: parseInt(conn.port) || 22,
                 ssh_auth_method: conn.authMethod,
-                ssh_password: conn.authMethod === 'password' ? conn.password : undefined,
+                ssh_password: conn.authMethod === 'password' ? store.passwordForConnection : undefined,
                 ssh_key_path: conn.authMethod === 'key' ? conn.keyPath : undefined,
                 ssh_key_passphrase: conn.authMethod === 'key' ? conn.keyPassphrase : undefined,
             };
@@ -966,6 +981,8 @@ window.FPLV = window.FPLV || {};
             }
         } catch (e) {
             setSshStatus('error', 'SSH connection failed: ' + e.message);
+        } finally {
+            store.passwordForConnection = '';
         }
     }
 
@@ -1219,6 +1236,8 @@ window.FPLV = window.FPLV || {};
     async function submitPasswordModal() {
         if (store.passwordModalPurpose === 'read') {
             await performPendingSshRead();
+        } else if (store.passwordModalPurpose === 'test') {
+            await doTestSSHConnection();
         } else {
             await executeSSHConnection();
         }
@@ -1228,6 +1247,7 @@ window.FPLV = window.FPLV || {};
         store.showPasswordModal = false;
         store.pendingSshRead = null;
         store.passwordModalPurpose = 'connect';
+        store.passwordForConnection = '';
         resetConnectionState();
     }
 
