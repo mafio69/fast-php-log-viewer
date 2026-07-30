@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer\Service;
+namespace Mariusz\LogViewer\Service\Host;
 
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\DefaultLogSources;
+use Mariusz\LogViewer\Service\LogSource;
+use Mariusz\LogViewer\Service\LogSourceCollectorInterface;
 
 /**
- * Single responsibility: gather the list of LogSource directories to scan.
+ * Single responsibility: gather local host LogSource directories to scan.
  *
  * Combines the immutable host defaults from {@see DefaultLogSources::DEFAULTS}
  * with the user-configured entries persisted in SQLite by {@see LogConfig}.
@@ -21,7 +24,7 @@ use Mariusz\LogViewer\Config\LogConfig;
  * an "and" in the description ("collects host sources and container sources"),
  * which is exactly the SRP violation we are untangling.
  */
-final class DefaultLogSourceCollector implements LogSourceCollectorInterface
+final class HostLogSourceCollector implements LogSourceCollectorInterface
 {
     public function __construct(
         private readonly LogConfig $logConfig,

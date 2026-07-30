@@ -18,9 +18,9 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
-use Mariusz\LogViewer\Service\DefaultLogSourceCollector;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
+use Mariusz\LogViewer\Service\Host\HostLogSourceCollector;
 use Mariusz\LogViewer\Service\Host\LocalDirectoryReader;
 use Mariusz\LogViewer\Service\Host\LocalFileReader;
 use Mariusz\LogViewer\Service\LogFinderInterface;
@@ -52,8 +52,8 @@ return function (ContainerBuilder $containerBuilder): void {
 
         // Service Bindings
         LogFinderInterface::class => autowire(LocalDirectoryReader::class),
-        // LogSourceCollector: DefaultLogSourceCollector (host defaults + LogConfig custom dirs)
-        LogSourceCollectorInterface::class => autowire(DefaultLogSourceCollector::class),
+        // LogSourceCollector: HostLogSourceCollector (host defaults + LogConfig custom dirs)
+        LogSourceCollectorInterface::class => autowire(HostLogSourceCollector::class),
 
         // ConfigManager - singleton
         ConfigManager::class => function () {
