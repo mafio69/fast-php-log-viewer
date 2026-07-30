@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer\Tests;
+namespace Mariusz\LogViewer\Tests\Service\Ssh;
 
-use Mariusz\LogViewer\Service\RemoteLogFinder;
 use Mariusz\LogViewer\Service\SSH;
+use Mariusz\LogViewer\Service\Ssh\SshDirectoryReader;
 use PHPUnit\Framework\TestCase;
 
-class RemoteLogFinderTest extends TestCase
+class SshDirectoryReaderTest extends TestCase
 {
     private SSH $mockSsh;
 
@@ -21,7 +21,7 @@ class RemoteLogFinderTest extends TestCase
     {
         $this->mockSsh->method('directoryExists')->willReturn(false);
 
-        $finder = new RemoteLogFinder($this->mockSsh);
+        $finder = new SshDirectoryReader($this->mockSsh);
         $files = $finder->findAll('/nonexistent/path');
 
         $this->assertSame([], $files);
@@ -36,7 +36,7 @@ class RemoteLogFinderTest extends TestCase
         $this->mockSsh->method('fileExists')->willReturn(true);
         $this->mockSsh->method('fileSize')->willReturn(1024);
 
-        $finder = new RemoteLogFinder($this->mockSsh);
+        $finder = new SshDirectoryReader($this->mockSsh);
         $files = $finder->findAll('/var/log');
 
         $this->assertCount(2, $files);
@@ -56,7 +56,7 @@ class RemoteLogFinderTest extends TestCase
         });
         $this->mockSsh->method('fileSize')->willReturn(1024);
 
-        $finder = new RemoteLogFinder($this->mockSsh);
+        $finder = new SshDirectoryReader($this->mockSsh);
         $files = $finder->findAll('/var/log');
 
         $this->assertCount(1, $files);
@@ -72,7 +72,7 @@ class RemoteLogFinderTest extends TestCase
         $this->mockSsh->method('fileExists')->willReturn(true);
         $this->mockSsh->method('fileSize')->willReturn(1024);
 
-        $finder = new RemoteLogFinder($this->mockSsh);
+        $finder = new SshDirectoryReader($this->mockSsh);
         $files = $finder->findAll('/var/log');
 
         $this->assertCount(1, $files);

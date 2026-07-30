@@ -193,12 +193,6 @@ parameters:
 			path: src/Service/LogScanner.php
 
 		-
-			message: '#^Method Mariusz\\LogViewer\\Service\\RemoteLogFinder\:\:findAll\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Service/RemoteLogFinder.php
-
-		-
 			message: '#^Method Mariusz\\LogViewer\\Service\\SSH\:\:__construct\(\) has parameter \$config with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

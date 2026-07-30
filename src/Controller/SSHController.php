@@ -6,9 +6,9 @@ namespace Mariusz\LogViewer\Controller;
 
 use Exception;
 use Mariusz\LogViewer\Service\LogParser;
-use Mariusz\LogViewer\Service\RemoteLogFinder;
 use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SSH;
+use Mariusz\LogViewer\Service\Ssh\SshDirectoryReader;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -74,7 +74,7 @@ class SSHController
             $ssh = new SSH($this->extractSSHData($data));
             $ssh->connect();
 
-            $finder = new RemoteLogFinder($ssh);
+            $finder = new SshDirectoryReader($ssh);
             $files = $finder->findAll($path);
 
             $ssh->disconnect();

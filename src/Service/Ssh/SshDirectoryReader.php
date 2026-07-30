@@ -2,24 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Mariusz\LogViewer\Service;
+namespace Mariusz\LogViewer\Service\Ssh;
+
+use Mariusz\LogViewer\Service\SSH;
 
 /**
- * Finds log files on remote servers via SSH.
+ * Single responsibility: list regular files in a remote directory via SSH.
+ *
+ * Replaces the older RetemoteLogFinder. Delegates SSH communication to
+ * {@see SSH}; this class only knows what "find" command to run and how to
+ * interpret its output. Keeping "list" separate from "read" (which lives in
+ * {@see SshFileReader}) prevents the "and" in "finds AND reads remote log
+ * files" that the old {@see RemoteLogFinder} had.
  */
-class RemoteLogFinder
+final class SshDirectoryReader
 {
-    use ErrorContextTrait;
-
-    private SSH $ssh;
-
-    public function __construct(SSH $ssh)
-    {
-        $this->ssh = $ssh;
+    public function __construct(
+        private readonly SSH $ssh,
+    ) {
     }
 
     /**
-     * Find all log files in remote directory
+     * @return array<int, array{path: string, name: string, size: int}>
      */
     public function findAll(string $remotePath, bool $allFiles = false): array
     {
@@ -30,7 +34,6 @@ class RemoteLogFinder
         $files = [];
 
         if ($allFiles) {
-            // List all files without pattern filtering
             $command = sprintf('find %s -maxdepth 1 -type f 2>/dev/null', escapeshellarg($remotePath));
             $output = $this->ssh->exec($command);
 
@@ -45,7 +48,6 @@ class RemoteLogFinder
                 }
             }
         } else {
-            // Try common log patterns
             $patterns = [
                 '*.log',
                 '*error*',
@@ -79,13 +81,9 @@ class RemoteLogFinder
             }
         }
 
-        // Remove duplicates
         $files = array_values(array_unique($files, SORT_REGULAR));
-
-        // Sort by name
         usort($files, fn ($a, $b) => strcmp($b['name'], $a['name']));
 
         return $files;
     }
-
 }
