@@ -70,7 +70,7 @@ class LogController
             }
 
             if (!$dirKey) {
-                return $this->json($response, ['error' => 'missing_dir'], 400);
+                return $this->json($response, ['error' => 'Nie podano katalogu.'], 400);
             }
 
             $dirs = $this->logConfig->getDirectories();
@@ -83,7 +83,7 @@ class LogController
             }
 
             if (!$dir) {
-                return $this->json($response, ['error' => 'directory_not_found'], 404);
+                return $this->json($response, ['error' => 'Katalog nie istnieje.'], 404);
             }
 
             $files = $this->logFinder->findAll($dir['path']);
@@ -96,7 +96,8 @@ class LogController
 
             return $this->json($response, $result);
         } catch (\Exception $e) {
-            return $this->json($response, ['error' => 'server_error', 'message' => $e->getMessage()], 500);
+            error_log('LogController::getFiles error: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Wystąpił błąd. Spróbuj ponownie.'], 500);
         }
     }
 
@@ -104,7 +105,7 @@ class LogController
     {
         $filePath = $request->getQueryParams()['file'] ?? null;
         if (!$filePath) {
-            return $this->json($response, ['error' => 'missing_file'], 400);
+            return $this->json($response, ['error' => 'Nie podano pliku.'], 400);
         }
 
         $containerId = $request->getQueryParams()['container_id'] ?? null;
@@ -116,7 +117,7 @@ class LogController
         $dirKey = $request->getQueryParams()['dir'] ?? null;
 
         if (!$this->accessValidator->isFileAllowed($filePath, $dirKey)) {
-            return $this->json($response, ['error' => 'access_denied'], 403);
+            return $this->json($response, ['error' => 'Brak dostępu.'], 403);
         }
 
         // Single responsibility split: LocalFileReader reads bytes from disk,
@@ -129,12 +130,13 @@ class LogController
         } catch (\RuntimeException $e) {
             $message = $e->getMessage();
             if (str_starts_with($message, 'file_not_found')) {
-                return $this->json($response, ['error' => 'file_not_found'], 404);
+                return $this->json($response, ['error' => 'Plik nie został znaleziony.'], 404);
             }
             if (str_starts_with($message, 'file_not_readable')) {
-                return $this->json($response, ['error' => 'access_denied'], 403);
+                return $this->json($response, ['error' => 'Brak dostępu do pliku.'], 403);
             }
-            return $this->json($response, ['error' => 'read_error', 'message' => $message], 500);
+            error_log('LogController::getEntries read error: ' . $message);
+            return $this->json($response, ['error' => 'Nie można odczytać pliku.'], 500);
         }
 
         $level = $request->getQueryParams()['level'] ?? null;
@@ -150,23 +152,24 @@ class LogController
     private function getFilesFromContainer(string $containerId, string $dirPath, Response $response): Response
     {
         if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {
-            return $this->json($response, ['error' => 'docker_unavailable'], 503);
+            return $this->json($response, ['error' => 'Docker nie jest dostępny.'], 503);
         }
         if (!$this->dockerDirectoryReader) {
-            return $this->json($response, ['error' => 'docker_directory_reader_unavailable'], 503);
+            return $this->json($response, ['error' => 'Docker nie jest dostępny.'], 503);
         }
 
         try {
             $files = $this->dockerDirectoryReader->listFiles($containerId, $dirPath);
         } catch (\RuntimeException $e) {
             $message = $e->getMessage();
+            error_log('LogController::getFilesFromContainer: ' . $message);
             if ($message === 'container_not_found') {
-                return $this->json($response, ['error' => $message], 404);
+                return $this->json($response, ['error' => 'Kontener nie został znaleziony.'], 404);
             }
             if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
-                return $this->json($response, ['error' => $message], 403);
+                return $this->json($response, ['error' => 'Brak dostępu do tego kontenera lub ścieżki.'], 403);
             }
-            return $this->json($response, ['error' => 'docker_exec_failed', 'message' => $message], 500);
+            return $this->json($response, ['error' => 'Nie można odczytać katalogu kontenera.'], 500);
         }
 
         $basePath = rtrim($dirPath, '/');
@@ -182,26 +185,28 @@ class LogController
     private function getEntriesFromContainer(string $containerId, string $filePath, Request $request, Response $response): Response
     {
         if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {
-            return $this->json($response, ['error' => 'docker_unavailable'], 503);
+            return $this->json($response, ['error' => 'Docker nie jest dostępny.'], 503);
         }
 
         try {
             $content = $this->dockerExec->readFile($containerId, $filePath);
         } catch (\RuntimeException $e) {
             $message = $e->getMessage();
+            error_log('LogController::getEntriesFromContainer: ' . $message);
             if ($message === 'file_not_found' || $message === 'container_not_found') {
-                return $this->json($response, ['error' => $message], 404);
+                return $this->json($response, ['error' => 'Nie znaleziono.'], 404);
             }
             if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
-                return $this->json($response, ['error' => $message], 403);
+                return $this->json($response, ['error' => 'Brak dostępu.'], 403);
             }
-            return $this->json($response, ['error' => 'docker_exec_failed', 'message' => $message], 500);
+            return $this->json($response, ['error' => 'Nie można odczytać pliku.'], 500);
         }
 
         try {
             $entries = $this->logParser->parseString($content);
         } catch (\Exception $e) {
-            return $this->json($response, ['error' => 'parse_error', 'message' => $e->getMessage()], 500);
+            error_log('LogController::getEntriesFromContainer parse error: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Nie można przetworzyć pliku.'], 500);
         }
 
         $level = $request->getQueryParams()['level'] ?? null;

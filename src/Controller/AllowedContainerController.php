@@ -28,7 +28,7 @@ class AllowedContainerController
         $containerId = is_array($data) ? trim((string)($data['container_id'] ?? '')) : '';
 
         if ($containerId === '' || !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.-]+$/', $containerId)) {
-            return $this->json($response, ['error' => 'invalid_container_id'], 400);
+            return $this->json($response, ['error' => 'Nieprawidłowy identyfikator kontenera.'], 400);
         }
 
         $this->logConfig->addAllowedContainer($containerId);

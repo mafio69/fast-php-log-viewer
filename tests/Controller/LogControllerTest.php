@@ -364,7 +364,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(403, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('access_denied', $body['error']);
+        $this->assertEquals('Brak dostępu.', $body['error']);
     }
 
     public function testGetEntriesBlocksPathTraversal(): void
@@ -384,7 +384,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(403, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('access_denied', $body['error']);
+        $this->assertEquals('Brak dostępu.', $body['error']);
     }
 
     public function testGetEntriesNeverAutoRegistersParentDirOnDeniedAccess(): void
@@ -408,7 +408,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(403, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('access_denied', $body['error']);
+        $this->assertEquals('Brak dostępu.', $body['error']);
     }
 
     public function testGetFilesHandlesExceptionFromFinder(): void
@@ -427,8 +427,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(500, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('server_error', $body['error']);
-        $this->assertEquals('Permission denied', $body['message']);
+        $this->assertEquals('Wystąpił błąd. Spróbuj ponownie.', $body['error']);
     }
 
     public function testGetEntriesReturnsFileNotFoundForNonExistentFile(): void
@@ -450,7 +449,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(404, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('file_not_found', $body['error']);
+        $this->assertEquals('Plik nie został znaleziony.', $body['error']);
     }
 
     public function testGetEntriesFiltersByLevelCorrectly(): void
@@ -552,7 +551,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(404, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('container_not_found', $body['error']);
+        $this->assertEquals('Nie znaleziono.', $body['error']);
     }
 
     public function testGetEntriesWithContainerIdReturns404WhenFileNotFound(): void
@@ -574,7 +573,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(404, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('file_not_found', $body['error']);
+        $this->assertEquals('Nie znaleziono.', $body['error']);
     }
 
     public function testGetEntriesWithContainerIdReturns503WhenDockerUnavailable(): void
@@ -594,7 +593,7 @@ class LogControllerTest extends TestCase
 
         $this->assertEquals(503, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('docker_unavailable', $body['error']);
+        $this->assertEquals('Docker nie jest dostępny.', $body['error']);
     }
 
     public function testGetEntriesWithContainerIdFiltersByLevel(): void

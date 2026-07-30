@@ -35,7 +35,8 @@ class DirectoryController
             $id = $this->logConfig->addDirectory($data);
             return $this->json($response, ['success' => true, 'id' => $id]);
         } catch (Exception $e) {
-            return $this->json($response, ['error' => $e->getMessage()], 400);
+            error_log('DirectoryController: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Nie można dodać katalogu.'], 400);
         }
     }
 

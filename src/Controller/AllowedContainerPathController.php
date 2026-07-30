@@ -28,7 +28,7 @@ class AllowedContainerPathController
         $prefix = is_array($data) ? trim((string)($data['path_prefix'] ?? '')) : '';
 
         if ($prefix === '' || !str_starts_with($prefix, '/') || str_contains($prefix, "\0") || str_contains($prefix, "\n")) {
-            return $this->json($response, ['error' => 'invalid_path_prefix'], 400);
+            return $this->json($response, ['error' => 'Nieprawidłowa ścieżka.'], 400);
         }
 
         $this->logConfig->addAllowedContainerPath($prefix);

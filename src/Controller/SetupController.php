@@ -51,7 +51,8 @@ class SetupController
         } catch (InvalidArgumentException $e) {
             return $this->json($response, ['error' => 'unknown_step', 'step' => $step], 400);
         } catch (Exception $e) {
-            return $this->json($response, ['error' => 'internal_error', 'message' => $e->getMessage()], 500);
+            error_log('SetupController: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Wystąpił błąd konfiguracji.'], 500);
         }
     }
 

@@ -361,15 +361,17 @@ window.FPLV = window.FPLV || {};
                         applyFilters();
                         return;
                     } catch (e2) {
-                        alert('Nie udało się dodać katalogu: ' + e2.message);
+                        alert('Nie udało się dodać katalogu.');
+                        console.error(e2);
                         return;
                     }
                 }
             }
             if (e.message.includes('file_not_found')) {
-                alert('Plik nie istnieje: ' + path);
+                alert('Plik nie istnieje.');
+                console.error('File not found:', path);
             } else {
-                alert('Błąd ładowania pliku: ' + e.message);
+                alert('Nie udało się załadować pliku.'); console.error(e);
             }
             console.error('Load direct file error:', e);
         } finally {
@@ -409,7 +411,7 @@ window.FPLV = window.FPLV || {};
             }
         } catch (e) {
             if (e.message.includes('container_not_found')) {
-                alert('Kontener nie znaleziony: ' + containerId);
+                alert('Kontener nie został znaleziony.'); console.error('Container not found:', containerId);
             } else if (e.message.includes('container_not_allowed')) {
                 if (confirm(containerNotAllowedExplanation(containerId))) {
                     await allowContainerAndRetry(containerId, dirPath);
@@ -419,9 +421,9 @@ window.FPLV = window.FPLV || {};
                     await allowPathAndRetry(dirPath);
                 }
             } else if (e.message.includes('docker_unavailable')) {
-                alert('Docker niedostępny. Zamontuj /var/run/docker.sock.');
+                alert('Docker nie jest dostępny.');
             } else {
-                alert('Błąd ładowania katalogu: ' + e.message);
+                alert('Nie udało się załadować katalogu.'); console.error(e);
             }
             console.error('Load direct docker directory error:', e);
         } finally {
@@ -448,11 +450,11 @@ window.FPLV = window.FPLV || {};
             });
             const data = await res.json();
             if (!data.success) {
-                alert('Nie udało się dodać kontenera: ' + (data.error || 'unknown'));
+                alert('Nie udało się dodać kontenera.'); console.error(data);
                 return;
             }
         } catch (e) {
-            alert('Błąd dodawania kontenera: ' + e.message);
+            alert('Nie udało się dodać kontenera.'); console.error(e);
             return;
         }
         await loadDirectDockerFiles(dirPath);
@@ -477,11 +479,11 @@ window.FPLV = window.FPLV || {};
             });
             const data = await res.json();
             if (!data.success) {
-                alert('Nie udało się dodać ścieżki: ' + (data.error || 'unknown'));
+                alert('Nie udało się dodać ścieżki.'); console.error(data);
                 return;
             }
         } catch (e) {
-            alert('Błąd dodawania ścieżki: ' + e.message);
+            alert('Nie udało się dodać ścieżki.'); console.error(e);
             return;
         }
         await loadDirectDockerFiles(dirPath);
@@ -625,10 +627,10 @@ window.FPLV = window.FPLV || {};
                 store.selectedDir = found ? found.key : name;
                 try { await loadFiles(); } catch (e) { /* ignore */ }
             } else {
-                alert('Błąd: ' + (data.error || 'Unknown error'));
+                alert('Wystąpił błąd.'); console.error(data);
             }
         } catch (e) {
-            alert('Błąd dodawania katalogu: ' + e.message);
+            alert('Nie udało się dodać katalogu.'); console.error(e);
         } finally {
             store.loading = false;
         }
@@ -750,7 +752,7 @@ window.FPLV = window.FPLV || {};
             const res = await fetch('/api/files' + filesApiUrl());
             const allFiles = await res.json();
             if (!allFiles.some(f => f.file === bm.file)) {
-                alert('Plik już nie istnieje: ' + bm.file.split('/').pop());
+                alert('Plik już nie istnieje.');
                 removeBookmark(store.bookmarks.findIndex(b => b.key === bm.key));
                 return;
             }
@@ -819,7 +821,7 @@ window.FPLV = window.FPLV || {};
                 if (data.fields) {
                     alert('Brakujące pola: ' + data.fields.join(', '));
                 } else {
-                    alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+                    alert('Wystąpił błąd konfiguracji.'); console.error(data);
                 }
                 return;
             }
@@ -845,7 +847,7 @@ window.FPLV = window.FPLV || {};
                 init();
             }
         } catch (e) {
-            alert('Błąd: ' + e.message);
+            alert('Wystąpił błąd.'); console.error(e);
         }
     }
 

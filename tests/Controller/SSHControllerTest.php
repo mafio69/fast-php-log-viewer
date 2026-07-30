@@ -129,7 +129,7 @@ class SSHControllerTest extends TestCase
 
         $this->assertEquals(400, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('missing_path', $body['error']);
+        $this->assertEquals('Nie podano ścieżki.', $body['error']);
     }
 
     public function testReadFileWithMissingPath(): void
@@ -145,7 +145,7 @@ class SSHControllerTest extends TestCase
 
         $this->assertEquals(400, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('missing_path', $body['error']);
+        $this->assertEquals('Nie podano ścieżki.', $body['error']);
     }
 
     public function testDownloadFileWithMissingPath(): void
@@ -161,7 +161,7 @@ class SSHControllerTest extends TestCase
 
         $this->assertEquals(400, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertEquals('missing_path', $body['error']);
+        $this->assertEquals('Nie podano ścieżki.', $body['error']);
     }
 
     public function testTestConnectionWithInvalidData(): void

@@ -90,7 +90,7 @@ class AllowedContainerControllerTest extends TestCase
 
         $this->assertEquals(400, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
-        $this->assertSame('invalid_container_id', $body['error']);
+        $this->assertSame('Nieprawidłowy identyfikator kontenera.', $body['error']);
     }
 
     public function testAddRejectsMalformedContainerId(): void

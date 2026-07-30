@@ -42,7 +42,7 @@ class SSHController
             return $this->json($response, ['error' => 'invalid_json'], 400);
         }
         if (!SSH::isAvailable()) {
-            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
+            return $this->json($response, ['error' => 'Rozszerzenie SSH2 nie jest dostępne.'], 503);
         }
 
         try {
@@ -51,7 +51,8 @@ class SSHController
             $ssh->disconnect();
             return $this->json($response, ['success' => true]);
         } catch (Exception $e) {
-            return $this->json($response, ['error' => $e->getMessage()], 500);
+            error_log('SSHController: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Wystąpił błąd połączenia SSH.'], 500);
         }
     }
 
@@ -62,12 +63,12 @@ class SSHController
             return $this->json($response, ['error' => 'invalid_json'], 400);
         }
         if (!SSH::isAvailable()) {
-            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
+            return $this->json($response, ['error' => 'Rozszerzenie SSH2 nie jest dostępne.'], 503);
         }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
-            return $this->json($response, ['error' => 'missing_path'], 400);
+            return $this->json($response, ['error' => 'Nie podano ścieżki.'], 400);
         }
 
         try {
@@ -81,7 +82,8 @@ class SSHController
 
             return $this->json($response, ['success' => true, 'files' => $files]);
         } catch (Exception $e) {
-            return $this->json($response, ['error' => $e->getMessage()], 500);
+            error_log('SSHController: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Wystąpił błąd połączenia SSH.'], 500);
         }
     }
 
@@ -92,12 +94,12 @@ class SSHController
             return $this->json($response, ['error' => 'invalid_json'], 400);
         }
         if (!SSH::isAvailable()) {
-            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
+            return $this->json($response, ['error' => 'Rozszerzenie SSH2 nie jest dostępne.'], 503);
         }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
-            return $this->json($response, ['error' => 'missing_path'], 400);
+            return $this->json($response, ['error' => 'Nie podano ścieżki.'], 400);
         }
 
         try {
@@ -111,7 +113,8 @@ class SSHController
 
             return $this->json($response, ['success' => true, 'entries' => $entries]);
         } catch (Exception $e) {
-            return $this->json($response, ['error' => $e->getMessage()], 500);
+            error_log('SSHController: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Wystąpił błąd połączenia SSH.'], 500);
         }
     }
 
@@ -122,12 +125,12 @@ class SSHController
             return $this->json($response, ['error' => 'invalid_json'], 400);
         }
         if (!SSH::isAvailable()) {
-            return $this->json($response, ['error' => 'ssh_extension_missing'], 503);
+            return $this->json($response, ['error' => 'Rozszerzenie SSH2 nie jest dostępne.'], 503);
         }
 
         $path = $data['path'] ?? '';
         if (empty($path)) {
-            return $this->json($response, ['error' => 'missing_path'], 400);
+            return $this->json($response, ['error' => 'Nie podano ścieżki.'], 400);
         }
 
         try {
@@ -137,19 +140,19 @@ class SSHController
             $fileSize = $ssh->fileSize($path);
             if ($fileSize > 10 * 1024 * 1024) {
                 $ssh->disconnect();
-                return $this->json($response, ['error' => 'file_too_large'], 400);
+                return $this->json($response, ['error' => 'Plik jest za duży.'], 400);
             }
 
             $content = $ssh->readFile($path);
 
             if ($this->securityService->isBinaryContent($content)) {
                 $ssh->disconnect();
-                return $this->json($response, ['error' => 'binary_content_not_allowed'], 400);
+                return $this->json($response, ['error' => 'Pliki binarne nie są obsługiwane.'], 400);
             }
 
             if ($this->securityService->containsSuspiciousContent($content)) {
                 $ssh->disconnect();
-                return $this->json($response, ['error' => 'suspicious_content_detected'], 400);
+                return $this->json($response, ['error' => 'Wykryto podejrzaną zawartość.'], 400);
             }
 
             $ssh->disconnect();
@@ -164,7 +167,8 @@ class SSHController
                 'size' => strlen($content),
             ]);
         } catch (Exception $e) {
-            return $this->json($response, ['error' => $e->getMessage()], 500);
+            error_log('SSHController: ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Wystąpił błąd połączenia SSH.'], 500);
         }
     }
 }
