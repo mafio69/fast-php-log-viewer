@@ -10,11 +10,20 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'SetupWizard',
         props: ['store'],
-        emits: ['proceed-step', 'toggle-skip-confirm'],
+        emits: ['proceed-step', 'toggle-skip-confirm', 'add-preset-path'],
         template: `
         <div class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.95);">
             <div class="rounded shadow-lg p-6" style="background:#000;border:1px solid #00ff00;width:600px;">
-                <h2 class="text-sm font-bold crt-glow mb-4">⚡ KONFIGURACJA APLIKACJI</h2>
+                        <h2 class="text-sm font-bold crt-glow mb-4">⚡ KONFIGURACJA APLIKACJI</h2>
+                        <p class="text-xs crt-text mb-4">Sugerowane katalogi logów — kliknij by dodać:</p>
+                        <div class="flex flex-wrap gap-1 mb-2">
+                            <button v-for="preset in store.setupPresets" :key="preset"
+                                @click="$emit('add-preset-path', preset)"
+                                class="crt-button px-2 py-1 text-xs" style="border-color:#0066cc;color:#0066cc;">
+                                {{ preset }}
+                            </button>
+                        </div>
+                        <p class="text-xs crt-text mb-4">Lub wpisz własną ścieżkę:</p>
                 <div v-if="store.setupWarning" class="mb-3 p-2 text-xs" style="border:1px solid #ffff00;color:#ffff00;">
                     ⚠ {{ store.setupWarning }}
                 </div>

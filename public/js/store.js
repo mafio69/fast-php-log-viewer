@@ -65,6 +65,7 @@ window.FPLV = window.FPLV || {};
         setupStepData: {},
         setupWarning: '',
         setupKeyDisplay: '',
+        setupPresets: ['/var/log/nginx', '/var/log/apache2', '/var/log/php-fpm'],
         sshEnabled: true,
 
         // SSH state

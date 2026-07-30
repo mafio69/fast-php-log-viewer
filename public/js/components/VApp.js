@@ -17,6 +17,7 @@ window.FPLV.components = window.FPLV.components || [];
                 :store="store"
                 @proceed-step="proceedStep"
                 @toggle-skip-confirm="v => store.setupSkipConfirm = v"
+                @add-preset-path="addPresetPath"
             ></setup-wizard>
             <sidebar
                 :store="store"
@@ -78,6 +79,10 @@ window.FPLV.components = window.FPLV.components || [];
             return {
                 store,
                 proceedStep: F.proceedStep,
+                addPresetPath(preset) {
+                    store.setupStepData.path = preset;
+                    F.proceedStep(false);
+                },
                 selectFile: F.selectFile,
                 changeDir: F.changeDir,
                 loadDirectFile: F.loadDirectFile,
