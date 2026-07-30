@@ -19,6 +19,7 @@ window.FPLV = window.FPLV || {};
         defaultDirectories: [],
         directFilePath: '',
         directFileMode: 'docker',
+        activeSshConnection: null, // null or {name, host, user, port}
         containerId: '',
         containerCheckStatus: '', // '' | 'checking' | 'ok' | 'not_found' | 'not_allowed' | 'path_not_allowed' | 'error'
         selectedFileContainerId: '', // container_id the currently selected/listed files came from, '' for local/host
@@ -331,6 +332,11 @@ window.FPLV = window.FPLV || {};
         const path = store.directFilePath.trim();
         if (!path) {
             alert('Wpisz ścieżkę do ' + (store.directFileMode === 'docker' ? 'katalogu' : 'pliku'));
+            return;
+        }
+
+        if (store.activeSshConnection) {
+            await loadSshFileEntries(store.activeSshConnection.name, path);
             return;
         }
 
@@ -1113,6 +1119,7 @@ window.FPLV = window.FPLV || {};
         try {
             const files = await performSshListing(creds, conn);
             store.sshActiveCredentials[conn.name] = creds;
+            store.activeSshConnection = {name: conn.name, host: conn.host, user: conn.user, port: conn.port};
             store.sshFiles[conn.name] = files;
             store.selectedDir = 'ssh:' + conn.name;
             store.selectedFileContainerId = '';
@@ -1155,8 +1162,10 @@ window.FPLV = window.FPLV || {};
      * mode (performPendingSshRead completes the flow once submitted).
      */
     async function loadSshFileEntries(connName, path) {
+        const conn = store.sshConnections.find(c => c.name === connName);
         const cached = store.sshActiveCredentials[connName];
         if (cached) {
+            store.activeSshConnection = {name: connName, host: conn.host || '', user: conn.user || '', port: conn.port || 22};
             store.loading = true;
             try {
                 store.entries = await fetchSshEntries(cached, path);
@@ -1171,7 +1180,6 @@ window.FPLV = window.FPLV || {};
             return;
         }
 
-        const conn = store.sshConnections.find(c => c.name === connName);
         if (!conn) {
             setSshStatus('error', 'Nieznane połączenie SSH: ' + connName);
             return;

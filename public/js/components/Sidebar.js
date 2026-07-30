@@ -51,7 +51,22 @@ window.FPLV.components = window.FPLV.components || [];
                 </div>
             </div>
             <div class="px-3 py-3" style="border-bottom:1px solid #00ff00;background:#001100;">
-                <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO {{ store.directFileMode === 'docker' ? 'KATALOGU' : 'PLIKU' }}</div>
+                <div class="text-xs font-bold mb-2 crt-text">📂 ŚCIEŻKA DO {{ store.activeSshConnection ? 'PLIKU' : (store.directFileMode === 'docker' ? 'KATALOGU' : 'PLIKU') }}</div>
+                <div v-if="store.activeSshConnection" class="mb-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="text-xs crt-text" style="color:#cc00cc;">
+                            🔗 {{ store.activeSshConnection.user }}@{{ store.activeSshConnection.host }}:{{ store.activeSshConnection.port || 22 }}
+                        </div>
+                        <button @click="store.activeSshConnection = null; store.directFileMode = 'docker'"
+                            class="text-xs" style="color:#ff6666;background:none;border:none;cursor:pointer;">✕</button>
+                    </div>
+                    <input type="text" v-model="store.directFilePath"
+                        placeholder="/home/frog/test"
+                        name="fplv_direct_file_path" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                        class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
+                    <button @click="$emit('load-direct-file')" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">⚡ ZAŁADUJ</button>
+                </div>
+                <template v-else>
                 <input v-if="store.directFileMode !== 'host'" type="text" v-model="store.containerId" placeholder="container_name (opcjonalnie)"
                     name="fplv_container_id" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2" style="color:#00aacc;">
@@ -71,6 +86,7 @@ window.FPLV.components = window.FPLV.components || [];
                     name="fplv_direct_file_path" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                     class="w-full rounded px-2 py-1 text-xs crt-input mb-2">
                 <button @click="$emit('load-direct-file')" class="w-full rounded px-2 py-1 text-xs crt-button font-bold">⚡ ZAŁADUJ</button>
+                </template>
             </div>
             <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
                 <button @click="$emit('open-ssh-modal'); $emit('cancel-edit')" class="w-full rounded py-1 text-xs crt-button">🔗 SSH Connections</button>
