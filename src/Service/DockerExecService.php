@@ -80,72 +80,50 @@ class DockerExecService
         return file_exists(self::SOCKET);
     }
 
-    public function readFile(string $containerId, string $filePath): string
+    /**
+     * Execute a command inside an allowed container and return the combined
+     * stdout+stderr output. Validation (container ID + allow-list) is performed
+     * before the exec call starts, so callers like DockerDirectoryReader don't
+     * need to duplicate the security checks.
+     *
+     * Path validation is NOT done here — the command's path argument(s) must be
+     * validated separately via validateAndNormalizePath() by the caller.
+     *
+     * @param string[] $cmd Argv array (no shell interpolation)
+     */
+    public function exec(string $containerId, array $cmd): string
     {
         $this->validateContainerId($containerId);
-        $this->validateFilePath($filePath);
-        $filePath = $this->normalizePath($filePath);
         $this->assertContainerAllowed($containerId);
-        $this->assertPathAllowed($filePath);
 
-        $execId = $this->createExec($containerId, ['cat', $filePath]);
-        $output = $this->startExec($execId);
+        $execId = $this->createExec($containerId, $cmd);
+        return $this->startExec($execId);
+    }
+
+    /**
+     * Validate a file/directory path against the allow-list, then normalize it
+     * (collapse "." and ".."). Returns the normalized path ready for use in a
+     * docker exec command. Throws on invalid or disallowed paths.
+     */
+    public function validateAndNormalizePath(string $path): string
+    {
+        $this->validateFilePath($path);
+        $path = $this->normalizePath($path);
+        $this->assertPathAllowed($path);
+        return $path;
+    }
+
+    public function readFile(string $containerId, string $filePath): string
+    {
+        $filePath = $this->validateAndNormalizePath($filePath);
+
+        $output = $this->exec($containerId, ['cat', $filePath]);
 
         if ($output === '') {
             throw new RuntimeException('file_not_found');
         }
 
         return $output;
-    }
-
-    /**
-     * Lists regular files directly inside $dirPath (non-recursive) in an allowed container.
-     * Uses `find -exec stat` as a single argv command (no shell involved - $dirPath is passed
-     * as a distinct Cmd array element, never interpolated into a shell string), so it carries
-     * the same traversal/allow-list protection as readFile() without any injection risk.
-     *
-     * @return array<int, array{file: string, date: string, size: int}>
-     */
-    public function listFiles(string $containerId, string $dirPath): array
-    {
-        $this->validateContainerId($containerId);
-        $this->validateFilePath($dirPath);
-        $dirPath = $this->normalizePath($dirPath);
-        $this->assertContainerAllowed($containerId);
-        $this->assertPathAllowed($dirPath);
-
-        // A literal tab byte, not the two-char "\t", is embedded directly in the
-        // format string: BusyBox stat (Alpine images) doesn't interpret "\t" as an
-        // escape sequence the way GNU stat does - it would print a literal
-        // backslash+t instead of a tab, breaking the parseListing() regex below.
-        $execId = $this->createExec($containerId, [
-            'find', $dirPath, '-maxdepth', '1', '-type', 'f',
-            '-exec', 'stat', '-c', "%Y\t%s\t%n", '{}', ';',
-        ]);
-        $output = $this->startExec($execId);
-
-        return $this->parseListing($output);
-    }
-
-    /**
-     * @return array<int, array{file: string, date: string, size: int}>
-     */
-    private function parseListing(string $output): array
-    {
-        $files = [];
-        foreach (explode("\n", trim($output)) as $line) {
-            if (!preg_match('/^(\d+)\t(\d+)\t(.+)$/', $line, $m)) {
-                continue;
-            }
-            [, $mtime, $size, $path] = $m;
-            $files[] = [
-                'file' => basename($path),
-                'date' => date('Y-m-d H:i:s', (int)$mtime),
-                'size' => (int)$size,
-            ];
-        }
-
-        return $files;
     }
 
     private function validateContainerId(string $containerId): void

@@ -18,6 +18,7 @@ use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
+use Mariusz\LogViewer\Service\Docker\DockerDirectoryReader;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\HostLogSourceCollector;
@@ -90,7 +91,7 @@ return function (ContainerBuilder $containerBuilder): void {
             );
         },
 
-        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser, LocalFileReader, DockerExecService
+        // LogController - wstrzykuje LogConfig, ConfigManager, LogFinder, PathResolver, FileAccessValidator, LogParser, LocalFileReader, DockerExecService, DockerDirectoryReader
         LogController::class => function ($c) {
             return new LogController(
                 $c->get(LogConfig::class),
@@ -101,6 +102,7 @@ return function (ContainerBuilder $containerBuilder): void {
                 $c->get(LogParser::class),
                 $c->get(LocalFileReader::class),
                 $c->get(DockerExecService::class),
+                $c->get(DockerDirectoryReader::class),
             );
         },
 
@@ -153,6 +155,11 @@ return function (ContainerBuilder $containerBuilder): void {
             )));
 
             return new DockerExecService($containers, $paths);
+        },
+
+        // DockerDirectoryReader — deleguje listFiles do DockerExecService (socket)
+        DockerDirectoryReader::class => function ($c) {
+            return new DockerDirectoryReader($c->get(DockerExecService::class));
         },
 
         // DirectoryController - wstrzykuje LogConfig, LogScanner, LogSourceCollectorInterface

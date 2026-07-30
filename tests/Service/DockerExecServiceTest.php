@@ -176,78 +176,22 @@ class DockerExecServiceTest extends TestCase
         $this->assertSame('', $output);
     }
 
-    public function testListFilesDeniesContainerNotOnAllowList(): void
-    {
-        $service = new DockerExecService(['allowed-container'], ['/var/log/']);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('container_not_allowed');
-
-        $service->listFiles('some-other-container', '/var/log/');
-    }
-
-    public function testListFilesDeniesPathOutsideAllowedPrefixes(): void
+    public function testValidateAndNormalizePathDeniesOutsideAllowedPrefixes(): void
     {
         $service = new DockerExecService(['allowed-container'], ['/var/log/']);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('path_not_allowed');
 
-        $service->listFiles('allowed-container', '/etc');
+        $service->validateAndNormalizePath('/etc/passwd');
     }
 
-    public function testListFilesAcceptsBareDirectoryMatchingPrefixWithoutTrailingSlash(): void
+    public function testValidateAndNormalizePathAcceptsBareDirectoryMatchingPrefix(): void
     {
-        // Users naturally type "/var/log" without a trailing slash when browsing
-        // a directory; it must match the "/var/log/" allow-list prefix too, not
-        // just paths that already have a trailing slash.
         $service = new DockerExecService(['allowed-container'], ['/var/log/']);
-        $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('assertPathAllowed');
 
-        $method->invoke($service, '/var/log');
-        $this->addToAssertionCount(1);
-    }
-
-    public function testParseListingParsesStatOutput(): void
-    {
-        $service = new DockerExecService();
-        $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseListing');
-
-        $result = $method->invoke($service, "1721900000\t1234\t/var/log/app.log\n1721900100\t56\t/var/log/other.log\n");
-
-        $this->assertSame([
-            ['file' => 'app.log', 'date' => date('Y-m-d H:i:s', 1721900000), 'size' => 1234],
-            ['file' => 'other.log', 'date' => date('Y-m-d H:i:s', 1721900100), 'size' => 56],
-        ], $result);
-    }
-
-    public function testParseListingSkipsUnparsableLines(): void
-    {
-        // "find" writes errors like this to the same stream that's parsed here
-        // when a directory doesn't exist or isn't readable - they must not be
-        // mistaken for a file entry.
-        $service = new DockerExecService();
-        $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseListing');
-
-        $result = $method->invoke($service, "find: /var/log/missing: No such file or directory\n1721900000\t42\t/var/log/ok.log\n");
-
-        $this->assertSame([
-            ['file' => 'ok.log', 'date' => date('Y-m-d H:i:s', 1721900000), 'size' => 42],
-        ], $result);
-    }
-
-    public function testParseListingHandlesEmptyOutput(): void
-    {
-        $service = new DockerExecService();
-        $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseListing');
-
-        $result = $method->invoke($service, '');
-
-        $this->assertSame([], $result);
+        $result = $service->validateAndNormalizePath('/var/log');
+        $this->assertSame('/var/log', $result);
     }
 
     private function buildMultiplexedData(array $chunks): string

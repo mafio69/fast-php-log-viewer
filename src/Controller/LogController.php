@@ -6,6 +6,7 @@ namespace Mariusz\LogViewer\Controller;
 
 use Mariusz\LogViewer\Config\ConfigManager;
 use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Service\Docker\DockerDirectoryReader;
 use Mariusz\LogViewer\Service\DockerExecService;
 use Mariusz\LogViewer\Service\FileAccessValidator;
 use Mariusz\LogViewer\Service\Host\LocalFileReader;
@@ -28,6 +29,7 @@ class LogController
         private readonly LogParser $logParser,
         private readonly LocalFileReader $localFileReader,
         private readonly ?DockerExecService $dockerExec = null,
+        private readonly ?DockerDirectoryReader $dockerDirectoryReader = null,
     ) {
     }
 
@@ -150,9 +152,12 @@ class LogController
         if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {
             return $this->json($response, ['error' => 'docker_unavailable'], 503);
         }
+        if (!$this->dockerDirectoryReader) {
+            return $this->json($response, ['error' => 'docker_directory_reader_unavailable'], 503);
+        }
 
         try {
-            $files = $this->dockerExec->listFiles($containerId, $dirPath);
+            $files = $this->dockerDirectoryReader->listFiles($containerId, $dirPath);
         } catch (\RuntimeException $e) {
             $message = $e->getMessage();
             if ($message === 'container_not_found') {
