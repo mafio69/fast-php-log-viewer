@@ -40,6 +40,7 @@ Keep AGENTS.md short, specific, and authoritative for AI assistants.
 ## DO NOT MAKE CHANGES WITHOUT EXPLICIT PERMISSION
 ## DO NOT READ, ACCESS, OR EXPOSE SECRETS. DO NOT ASK TO EDIT .ENV* FILES. DO NOT OPEN THEM. DO NOT PRINT THEM. ALWAYS REFER TO THE VARIABLE NAME OR TOKEN NAME, NEVER TO THE SECRET VALUE, TOKEN VALUE, OR PASSWORD. USE DUMMY SECRETS FOR TESTS.
 ## DO NOT MODIFY ANYTHING INSIDE vendor/
+## DO NOT ACCESS, READ, OR MODIFY ANYTHING OUTSIDE THIS REPOSITORY'S DIRECTORY. STAY WITHIN THIS REPO'S SCOPE — NO OTHER PROJECTS, NO OTHER FOLDERS ON THE MACHINE, EVEN IF TECHNICALLY REACHABLE.
 
 ## Branch & merge workflow (anti-divergence)
 
@@ -147,6 +148,24 @@ Verification order when finishing work: **cs-fix → stan → test** (or just `c
 - PHPUnit 11 + **eris** (property-based testing) — see `*PropertyTest.php` files.
 - `phpunit.xml` sets `APP_ENV=testing`, `LOG_DIR=temp/logs`, and a fixed `BACKUP_ENCRYPTION_KEY`. Tests write to `temp/` (gitignored) — don't rely on `data/` in tests.
 - `ext-ssh2` and `ext-pdo_sqlite` are required; SSH tests use short socket timeout (`default_socket_timeout=2`).
+
+## E2E screenshoty (dowód wykonania atomu)
+
+Po każdym "atomie" (kroku/etapie zadania weryfikowanym e2e) agent AI robi screenshot **sam**,
+przez Playwright — nie czeka aż zrobi to użytkownik.
+
+- Zapis do `.local/img/` (katalog już istnieje w tym repo, niecommitowany — dowód z sesji AI,
+  nie artefakt projektu).
+- Nazewnictwo: `.local/img/<zadanie>__<atom>__<timestamp>.png`, np.
+  `.local/img/zadanie-12__krok-2-login__20260719-1530.png` — tytuł zadania na początku, żeby
+  dało się grupować/sortować per zadanie.
+- Technicznie: `page.screenshot({ path: '.local/img/<nazwa>.png', fullPage: true })` w
+  odpowiednim miejscu skryptu/testu Playwright — po każdym atomie, nie tylko na końcu.
+- Jeśli brak uprawnień do zapisu w `.local/img/` w danym sandboksie — nie próbuj obejść (sudo
+  itp.). Zgłoś to użytkownikowi wprost i przejdź na fallback: tylko zielony wynik e2e w
+  outputcie, bez screenów.
+- Nie nadpisuj starych screenów z poprzednich zadań — unikalna nazwa z timestampem zachowuje
+  historię.
 
 ## Docker
 
