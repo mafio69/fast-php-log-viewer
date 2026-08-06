@@ -31,7 +31,7 @@ jobs:
           # ~8.2-8.5, and several locked symfony/* packages need >=8.4.1. 8.4
           # is what the Dockerfile's base image runs in production, and the
           # only version this repo's own lock file can currently install on.
-          php-version: "8.4"
+          php-version: "8.5"
           extensions: ctype, iconv, simplexml, pdo, pdo_sqlite, sqlite3, ssh2
           coverage: none
 
