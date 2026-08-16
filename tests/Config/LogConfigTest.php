@@ -143,4 +143,58 @@ class LogConfigTest extends TestCase
         $this->assertTrue($result);
         $this->assertSame([], $this->config->getAllowedContainerPaths());
     }
+
+    public function testDeleteSSHConnectionOnlyDeletesOwnConnections(): void
+    {
+        $idA = $this->config->addSSHConnection([
+            'name' => 'alice-server', 'ssh_host' => 'h', 'ssh_user' => 'u',
+            'ssh_auth_method' => 'password', 'remote_path' => '/var/log',
+        ], 1);
+        $idB = $this->config->addSSHConnection([
+            'name' => 'bob-server', 'ssh_host' => 'h', 'ssh_user' => 'u',
+            'ssh_auth_method' => 'password', 'remote_path' => '/var/log',
+        ], 2);
+
+        $deletedByAlice = $this->config->deleteSSHConnection($idB, 1);
+        $this->assertFalse($deletedByAlice);
+
+        $deletedByBob = $this->config->deleteSSHConnection($idB, 2);
+        $this->assertTrue($deletedByBob);
+
+        $this->assertSame($idA, $this->config->getSSHConnections(1)[0]['id']);
+    }
+
+    public function testDeleteSSHConnectionReturnsFalseForNonexistentId(): void
+    {
+        $this->assertFalse($this->config->deleteSSHConnection(99999, 1));
+    }
+
+    public function testGetSSHConnectionsIsolatesByUser(): void
+    {
+        $this->config->addSSHConnection([
+            'name' => 'alice', 'ssh_host' => 'h', 'ssh_user' => 'u',
+            'ssh_auth_method' => 'password', 'remote_path' => '/var/log',
+        ], 1);
+        $this->config->addSSHConnection([
+            'name' => 'bob', 'ssh_host' => 'h', 'ssh_user' => 'u',
+            'ssh_auth_method' => 'password', 'remote_path' => '/var/log',
+        ], 2);
+        $this->config->addSSHConnection([
+            'name' => 'global', 'ssh_host' => 'h', 'ssh_user' => 'u',
+            'ssh_auth_method' => 'password', 'remote_path' => '/var/log',
+        ], null);
+
+        $namesAlice = array_column($this->config->getSSHConnections(1), 'name');
+        $this->assertContains('alice', $namesAlice);
+        $this->assertContains('global', $namesAlice);
+        $this->assertNotContains('bob', $namesAlice);
+
+        $namesBob = array_column($this->config->getSSHConnections(2), 'name');
+        $this->assertContains('bob', $namesBob);
+        $this->assertContains('global', $namesBob);
+        $this->assertNotContains('alice', $namesBob);
+
+        $namesAnon = array_column($this->config->getSSHConnections(null), 'name');
+        $this->assertSame(['global'], $namesAnon);
+    }
 }

@@ -222,7 +222,11 @@ class SSHController
         }
 
         $id = (int)($args['id'] ?? 0);
-        $this->logConfig->deleteSSHConnection($id);
+        $deleted = $this->logConfig->deleteSSHConnection($id, (int)$userId);
+
+        if (!$deleted) {
+            return $this->json($response, ['error' => 'Połączenie nie istnieje lub nie należy do Ciebie.'], 404);
+        }
 
         return $this->json($response, ['success' => true]);
     }

@@ -645,10 +645,11 @@ class LogConfig
         return (int)$this->db->lastInsertId();
     }
 
-    public function deleteSSHConnection(int $id): void
+    public function deleteSSHConnection(int $id, ?int $userId): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM ssh_connections WHERE id = :id');
-        $stmt->execute([':id' => $id]);
+        $stmt = $this->db->prepare('DELETE FROM ssh_connections WHERE id = :id AND user_id = :user_id');
+        $stmt->execute([':id' => $id, ':user_id' => $userId]);
+        return $stmt->rowCount() > 0;
     }
 
     public function hasSSHConnections(): bool
