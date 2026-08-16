@@ -1,13 +1,15 @@
 # STATUS — fast-php-log-viewer
 
-Ostatnia aktualizacja: 2026-08-16 (sesja z GLM-5.2)
+Ostatnia aktualizacja: 2026-08-16 (sesja z GLM-5.2, wznowienie — porządki git)
 
 ## Drzewo
 
-- Gałąź: `develop` (trackuje `origin/develop`)
-- HEAD: `62b378e` — Fix: Docker container check shows 'błąd sprawdzania' instead of 'niedozwolony'
-- Drzewo: **czyste** (wszystko zcommitowane i zpushowane)
-- Kontener: `fast-php-log-viewer-php-1` running, port 9123
+- Gałąź robocza: `develop` (trackuje `origin/develop`)
+- HEAD `develop`: `7868217` — Docs: add project status snapshot (2026-08-16)
+- HEAD `master`: `d30c83c` — DualLogger: add 'repository:data' default + fix php-errors.ini path
+- develop jest **1 commit przed masterem** — czeka na PR `develop → master` (patrz `przepływ-git.md`: master tylko przez PR, nigdy bezpośrednim pushem)
+- Drzewo robocze: **czyste** (wszystko zcommitowane i zpushowane na origin/develop)
+- Kontener: `fast-php-log-viewer-php-1` — **nie działał** przy wznowieniu (do odpalenia `docker compose up -d --build`)
 
 ## Bramki jakości
 
@@ -25,9 +27,11 @@ Ostatnia aktualizacja: 2026-08-16 (sesja z GLM-5.2)
 | 3. SSH + prywatna sesja | ✅ ZROBIONE | AuthService/AuthController/AuthMiddleware, LogConfig ssh_connections (per-user), deleteSSHConnection ownership check |
 | 4. Domyślne lokalizacje | ✅ ZROBIONE | DefaultLogSources + getDefaultDirectories (ale dwie prawdy — patrz tech debt) |
 
-## Ostatnie commity (od najnowszego)
+## Ostatnie commity na develop (od najnowszego)
 
 ```
+7868217 Docs: add project status snapshot (2026-08-16)
+d30c83c DualLogger: add 'repository:data' default + fix php-errors.ini path
 62b378e Fix: Docker container check shows 'błąd sprawdzania' instead of 'niedozwolony'
 afd65bf Docs: README in English + security guide + technical account
 1e3d705 Auth UI + tests (Wymaganie 3, kryterium 3-4)
@@ -35,6 +39,13 @@ b411683 Security: deleteSSHConnection must check ownership (Wymaganie 3, kryteri
 9730fd4 Auth: per-user SSH connections + login/session (LogConfig-backed)
 4484da6 Update docs
 ```
+
+## Git flow (zgodnie z `przepływ-git.md`)
+
+- Praca na branchach zadaniowych z aktualnego `develop` (nie bezpośrednio na develop, chyba że priorytet `fire`).
+- `develop` → merge lokalnie + push do `origin/develop` (bez PR).
+- `master` → **tylko przez PR** z `develop`, po zielonym CI. Bezpośredni push zabroniony.
+- Commity AI podpisują się własną tożsamością (`--author` + `Co-Authored-By` trailer).
 
 ## Co jest W TOKU (przerwane)
 
