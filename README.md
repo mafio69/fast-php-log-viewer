@@ -46,10 +46,16 @@ Open `http://localhost:9123` — no setup needed.
 | Host path              | Container path         | Purpose                                  |
 |------------------------|------------------------|------------------------------------------|
 | `./docker-logs/nginx/` | `/var/log/nginx/`      | Sample nginx logs                        |
-| `/var/log`             | `/host/var/log`        | Host system logs                         |
-| `~/logs`               | `/host/home/logs`      | User home logs                           |
-| `~/.ssh`               | `/home/www-data/.ssh`  | SSH keys (for remote log access)         |
 | `/var/run/docker.sock` | `/var/run/docker.sock` | Docker socket (for reading other container logs) |
+
+> **Host logs are not mounted by default.** Reading `/var/log` on the host
+> from inside a container requires a volume mount
+> (`/var/log:/host/var/log:ro`) that is not configured out-of-the-box — a
+> "host:/var/log" entry would 404 on a fresh install, which is worse than not
+> shipping it. If you want host logs, mount the volume in `docker-compose.yml`
+> and add the path via the **Zapisane** panel. The defaults work without any
+> host setup: `docker:/var/log`, `docker:/var/log/nginx`, `repository:logs`,
+> `repository:logs/php-error`, `repository:data`.
 
 ### Three log access modes
 
@@ -58,8 +64,25 @@ The app supports three log access modes, selected in the sidebar:
 | Mode | Description | Example |
 |---|---|---|
 | **DOCKER** | Logs inside the app container (volume mounts) | `/var/log/nginx/error.log` |
-| **HOST** | Host logs mounted via `/host/var/log` | `/host/var/log/nginx/error.log` |
+| **HOST** | Host logs mounted manually via `/host/...` | `/host/var/log/nginx/error.log` (requires volume mount) |
 | **CONTAINER** | Logs from another Docker container via `docker exec cat` | provide `container_name` + `/var/log/nginx/error.log` |
+
+### App's own logs (DualLogger)
+
+The app logs its own activity to `data/YYYY/MM/YYYY-MM-DD.log` via
+[`mafio69/fast-php-logger`](https://packagist.org/packages/mafio69/fast-php-logger)
+(DualLogger). This is the `repository:data` default source. Log levels in the
+output are in English (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`); the
+log format is:
+
+```
+[2026-08-16 14:25:00] [WARNING] [Service/PathResolver.php:20] resolvePath input {"path":"/var/log"}
+```
+
+PHP fatal/warning/notice errors are written by `php-errors.ini` to
+`logs/php-error/php_errors.log` (the `repository:logs/php-error` default).
+Both directories are scanned recursively, so nested `YYYY/MM/` structures are
+visible in the file list.
 
 ### Reading logs from another container
 
