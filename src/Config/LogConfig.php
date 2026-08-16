@@ -451,6 +451,7 @@ class LogConfig
             ['key' => 'host:/var/log',     'path' => '/host/var/log',   'type' => 'host',       'name' => 'Host (Ubuntu)'],
             ['key' => 'host-home:~/logs',  'path' => '/host/home/logs', 'type' => 'home',       'name' => 'Host (~/logs)'],
             ['key' => 'repository:logs',   'path' => 'logs/',           'type' => 'repository', 'name' => 'Aplikacja (logs/)'],
+            ['key' => 'repository:data',   'path' => 'data/',            'type' => 'repository', 'name' => 'DualLogger (data/)'],
         ];
     }
 

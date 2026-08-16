@@ -106,7 +106,7 @@ class DirectoryControllerTest extends TestCase
         $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
 
-        $this->assertCount(5, $body);
+        $this->assertCount(6, $body);
         $this->assertSame('docker:/var/log', $body[0]['key']);
         $this->assertSame('/var/log', $body[0]['path']);
         $this->assertSame('docker:/var/log/nginx', $body[1]['key']);
@@ -117,6 +117,8 @@ class DirectoryControllerTest extends TestCase
         $this->assertSame('/host/home/logs', $body[3]['path']);
         $this->assertSame('repository:logs', $body[4]['key']);
         $this->assertSame('logs/', $body[4]['path']);
+        $this->assertSame('repository:data', $body[5]['key']);
+        $this->assertSame('data/', $body[5]['path']);
     }
 
     public function testGetDeferredDirectoriesReturnsLogConfigResult(): void
