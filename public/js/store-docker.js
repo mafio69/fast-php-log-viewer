@@ -40,17 +40,18 @@ window.FPLV = window.FPLV || {};
                 });
             }
         } catch (e) {
-            if (e.message.includes('container_not_found')) {
+            const code = e.code || '';
+            if (code === 'container_not_found' || e.message.includes('container_not_found')) {
                 alert('Kontener nie został znaleziony.'); console.error('Container not found:', containerId);
-            } else if (e.message.includes('container_not_allowed')) {
+            } else if (code === 'container_not_allowed' || e.message.includes('container_not_allowed')) {
                 if (confirm(containerNotAllowedExplanation(containerId))) {
                     await allowContainerAndRetry(containerId, dirPath);
                 }
-            } else if (e.message.includes('path_not_allowed')) {
+            } else if (code === 'path_not_allowed' || e.message.includes('path_not_allowed')) {
                 if (confirm(pathNotAllowedExplanation(dirPath))) {
                     await allowPathAndRetry(dirPath);
                 }
-            } else if (e.message.includes('docker_unavailable')) {
+            } else if (code === 'docker_unavailable' || e.message.includes('docker_unavailable') || e.message.includes('Docker nie jest')) {
                 alert('Docker nie jest dostępny.');
             } else {
                 alert('Nie udało się załadować katalogu.'); console.error(e);
@@ -139,9 +140,10 @@ window.FPLV = window.FPLV || {};
             await F.fetchJson('/api/files?container_id=' + encodeURIComponent(containerId) + '&path=' + encodeURIComponent(path));
             store.containerCheckStatus = 'ok';
         } catch (e) {
-            if (e.message.includes('container_not_found')) store.containerCheckStatus = 'not_found';
-            else if (e.message.includes('container_not_allowed')) store.containerCheckStatus = 'not_allowed';
-            else if (e.message.includes('path_not_allowed')) store.containerCheckStatus = 'path_not_allowed';
+            const code = e.code || '';
+            if (code === 'container_not_found' || e.message.includes('container_not_found')) store.containerCheckStatus = 'not_found';
+            else if (code === 'container_not_allowed' || e.message.includes('container_not_allowed')) store.containerCheckStatus = 'not_allowed';
+            else if (code === 'path_not_allowed' || e.message.includes('path_not_allowed')) store.containerCheckStatus = 'path_not_allowed';
             else store.containerCheckStatus = 'error';
         }
     }

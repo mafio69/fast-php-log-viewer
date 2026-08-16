@@ -256,7 +256,18 @@ window.FPLV = window.FPLV || {};
 
     async function fetchJson(url) {
         const r = await fetch(url);
-        if (!r.ok) throw new Error(await r.text());
+        if (!r.ok) {
+            const text = await r.text();
+            try {
+                const data = JSON.parse(text);
+                const err = new Error(data.error || text);
+                if (data.code) err.code = data.code;
+                throw err;
+            } catch (parseErr) {
+                if (parseErr instanceof SyntaxError) throw new Error(text);
+                throw parseErr;
+            }
+        }
         return r.json();
     }
 
@@ -328,7 +339,8 @@ window.FPLV = window.FPLV || {};
             store.filtered = store.entries;
             applyFilters();
         } catch (e) {
-            if (e.message.includes('access_denied')) {
+            const code = e.code || '';
+            if (code === 'access_denied' || e.message.includes('access_denied')) {
                 const parentDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
                 if (parentDir) {
                     try {
@@ -344,7 +356,7 @@ window.FPLV = window.FPLV || {};
                     }
                 }
             }
-            if (e.message.includes('file_not_found')) {
+            if (code === 'file_not_found' || e.message.includes('file_not_found')) {
                 alert('Plik nie istnieje.');
                 console.error('File not found:', path);
             } else {

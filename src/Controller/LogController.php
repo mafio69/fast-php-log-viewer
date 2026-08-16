@@ -118,7 +118,7 @@ class LogController
         $dirKey = $request->getQueryParams()['dir'] ?? null;
 
         if (!$this->accessValidator->isFileAllowed($filePath, $dirKey)) {
-            return $this->json($response, ['error' => 'Brak dostępu.'], 403);
+            return $this->json($response, ['error' => 'Brak dostępu.', 'code' => 'access_denied'], 403);
         }
 
         // Single responsibility split: LocalFileReader reads bytes from disk,
@@ -131,10 +131,10 @@ class LogController
         } catch (\RuntimeException $e) {
             $message = $e->getMessage();
             if (str_starts_with($message, 'file_not_found')) {
-                return $this->json($response, ['error' => 'Plik nie został znaleziony.'], 404);
+                return $this->json($response, ['error' => 'Plik nie został znaleziony.', 'code' => 'file_not_found'], 404);
             }
             if (str_starts_with($message, 'file_not_readable')) {
-                return $this->json($response, ['error' => 'Brak dostępu do pliku.'], 403);
+                return $this->json($response, ['error' => 'Brak dostępu do pliku.', 'code' => 'access_denied'], 403);
             }
             error_log('LogController::getEntries read error: ' . $message);
             return $this->json($response, ['error' => 'Nie można odczytać pliku.'], 500);
@@ -165,10 +165,13 @@ class LogController
             $message = $e->getMessage();
             error_log('LogController::getFilesFromContainer: ' . $message);
             if ($message === 'container_not_found') {
-                return $this->json($response, ['error' => 'Kontener nie został znaleziony.'], 404);
+                return $this->json($response, ['error' => 'Kontener nie został znaleziony.', 'code' => 'container_not_found'], 404);
             }
-            if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
-                return $this->json($response, ['error' => 'Brak dostępu do tego kontenera lub ścieżki.'], 403);
+            if ($message === 'container_not_allowed') {
+                return $this->json($response, ['error' => 'Brak dostępu do tego kontenera.', 'code' => 'container_not_allowed'], 403);
+            }
+            if ($message === 'path_not_allowed') {
+                return $this->json($response, ['error' => 'Brak dostępu do tej ścieżki.', 'code' => 'path_not_allowed'], 403);
             }
             return $this->json($response, ['error' => 'Nie można odczytać katalogu kontenera.'], 500);
         }
@@ -195,10 +198,13 @@ class LogController
             $message = $e->getMessage();
             error_log('LogController::getEntriesFromContainer: ' . $message);
             if ($message === 'file_not_found' || $message === 'container_not_found') {
-                return $this->json($response, ['error' => 'Nie znaleziono.'], 404);
+                return $this->json($response, ['error' => 'Nie znaleziono.', 'code' => $message], 404);
             }
-            if ($message === 'container_not_allowed' || $message === 'path_not_allowed') {
-                return $this->json($response, ['error' => 'Brak dostępu.'], 403);
+            if ($message === 'container_not_allowed') {
+                return $this->json($response, ['error' => 'Brak dostępu do tego kontenera.', 'code' => 'container_not_allowed'], 403);
+            }
+            if ($message === 'path_not_allowed') {
+                return $this->json($response, ['error' => 'Brak dostępu do tej ścieżki.', 'code' => 'path_not_allowed'], 403);
             }
             return $this->json($response, ['error' => 'Nie można odczytać pliku.'], 500);
         }
