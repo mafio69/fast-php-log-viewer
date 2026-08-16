@@ -94,7 +94,7 @@ class DirectoryControllerTest extends TestCase
         $this->assertTrue($body['success']);
     }
 
-    public function testGetDefaultDirectoriesReturnsFiveEntries(): void
+    public function testGetDefaultDirectoriesReturnsContainerAndRepoEntries(): void
     {
         $requestFactory = new RequestFactory();
         $request = $requestFactory->createRequest('GET', '/api/config/default-directories');
@@ -106,19 +106,19 @@ class DirectoryControllerTest extends TestCase
         $this->assertEquals(200, $result->getStatusCode());
         $body = json_decode((string)$result->getBody(), true);
 
-        $this->assertCount(6, $body);
+        // Host paths are intentionally excluded — they require a volume mount
+        // that is not set up by default and would 404 out-of-the-box.
+        $this->assertCount(5, $body);
         $this->assertSame('docker:/var/log', $body[0]['key']);
         $this->assertSame('/var/log', $body[0]['path']);
         $this->assertSame('docker:/var/log/nginx', $body[1]['key']);
         $this->assertSame('/var/log/nginx', $body[1]['path']);
-        $this->assertSame('host:/var/log', $body[2]['key']);
-        $this->assertSame('/host/var/log', $body[2]['path']);
-        $this->assertSame('host-home:~/logs', $body[3]['key']);
-        $this->assertSame('/host/home/logs', $body[3]['path']);
-        $this->assertSame('repository:logs', $body[4]['key']);
-        $this->assertSame('logs/', $body[4]['path']);
-        $this->assertSame('repository:data', $body[5]['key']);
-        $this->assertSame('data/', $body[5]['path']);
+        $this->assertSame('repository:logs', $body[2]['key']);
+        $this->assertSame('logs/', $body[2]['path']);
+        $this->assertSame('repository:logs/php-error', $body[3]['key']);
+        $this->assertSame('logs/php-error/', $body[3]['path']);
+        $this->assertSame('repository:data', $body[4]['key']);
+        $this->assertSame('data/', $body[4]['path']);
     }
 
     public function testGetDeferredDirectoriesReturnsLogConfigResult(): void

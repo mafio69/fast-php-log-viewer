@@ -441,17 +441,24 @@ class LogConfig
      * Each entry has: key (user-friendly label), path (for backend resolution),
      * type (logical group), name (display name).
      *
+     * Host log paths are intentionally NOT in this list: reading /var/log on the
+     * host from inside a Docker container requires a volume mount
+     * (/var/log:/host/var/log:ro) that is not set up by default. Shipping a
+     * "host:/var/log" entry that 404s out-of-the-box is worse than not shipping
+     * it — users who want host logs can mount the volume and add the path
+     * manually via the "Zapisane" panel. Container-internal paths and the
+     * repository's own data/logs directories work without any host setup.
+     *
      * @return array<int, array{key: string, path: string, type: string, name: string}>
      */
     public static function getDefaultDirectories(): array
     {
         return [
-            ['key' => 'docker:/var/log',   'path' => '/var/log',       'type' => 'docker',     'name' => 'Kontener (Docker)'],
-            ['key' => 'docker:/var/log/nginx', 'path' => '/var/log/nginx', 'type' => 'docker', 'name' => 'Kontener (nginx)'],
-            ['key' => 'host:/var/log',     'path' => '/host/var/log',   'type' => 'host',       'name' => 'Host (Ubuntu)'],
-            ['key' => 'host-home:~/logs',  'path' => '/host/home/logs', 'type' => 'home',       'name' => 'Host (~/logs)'],
-            ['key' => 'repository:logs',   'path' => 'logs/',           'type' => 'repository', 'name' => 'Aplikacja (logs/)'],
-            ['key' => 'repository:data',   'path' => 'data/',            'type' => 'repository', 'name' => 'DualLogger (data/)'],
+            ['key' => 'docker:/var/log',           'path' => '/var/log',                   'type' => 'docker',     'name' => 'Kontener (/var/log)'],
+            ['key' => 'docker:/var/log/nginx',     'path' => '/var/log/nginx',             'type' => 'docker',     'name' => 'Kontener (nginx)'],
+            ['key' => 'repository:logs',           'path' => 'logs/',                       'type' => 'repository', 'name' => 'Aplikacja (logs/)'],
+            ['key' => 'repository:logs/php-error', 'path' => 'logs/php-error/',             'type' => 'repository', 'name' => 'PHP errors (logs/php-error/)'],
+            ['key' => 'repository:data',           'path' => 'data/',                       'type' => 'repository', 'name' => 'DualLogger (data/)'],
         ];
     }
 
