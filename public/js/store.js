@@ -243,6 +243,20 @@ window.FPLV = window.FPLV || {};
         return (saved && saved.type === 'docker' && saved.container_id) ? saved : null;
     }
 
+    // Single source of truth for "is the currently selected file in a docker
+    // container, and if so which one". Computed live from selectedDir (saved
+    // docker shortcut) or from selectedFileContainerId (direct-docker mode,
+    // where selectedDir is empty and the container id was set explicitly by
+    // loadDirectDockerFiles). loadEntries() reads this instead of trusting
+    // selectedFileContainerId as a cache, so a selectedDir change that didn't
+    // go through loadFiles() can't leave a stale container id in place.
+    function currentContainerId() {
+        const dockerDir = findSavedDockerDir();
+        if (dockerDir) return dockerDir.container_id;
+        if (!store.selectedDir) return store.selectedFileContainerId;
+        return '';
+    }
+
     function filesApiUrl() {
         const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
         if (def) return '?path=' + encodeURIComponent(def.path);
@@ -498,9 +512,10 @@ window.FPLV = window.FPLV || {};
         clearExpanded();
         try {
             let url;
-            if (store.selectedFileContainerId) {
+            const cid = currentContainerId();
+            if (cid) {
                 url = '/api/entries?file=' + encodeURIComponent(store.selectedFile)
-                    + '&container_id=' + encodeURIComponent(store.selectedFileContainerId);
+                    + '&container_id=' + encodeURIComponent(cid);
             } else {
                 const def = store.defaultDirectories.find(d => d.key === store.selectedDir);
                 const dirParam = def ? def.path : store.selectedDir;
@@ -733,8 +748,14 @@ window.FPLV = window.FPLV || {};
         try {
             store.directories = await fetchJson('/api/directories');
             F.syncSSHDirs();
-            const firstDefault = store.defaultDirectories[0];
-            store.selectedDir = firstDefault ? firstDefault.key : '';
+            // Only set selectedDir on the very first load (when it's still empty).
+            // Resetting it on every call would discard the user's selection every
+            // time addAllowedDir/deleteDirectoryEntry/saveDirectoryShortcut
+            // triggers a reload — losing context and forcing a re-click.
+            if (!store.selectedDir) {
+                const firstDefault = store.defaultDirectories[0];
+                store.selectedDir = firstDefault ? firstDefault.key : '';
+            }
         } catch (e) {
             console.error('Failed to load directories:', e);
         }
