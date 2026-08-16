@@ -47,6 +47,11 @@ b411683 Security: deleteSSHConnection must check ownership (Wymaganie 3, kryteri
 - `master` → **tylko przez PR** z `develop`, po zielonym CI. Bezpośredni push zabroniony.
 - Commity AI podpisują się własną tożsamością (`--author` + `Co-Authored-By` trailer).
 
+## Protokół tego pliku
+
+- **Start zadania** → dopisz 1-2 linijki pod sekcją „W toku" (co robisz, nad czym pracujesz).
+- **Po push** → usuń te linijki (zadanie zcommitowane = nie „w toku"; historia żyje w git, nie w statusie).
+
 ## Co jest W TOKU (przerwane)
 
 ### 1. Sortowanie + filtr daty w DataTable NIE DZIAŁAJĄ
