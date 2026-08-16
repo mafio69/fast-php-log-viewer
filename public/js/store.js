@@ -705,6 +705,7 @@ window.FPLV = window.FPLV || {};
         await loadDirectories();
         await loadFiles();
         validateBookmarks();
+        F.checkSession();
     }
 
     async function loadDefaultDirectories() {

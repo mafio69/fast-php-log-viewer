@@ -23,9 +23,21 @@ class AuthService
             $this->db = new PDO('sqlite:' . $dbPath);
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            $this->initSchema();
         } catch (PDOException $e) {
             throw new RuntimeException('Failed to connect to SQLite: ' . $e->getMessage());
         }
+    }
+
+    private function initSchema(): void
+    {
+        $this->db->exec('
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            );
+        ');
     }
 
     /**

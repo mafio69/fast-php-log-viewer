@@ -28,12 +28,21 @@ window.FPLV.components = window.FPLV.components || [];
                 @open-ssh-modal="openSSHModal"
                 @open-dir-manager="openDirManager"
                 @cancel-edit="cancelEdit"
+                @open-auth-modal="openAuthModal"
+                @logout="logout"
             ></sidebar>
             <dir-manager-modal
                 v-if="store.showDirManager"
                 :store="store"
                 @close="store.showDirManager = false"
             ></dir-manager-modal>
+            <auth-modal
+                v-if="store.showAuthModal"
+                :store="store"
+                @close="store.showAuthModal = false"
+                @submit="submitAuth"
+                @switch-mode="store.authMode = store.authMode === 'register' ? 'login' : 'register'"
+            ></auth-modal>
             <ssh-modal
                 v-if="store.showSSHModal"
                 :store="store"
@@ -90,6 +99,9 @@ window.FPLV.components = window.FPLV.components || [];
                 openDirManager: F.openDirManager,
                 openSSHModal: F.openSSHModal,
                 cancelEdit: F.cancelEdit,
+                openAuthModal: F.openAuthModal,
+                logout: F.logout,
+                submitAuth: F.submitAuth,
                 testSSHConnection: F.testSSHConnection,
                 addSSHConnection: F.addSSHConnection,
                 deleteSSHConnection: F.deleteSSHConnection,
