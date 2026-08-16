@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mariusz\LogViewer\Tests\Controller;
 
+use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\SSHController;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\SecurityService;
@@ -25,7 +26,8 @@ class SSHControllerTest extends TestCase
         // (assertIsArray zamiast assertCount) nigdy tego nie wykrywały.
         $logParser = new LogParser();
         $securityService = $this->createMock(SecurityService::class);
-        $this->controller = new SSHController($logParser, $securityService);
+        $logConfig = $this->createMock(LogConfig::class);
+        $this->controller = new SSHController($logParser, $securityService, $logConfig);
     }
 
     /**

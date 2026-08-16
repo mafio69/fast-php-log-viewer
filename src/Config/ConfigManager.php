@@ -261,4 +261,11 @@ class ConfigManager
 
         return $data;
     }
+
+    public function clearSSHProfiles(): void
+    {
+        $config = $this->getConfig();
+        unset($config['ssh_profiles']);
+        $this->saveConfig($config);
+    }
 }

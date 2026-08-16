@@ -89,11 +89,32 @@ class LogConfig
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS ssh_connections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                name TEXT NOT NULL,
+                ssh_host TEXT NOT NULL,
+                ssh_user TEXT NOT NULL,
+                ssh_port INTEGER DEFAULT 22,
+                ssh_auth_method TEXT DEFAULT 'password',
+                ssh_key_path TEXT,
+                remote_path TEXT DEFAULT '/var/log',
+                all_files INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_log_files_path ON log_files(file_path);
             CREATE INDEX IF NOT EXISTS idx_log_directories_active ON log_directories(is_active);
         ");
 
         $this->ensureColumn('log_directories', 'container_id', 'TEXT');
+        $this->ensureColumn('log_directories', 'user_id', 'INTEGER');
     }
 
     /**
@@ -118,22 +139,25 @@ class LogConfig
      * Add a log directory configuration
      * If the directory already exists, returns the existing ID (idempotent).
      */
-    public function addDirectory(array $config): int
+    public function addDirectory(array $config, ?int $userId = null): int
     {
         $containerId = $config['container_id'] ?? null;
 
         // Check if directory already exists — return existing ID. Path alone isn't unique
         // across containers (two containers can both have "/var/log"), so container_id is
         // part of the identity check too (NULL-safe via IS, since it's null for non-docker).
-        $stmt = $this->db->prepare('SELECT id FROM log_directories WHERE path = :path AND container_id IS :container_id');
-        $stmt->execute([':path' => $config['path'], ':container_id' => $containerId]);
+        $stmt = $this->db->prepare(<<<'SQL'
+            SELECT id FROM log_directories
+            WHERE path = :path AND container_id IS :container_id AND user_id IS :user_id
+        SQL);
+        $stmt->execute([':path' => $config['path'], ':container_id' => $containerId, ':user_id' => $userId]);
         if ($existing = $stmt->fetch()) {
             return (int)$existing['id'];
         }
 
         $stmt = $this->db->prepare('
-            INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path, container_id)
-            VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path, :container_id)
+            INSERT INTO log_directories (name, path, type, ssh_host, ssh_user, ssh_auth_method, ssh_key_path, container_id, user_id)
+            VALUES (:name, :path, :type, :ssh_host, :ssh_user, :ssh_auth_method, :ssh_key_path, :container_id, :user_id)
         ');
 
         $stmt->execute([
@@ -145,6 +169,7 @@ class LogConfig
             ':ssh_auth_method' => $config['ssh_auth_method'] ?? null,
             ':ssh_key_path' => $config['ssh_key_path'] ?? null,
             ':container_id' => $containerId,
+            ':user_id' => $userId,
         ]);
 
         $id = (int)$this->db->lastInsertId();
@@ -176,11 +201,18 @@ class LogConfig
     }
 
     /**
-     * Get all configured directories
+     * Get all configured directories, optionally scoped to a user.
+     * When $userId is null, returns only global directories (user_id IS NULL).
+     * When $userId is set, returns global directories + user-specific ones.
      */
-    public function getDirectories(): array
+    public function getDirectories(?int $userId = null): array
     {
-        $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 1 ORDER BY name');
+        if ($userId === null) {
+            $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 1 AND user_id IS NULL ORDER BY name');
+        } else {
+            $stmt = $this->db->prepare('SELECT * FROM log_directories WHERE is_active = 1 AND (user_id IS NULL OR user_id = :user_id) ORDER BY name');
+            $stmt->execute([':user_id' => $userId]);
+        }
         return $stmt->fetchAll();
     }
 
@@ -190,9 +222,14 @@ class LogConfig
      *
      * @return array<int, array{id: int, key: string, name: string, path: string, type: string, container_id: ?string, valid: bool}>
      */
-    public function getDeferredDirectories(): array
+    public function getDeferredDirectories(?int $userId = null): array
     {
-        $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 0 ORDER BY name');
+        if ($userId === null) {
+            $stmt = $this->db->query('SELECT * FROM log_directories WHERE is_active = 0 AND user_id IS NULL ORDER BY name');
+        } else {
+            $stmt = $this->db->prepare('SELECT * FROM log_directories WHERE is_active = 0 AND (user_id IS NULL OR user_id = :user_id) ORDER BY name');
+            $stmt->execute([':user_id' => $userId]);
+        }
         return $this->withValidFlag($stmt->fetchAll());
     }
 
@@ -203,9 +240,9 @@ class LogConfig
      *
      * @return array<int, array{id: int, key: string, name: string, path: string, type: string, container_id: ?string, valid: bool}>
      */
-    public function getValidDirectories(): array
+    public function getValidDirectories(?int $userId = null): array
     {
-        return $this->withValidFlag($this->getDirectories());
+        return $this->withValidFlag($this->getDirectories($userId));
     }
 
     /**
@@ -308,9 +345,14 @@ class LogConfig
     /**
      * Check if database has any configurations
      */
-    public function hasConfigurations(): bool
+    public function hasConfigurations(?int $userId = null): bool
     {
-        $stmt = $this->db->query('SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1');
+        if ($userId === null) {
+            $stmt = $this->db->query('SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1 AND user_id IS NULL');
+        } else {
+            $stmt = $this->db->prepare('SELECT COUNT(*) as count FROM log_directories WHERE is_active = 1 AND (user_id IS NULL OR user_id = :user_id)');
+            $stmt->execute([':user_id' => $userId]);
+        }
         $result = $stmt->fetch();
         return ($result['count'] ?? 0) > 0;
     }
@@ -564,6 +606,77 @@ class LogConfig
      *
      * @throws RuntimeException if key is missing or invalid length
      */
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getSSHConnections(?int $userId): array
+    {
+        if ($userId === null) {
+            $stmt = $this->db->query('SELECT * FROM ssh_connections WHERE user_id IS NULL ORDER BY created_at');
+        } else {
+            $stmt = $this->db->prepare('SELECT * FROM ssh_connections WHERE user_id IS NULL OR user_id = :user_id ORDER BY created_at');
+            $stmt->execute([':user_id' => $userId]);
+        }
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    public function addSSHConnection(array $config, ?int $userId): int
+    {
+        $stmt = $this->db->prepare('
+            INSERT INTO ssh_connections (user_id, name, ssh_host, ssh_user, ssh_port, ssh_auth_method, ssh_key_path, remote_path, all_files)
+            VALUES (:user_id, :name, :ssh_host, :ssh_user, :ssh_port, :ssh_auth_method, :ssh_key_path, :remote_path, :all_files)
+        ');
+
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':name' => $config['name'],
+            ':ssh_host' => $config['ssh_host'],
+            ':ssh_user' => $config['ssh_user'],
+            ':ssh_port' => $config['ssh_port'] ?? 22,
+            ':ssh_auth_method' => $config['ssh_auth_method'] ?? 'password',
+            ':ssh_key_path' => $config['ssh_key_path'] ?? null,
+            ':remote_path' => $config['remote_path'] ?? '/var/log',
+            ':all_files' => (int)($config['all_files'] ?? false),
+        ]);
+
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function deleteSSHConnection(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM ssh_connections WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+    }
+
+    public function hasSSHConnections(): bool
+    {
+        $stmt = $this->db->query('SELECT COUNT(*) as count FROM ssh_connections');
+        $result = $stmt->fetch();
+        return ($result['count'] ?? 0) > 0;
+    }
+
+    /**
+     * Migrates SSH profiles from app_config.json into the ssh_connections table.
+     * All migrated profiles get user_id = NULL (legacy/global).
+     *
+     * @param array<int, array<string, mixed>> $profiles
+     */
+    public function migrateSSHProfilesFromConfig(array $profiles): int
+    {
+        $count = 0;
+        foreach ($profiles as $profile) {
+            if (empty($profile['ssh_host']) || empty($profile['ssh_user'])) {
+                continue;
+            }
+            $this->addSSHConnection($profile, null);
+            $count++;
+        }
+        return $count;
+    }
+
     private function getEncryptionKey(): string
     {
         $hex = getenv('BACKUP_ENCRYPTION_KEY');

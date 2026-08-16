@@ -165,6 +165,20 @@ class SetupWizardTest extends TestCase
             'all_files' => true,
         ];
 
+        $this->logConfig->expects($this->once())
+            ->method('addSSHConnection')
+            ->with([
+                'name' => 'SSH Profile',
+                'ssh_host' => 'example.com',
+                'ssh_user' => 'admin',
+                'ssh_port' => 2222,
+                'ssh_auth_method' => 'key',
+                'ssh_key_path' => '/home/user/.ssh/id_rsa',
+                'remote_path' => '/var/log',
+                'all_files' => true,
+            ], null)
+            ->willReturn(1);
+
         $result = $this->wizard->processStep('ssh_config', $data, false);
 
         $this->assertTrue($result['success']);
@@ -173,24 +187,6 @@ class SetupWizardTest extends TestCase
         $config = $this->configManager->getConfig();
         $this->assertEquals('complete', $config['setup_steps']['ssh_config']);
         $this->assertTrue($config['ssh_enabled']);
-        $this->assertNotEmpty($config['ssh_profiles']);
-    }
-
-    public function testProcessSSHConfigWithKeyPathWarnsWhenKeyNotFound(): void
-    {
-        $data = [
-            'ssh_host' => 'example.com',
-            'ssh_user' => 'admin',
-            'ssh_key_path' => '/nonexistent/key',
-        ];
-
-        $result = $this->wizard->processStep('ssh_config', $data, false);
-
-        $this->assertTrue($result['success']);
-
-        $config = $this->configManager->getConfig();
-        $profile = $config['ssh_profiles'][array_key_first($config['ssh_profiles'])];
-        $this->assertTrue($profile['ssh_key_path_warning']);
     }
 
     public function testProcessLocalDirectoriesSkipReturnsWarning(): void
@@ -304,15 +300,27 @@ class SetupWizardTest extends TestCase
             ],
         ];
 
+        $this->logConfig->expects($this->once())
+            ->method('addSSHConnection')
+            ->with([
+                'name' => 'Key Auth Server',
+                'ssh_host' => 'example.com',
+                'ssh_user' => 'admin',
+                'ssh_port' => 22,
+                'ssh_auth_method' => 'key',
+                'ssh_key_path' => '/home/user/.ssh/id_rsa',
+                'remote_path' => '/var/log',
+                'all_files' => false,
+            ], null)
+            ->willReturn(1);
+
         $result = $this->wizard->migrateSSHFromLocalStorage($connections);
 
         $this->assertEquals(1, $result['migrated']);
+        $this->assertEmpty($result['warnings']);
 
         $config = $this->configManager->getConfig();
-        $profile = $config['ssh_profiles'][array_key_first($config['ssh_profiles'])];
-        $this->assertEquals('/home/user/.ssh/id_rsa', $profile['ssh_key_path_original']);
-        $this->assertTrue($profile['ssh_key_path_warning']);
-        $this->assertTrue($profile['migrated_from_localstorage']);
+        $this->assertTrue($config['ssh_enabled']);
     }
 
     public function testProcessStepWithUnknownStepThrowsException(): void

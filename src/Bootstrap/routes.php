@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Mariusz\LogViewer\Controller\AllowedContainerController;
 use Mariusz\LogViewer\Controller\AllowedContainerPathController;
 use Mariusz\LogViewer\Controller\AppConfigController;
+use Mariusz\LogViewer\Controller\AuthController;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
@@ -57,4 +58,15 @@ return function (App $app): void {
     $app->post('/api/ssh/list-files', [SSHController::class, 'listFiles']);
     $app->post('/api/ssh/read-file', [SSHController::class, 'readFile']);
     $app->post('/api/ssh/download-file', [SSHController::class, 'downloadFile']);
+
+    // SSH connections CRUD (per-user)
+    $app->get('/api/ssh/connections', [SSHController::class, 'getConnections']);
+    $app->post('/api/ssh/connections', [SSHController::class, 'createConnection']);
+    $app->delete('/api/ssh/connections/{id}', [SSHController::class, 'deleteConnection']);
+
+    // Auth
+    $app->post('/api/auth/register', [AuthController::class, 'register']);
+    $app->post('/api/auth/login', [AuthController::class, 'login']);
+    $app->post('/api/auth/logout', [AuthController::class, 'logout']);
+    $app->get('/api/auth/session', [AuthController::class, 'session']);
 };

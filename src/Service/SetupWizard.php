@@ -99,28 +99,17 @@ class SetupWizard
                     continue;
                 }
 
-                // Przygotuj profil SSH
-                $profile = [
-                    'id' => 'profile_' . uniqid(),
+                // Przygotuj profil SSH i zapisz do ssh_connections
+                $this->logConfig->addSSHConnection([
                     'name' => $conn['name'] ?? 'Migrated SSH',
                     'ssh_host' => $conn['ssh_host'],
                     'ssh_user' => $conn['ssh_user'],
                     'ssh_port' => $conn['ssh_port'] ?? 22,
                     'ssh_auth_method' => $conn['ssh_auth_method'] ?? 'password',
+                    'ssh_key_path' => $conn['ssh_key_path'] ?? null,
                     'remote_path' => $conn['remote_path'] ?? '/var/log',
                     'all_files' => $conn['all_files'] ?? false,
-                    'migrated_from_localstorage' => true,
-                ];
-
-                // Dodaj ścieżkę klucza jeśli używana
-                if (!empty($conn['ssh_key_path'])) {
-                    $profile['ssh_key_path'] = $conn['ssh_key_path'];
-                    $profile['ssh_key_path_original'] = $conn['ssh_key_path'];
-                    $profile['ssh_key_path_warning'] = true;
-                }
-
-                // Zapisz profil (bez hasła)
-                $this->configManager->saveSSHProfile($profile);
+                ], null);
                 $migrated++;
             } catch (Exception $e) {
                 $warnings[] = 'Błąd migracji połączenia ' . ($conn['name'] ?? 'unnamed') . ': ' . $e->getMessage();
@@ -220,24 +209,16 @@ class SetupWizard
         }
 
         // Zapisz profil SSH
-        $profile = [
-            'id' => 'profile_' . uniqid(),
+        $this->logConfig->addSSHConnection([
             'name' => $data['name'] ?? 'SSH Profile',
             'ssh_host' => $data['ssh_host'],
             'ssh_user' => $data['ssh_user'],
             'ssh_port' => $data['ssh_port'] ?? 22,
             'ssh_auth_method' => $data['ssh_auth_method'] ?? 'password',
+            'ssh_key_path' => $data['ssh_key_path'] ?? null,
             'remote_path' => $data['remote_path'] ?? '/var/log',
             'all_files' => $data['all_files'] ?? false,
-        ];
-
-        if (!empty($data['ssh_key_path'])) {
-            $profile['ssh_key_path'] = $data['ssh_key_path'];
-            $profile['ssh_key_path_original'] = $data['ssh_key_path'];
-            $profile['ssh_key_path_warning'] = true;
-        }
-
-        $this->configManager->saveSSHProfile($profile);
+        ], null);
 
         $setupSteps['ssh_config'] = 'complete';
         $this->configManager->updateConfig([

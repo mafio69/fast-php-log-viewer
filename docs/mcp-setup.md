@@ -31,7 +31,7 @@ curl -s https://devbrain.virral.tech/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-Poprawna odpowiedź: JSON z listą 7 narzędzi (patrz niżej). `401` = zły/pusty token. Jeśli dostajesz
+Poprawna odpowiedź: JSON z listą 9 narzędzi (patrz niżej). `401` = zły/pusty token. Jeśli dostajesz
 `401` mimo poprawnego tokena — zapytaj użytkownika, czy `MCP_BEARER_TOKEN` jest w ogóle ustawiony
 na serwerze (puste = endpoint zawsze odrzuca, to celowe, fail-closed).
 
@@ -81,7 +81,7 @@ Transport: JSON-RPC 2.0 przez HTTP POST, `Content-Type: application/json`, bez S
 (każde zapytanie jest samodzielne). Nagłówek `Authorization: Bearer <TOKEN>` wymagany na
 każdym żądaniu.
 
-## Dostępne narzędzia (8)
+## Dostępne narzędzia (9)
 
 | Narzędzie | Co robi | Wymagane argumenty |
 |---|---|---|
@@ -91,6 +91,7 @@ każdym żądaniu.
 | `devbrain_todo_note` | Dopisuje notatkę/plan do zadania N | `number`, `note` |
 | `devbrain_todo_done` | Oznacza zadanie N jako wykonane | `number` |
 | `devbrain_todo_propose` | Dodaje NOWE zadanie z prefiksem `[PROPOZYCJA]` | `title` |
+| `devbrain_todo_bulk_add` | Dodaje WIELE zadań naraz (bez `[PROPOZYCJA]`); tworzy listę, gdy o nazwie nie istnieje | `titles[]` |
 | `devbrain_todo_approve` | Zdejmuje prefiks `[PROPOZYCJA]` z zadania N (zatwierdza) | `number` |
 | `devbrain_todo_set_priority` | Ustawia priorytet zadania N: `fire`/`high`/`mid`/`low`/`none` | `number`, `priority` |
 
@@ -139,6 +140,14 @@ listy, zanim podasz ją jako `listName` gdzie indziej:
 ```json
 {"name": "devbrain_todo_propose", "arguments": {"title": "Dodać cache do widoku listy", "description": "Wolne przy >200 zadaniach"}}
 ```
+
+**`devbrain_todo_bulk_add`** — masowe dodanie wielu zadań naraz (bez prefiksu `[PROPOZYCJA]`).
+Lista o podanej nazwie tworzy się, jeśli nie istnieje; do istniejącej dopisuje na koniec:
+```json
+{"name": "devbrain_todo_bulk_add", "arguments": {"listName": "Backlog Q3", "titles": ["Zadanie 1", "Zadanie 2", "Zadanie 3"]}}
+```
+Max 100 tytułów na wywołanie; pusty tytuł jest pomijany; prefiks `[PROPOZYCJA]` w tytule jest
+zdejmowany (to narzędzie zawsze tworzy zwykłe zadania, nie propozycje).
 
 **`devbrain_todo_approve`** — zatwierdzenie propozycji (zdejmuje prefiks `[PROPOZYCJA]`):
 ```json

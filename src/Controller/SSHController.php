@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mariusz\LogViewer\Controller;
 
 use Exception;
+use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Service\LogParser;
 use Mariusz\LogViewer\Service\SecurityService;
 use Mariusz\LogViewer\Service\SSH;
@@ -19,6 +20,7 @@ class SSHController
     public function __construct(
         private readonly LogParser $logParser,
         private readonly SecurityService $securityService,
+        private readonly LogConfig $logConfig,
     ) {
     }
 
@@ -170,5 +172,58 @@ class SSHController
             error_log('SSHController: ' . $e->getMessage());
             return $this->json($response, ['error' => 'Wystąpił błąd połączenia SSH.'], 500);
         }
+    }
+
+    public function getConnections(Request $request, Response $response): Response
+    {
+        $userId = $request->getAttribute('user_id');
+        $connections = $this->logConfig->getSSHConnections($userId);
+        return $this->json($response, ['connections' => $connections]);
+    }
+
+    public function createConnection(Request $request, Response $response): Response
+    {
+        $userId = $request->getAttribute('user_id');
+        if ($userId === null) {
+            return $this->json($response, ['error' => 'Musisz się zalogować, aby zapisać połączenie SSH.'], 401);
+        }
+
+        $data = $request->getParsedBody();
+        if (!is_array($data)) {
+            return $this->json($response, ['error' => 'invalid_json'], 400);
+        }
+
+        if (empty($data['name']) || empty($data['host']) || empty($data['user'])) {
+            return $this->json($response, ['error' => 'Pola name, host i user są wymagane.'], 400);
+        }
+
+        $id = $this->logConfig->addSSHConnection([
+            'name' => $data['name'],
+            'ssh_host' => $data['host'],
+            'ssh_user' => $data['user'],
+            'ssh_port' => $data['port'] ?? 22,
+            'ssh_auth_method' => $data['authMethod'] ?? 'password',
+            'ssh_key_path' => $data['keyPath'] ?? null,
+            'remote_path' => $data['remotePath'] ?? '/var/log',
+            'all_files' => $data['allFiles'] ?? false,
+        ], $userId);
+
+        return $this->json($response, ['success' => true, 'id' => $id]);
+    }
+
+    /**
+     * @param array<string, mixed> $args
+     */
+    public function deleteConnection(Request $request, Response $response, array $args): Response
+    {
+        $userId = $request->getAttribute('user_id');
+        if ($userId === null) {
+            return $this->json($response, ['error' => 'Musisz się zalogować, aby zarządzać połączeniami SSH.'], 401);
+        }
+
+        $id = (int)($args['id'] ?? 0);
+        $this->logConfig->deleteSSHConnection($id);
+
+        return $this->json($response, ['success' => true]);
     }
 }

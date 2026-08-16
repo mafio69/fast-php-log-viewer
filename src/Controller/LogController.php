@@ -36,7 +36,8 @@ class LogController
     public function getDirectories(Request $request, Response $response): Response
     {
         $this->logConfig->cleanupAuto();
-        $dirs = $this->logConfig->getValidDirectories();
+        $userId = $request->getAttribute('user_id');
+        $dirs = $this->logConfig->getValidDirectories($userId);
 
         if (!$this->configManager->isSshEnabled()) {
             $dirs = array_filter($dirs, fn ($d) => $d['type'] !== 'ssh');

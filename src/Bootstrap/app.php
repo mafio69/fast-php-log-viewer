@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Mariusz\LogViewer\Bootstrap;
 
 use DI\ContainerBuilder;
+use Mariusz\LogViewer\Config\ConfigManager;
+use Mariusz\LogViewer\Config\LogConfig;
+use Mariusz\LogViewer\Middleware\AuthMiddleware;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\App;
@@ -20,6 +23,14 @@ return function (): App {
 
     $container = $containerBuilder->build();
     AppFactory::setContainer($container);
+
+    $configManager = $container->get(ConfigManager::class);
+    $logConfig = $container->get(LogConfig::class);
+    $config = $configManager->getConfig();
+    if (!empty($config['ssh_profiles']) && !$logConfig->hasSSHConnections()) {
+        $logConfig->migrateSSHProfilesFromConfig($config['ssh_profiles']);
+        $configManager->clearSSHProfiles();
+    }
 
     $app = AppFactory::create();
 
@@ -40,6 +51,7 @@ return function (): App {
     );
 
     $app->add(SetupMiddleware::class);
+    $app->add(AuthMiddleware::class);
 
     return $app;
 };

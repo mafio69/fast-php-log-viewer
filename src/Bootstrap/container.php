@@ -13,11 +13,14 @@ use Mariusz\LogViewer\Config\LogConfig;
 use Mariusz\LogViewer\Controller\AllowedContainerController;
 use Mariusz\LogViewer\Controller\AllowedContainerPathController;
 use Mariusz\LogViewer\Controller\AppConfigController;
+use Mariusz\LogViewer\Controller\AuthController;
 use Mariusz\LogViewer\Controller\DirectoryController;
 use Mariusz\LogViewer\Controller\LogController;
 use Mariusz\LogViewer\Controller\SetupController;
 use Mariusz\LogViewer\Controller\SSHController;
+use Mariusz\LogViewer\Middleware\AuthMiddleware;
 use Mariusz\LogViewer\Middleware\SetupMiddleware;
+use Mariusz\LogViewer\Service\AuthService;
 use Mariusz\LogViewer\Service\Docker\DockerDirectoryReader;
 use Mariusz\LogViewer\Service\Docker\DockerLogSourceCollector;
 use Mariusz\LogViewer\Service\DockerExecService;
@@ -198,9 +201,25 @@ return function (ContainerBuilder $containerBuilder): void {
         SSHController::class => function ($c) {
             return new SSHController(
                 $c->get(LogParser::class),
-                $c->get(SecurityService::class)
+                $c->get(SecurityService::class),
+                $c->get(LogConfig::class),
             );
         },
+
+        // AuthService - uses the same SQLite DB as LogConfig
+        AuthService::class => function () {
+            return new AuthService(DATA_DIR . '/logviewer.db');
+        },
+
+        // AuthController - wstrzykuje AuthService
+        AuthController::class => function ($c) {
+            return new AuthController(
+                $c->get(AuthService::class)
+            );
+        },
+
+        // AuthMiddleware - bez zależności
+        AuthMiddleware::class => autowire(AuthMiddleware::class),
 
         // SetupMiddleware - wstrzykuje ConfigManager
         SetupMiddleware::class => function ($c) {

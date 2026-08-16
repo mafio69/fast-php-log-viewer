@@ -12,4 +12,3 @@ Dostęp: w UI DevBrain pod `/todos`, albo dla agentów `app:todo:list --list=<id
 - `fast-php-log-viewer/docs/business-rules.md` — dzisiejszy dokument wymagań (4 metody + audyt)
 - `fast-php-log-viewer/docs/requirements.md`, `technical.md`, `design.md`, `CODING_STANDARDS.md`, `przykazania-ai.md` — reszta konwencji projektu
 
-Miłego spaceru 🙂
