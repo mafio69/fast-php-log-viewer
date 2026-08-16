@@ -51,30 +51,30 @@ Open `http://localhost:9123` — no setup needed.
 | `~/.ssh`               | `/home/www-data/.ssh`  | SSH keys (for remote log access)         |
 | `/var/run/docker.sock` | `/var/run/docker.sock` | Docker socket (for reading other container logs) |
 
-### Trzy tryby dostepu do plikow logow
+### Three log access modes
 
-Aplikacja obsluguje trzy tryby dostepu do logow, wybierane w panelu bocznym:
+The app supports three log access modes, selected in the sidebar:
 
-| Tryb | Opis | Przyklad |
+| Mode | Description | Example |
 |---|---|---|
-| **DOCKER** | Logi wewnatrz kontenera aplikacji (zlycza wolumenow) | `/var/log/nginx/error.log` |
-| **HOST** | Logi hosta montowane przez `/host/var/log` | `/host/var/log/nginx/error.log` |
-| **KONTENER** | Logi z innego kontenera Docker przez `docker exec cat` | podaj `container_name` + `/var/log/nginx/error.log` |
+| **DOCKER** | Logs inside the app container (volume mounts) | `/var/log/nginx/error.log` |
+| **HOST** | Host logs mounted via `/host/var/log` | `/host/var/log/nginx/error.log` |
+| **CONTAINER** | Logs from another Docker container via `docker exec cat` | provide `container_name` + `/var/log/nginx/error.log` |
 
-### Czytanie logow z innego kontenera
+### Reading logs from another container
 
-1. W panelu bocznym wpisz nazwe kontenera (lub container ID) w pole `container_name`
-2. Wpisz sciezke do pliku wewnatrz tego kontenera, np. `/var/log/nginx/error.log`
-3. Kliknij **ZAŁADUJ**
+1. In the sidebar, enter the container name (or container ID) in the `container_name` field
+2. Enter the path to the file inside that container, e.g. `/var/log/nginx/error.log`
+3. Click **LOAD**
 
-Aplikacja uzywa Docker Engine API przez socket `/var/run/docker.sock` do wykonania
-`docker exec cat <sciezka>` wewnatrz wskazanego kontenera.
+The app uses the Docker Engine API via the `/var/run/docker.sock` socket to run
+`docker exec cat <path>` inside the indicated container.
 
-**Wymagania:**
-- `/var/run/docker.sock` musi byc dostepny i montowany (domyslnie w docker-compose)
-- PHP process (www-data) musi miec uprawnienia do socketu (start.sh konfiguruje automatycznie)
+**Requirements:**
+- `/var/run/docker.sock` must be available and mounted (default in docker-compose)
+- The PHP process (www-data) must have permissions to the socket (start.sh configures this automatically)
 
-### Uruchomienie bez Docker Compose
+### Running without Docker Compose
 
 ```sh
 docker run -d \
@@ -88,28 +88,213 @@ docker run -d \
 
 ---
 
-## SSH — logi zdalne
+## SSH — remote logs
 
-Aplikacja wspiera przegladanie i czytanie logow na zdalnych serwerach przez SSH.
+The app supports browsing and reading logs on remote servers via SSH.
 
-### Tryby autentykacji
+### Authentication modes
 
-- **Haslo** — autentykacja haslem uzytkownika
-- **Klucz SSH** — autentykacja kluczem prywatnym (RSA, Ed25519, ECDSA) + opcjonalne haslo klucza
+- **Password** — user password authentication
+- **SSH key** — private key authentication (RSA, Ed25519, ECDSA) + optional key passphrase
 
-### Przeplyw dzialania
+### How it works
 
-1. Uzytkownik konfiguruje polaczenie SSH (host, user, auth)
-2. Frontend wysyla `POST /api/ssh/list-files` z danymi polaczenia
-3. Backend nawiazuje polaczenie SSH (przez `ext-ssh2`), przeszukuje zdalny katalog
-4. Pliki sa pobierane i cache'owane lokalnie w `data/` dla szybkiego dostepu
-5. Logi zdalne sa wyswietlane tak samo jak lokalne
+1. User configures an SSH connection (host, user, auth)
+2. Frontend sends `POST /api/ssh/list-files` with connection data
+3. Backend opens an SSH connection (via `ext-ssh2`), scans the remote directory
+4. Files are downloaded and cached locally in `data/` for fast access
+5. Remote logs are displayed the same way as local ones
 
-### Uwagi bezpieczenstwa
+### Security notes
 
-- Hasla SSH NIGDY nie sa zapisywane w plikach konfiguracyjnych ani bazie danych
-- Profile SSH sa przechowywane w `data/app_config.json` (0600) bez hasel
-- Hasla sa przekazywane tylko w pamieci podczas aktywnej sesji
+- SSH passwords are NEVER saved in config files or the database
+- SSH profiles are stored in `data/app_config.json` (0600) without passwords
+- Passwords are kept in memory only during the active session
+
+---
+
+## 🔐 Security — read BEFORE you run
+
+> **Search:** `password`, `login`, `admin`, `security`, `secure` — any of these words leads you here.
+
+### Technical account
+
+The app has one predefined technical account for first launch:
+
+| Login  | Password  | Purpose                              |
+|--------|-----------|--------------------------------------|
+| `admin`| `jesien26`| First login, SSH management          |
+
+> **⚠️ CHANGE THIS PASSWORD IMMEDIATELY after first login.**
+> This is not your permanent password — it is a starting point.
+> The `admin` account lives in the SQLite database (`data/logviewer.db`),
+> which is git-ignored (never committed). Each installation has its own DB.
+
+### Why login at all?
+
+Login exists **solely** to keep your private SSH connections
+(host, user, key path) isolated from other people who may use the same
+app instance. It is **not** an account system that gates access to logs —
+all four log-browsing methods (default directories, pasted path, Docker
+container, SSH) work without logging in.
+
+A logged-in user sees:
+- Their own private SSH connections (saved in the DB with their `user_id`)
+- Global SSH connections (from the setup wizard — shared)
+
+They do NOT see:
+- Other users' private SSH connections
+
+---
+
+## 👋 A friend installs the app — complete guide
+
+Scenario: someone heard about the app and wants to run it on their machine.
+Here are all the problems they will hit, and their solutions — step by step.
+
+### Step 1: Download and run
+
+```sh
+git clone https://github.com/mafio69/fast-php-log-viewer.git
+cd fast-php-log-viewer
+docker compose up -d
+```
+
+Open `http://localhost:9123`. The setup wizard guides you through configuration.
+
+### Step 2: Setup wizard (first run)
+
+| Step           | What it does                        | What to choose                     |
+|----------------|-------------------------------------|------------------------------------|
+| `generate_keys`| Generates backup encryption key     | Don't skip — needed for SSH       |
+| `ssh_config`   | Configures the first SSH connection | Can skip, add later               |
+| `local_directories` | Adds a log directory           | Pick `/var/log` or `~/logs`       |
+| `finalize`     | Completes setup                     | —                                  |
+
+### Step 3: Change the admin password
+
+1. Click **👤 Login** in the bottom-left corner
+2. Log in as `admin` / `jesien26`
+3. **You can't change the password via UI (yet)** — do it via CLI:
+
+```sh
+docker compose exec app php -r "
+require '/var/www/html/vendor/autoload.php';
+use Mariusz\LogViewer\Service\AuthService;
+session_start();
+\$a = new AuthService('/var/www/html/data/logviewer.db');
+\$a->logout();
+// Delete the old admin and create a new one with your password:
+\$db = new PDO('sqlite:/var/www/html/data/logviewer.db');
+\$db->exec(\"DELETE FROM users WHERE username='admin'\");
+\$a->register('admin', 'YOUR_NEW_STRONG_PASSWORD');
+echo \"Password changed.\n\";
+"
+```
+
+### Step 4: Secure the app (CRITICAL)
+
+The app **does not require login to browse logs** by default.
+This is a deliberate design choice — it is a developer tool, not a production app.
+But if you expose it beyond `localhost`, you **must** secure access.
+
+#### Option A: Localhost only (simplest, default)
+
+```sh
+# docker-compose.yml already maps to localhost:
+ports:
+  - "127.0.0.1:9123:80"  # ← localhost only, not 0.0.0.0
+```
+
+If your ports read `9123:80` (without `127.0.0.1:`), change to `127.0.0.1:9123:80`
+and restart. No one outside can connect.
+
+#### Option B: Reverse proxy with auth (nginx + Basic Auth)
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name logs.yourdomain.com;
+
+    ssl_certificate     /etc/ssl/cert.pem;
+    ssl_certificate_key /etc/ssl/key.pem;
+
+    auth_basic "Log Viewer";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+
+    location / {
+        proxy_pass http://localhost:9123;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+Create `.htpasswd`:
+```sh
+htpasswd -c /etc/nginx/.htpasswd your_user
+```
+
+#### Option C: VPN / Tailscale (most secure)
+
+Run the app only inside a VPN. Tailscale (free up to 100 devices) is simplest:
+
+```sh
+# On the server:
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up
+
+# App listens on localhost, accessible only via Tailscale:
+tailscale serve --bg 9123
+```
+
+### Step 5: Secure the Docker socket (IMPORTANT)
+
+The app has access to `/var/run/docker.sock` — this means it can read files
+from **any** container on the host. This is not a bug, it's a feature
+(reading logs from other containers). But:
+
+- The app has a **container allow-list** — only explicitly added containers
+  are readable. Adding requires confirmation in the UI.
+- **Never expose the app without auth** (Option B or C above)
+  if the Docker socket is mounted.
+
+### Step 6: SSH — password security
+
+| Question | Answer |
+|----------|--------|
+| Is the SSH password saved in the DB? | **NO.** Never. Only host/user/method/key path. |
+| Where does the SSH password go? | Only into memory for the duration of the active browser session. |
+| Can other users see my SSH connections? | **NO**, if you are logged in — your connections are private (isolated by `user_id`). |
+| Can I use SSH without logging in? | Yes, but then connections are global (visible to everyone on that instance). |
+
+### Step 7: Backup and encryption
+
+The setup wizard generates `BACKUP_ENCRYPTION_KEY` (saved in `.env`).
+This key encrypts the config backup in `data/logviewer_backup.json`.
+
+- **Don't lose this key** — without it the backup is unreadable.
+- The key is in `.env` (git-ignored, not in the repo).
+- If `generate_keys` was skipped, the backup is **unencrypted** (plain JSON).
+
+### Step 8: Common problems
+
+| Problem | Solution |
+|---------|----------|
+| `no such table: users` | DB doesn't exist. Run the setup wizard or `docker compose restart app`. |
+| `SQLSTATE... database is locked` | Someone else is using the DB. SQLite = 1 writer. Wait or restart. |
+| SSH: `ssh2 extension not loaded` | `docker compose exec app docker-php-ext-install ssh2 && docker compose restart app` |
+| Docker: `permission denied on docker.sock` | `sudo chmod 666 /var/run/docker.sock` (or add www-data to the docker group) |
+| Can't change password | See Step 3 above (CLI). Password-change UI is in progress. |
+| Port 9123 taken | Change in `docker-compose.yml`: `127.0.0.1:9130:80` |
+| `BACKUP_ENCRYPTION_KEY is not set` | Setup wizard was skipped. Run: `docker compose exec app php -r "..."` or delete `data/app_config.json` and restart. |
+
+### Search keywords
+
+If you get stuck, search this file for:
+`password`, `login`, `admin`, `security`, `secure`, `docker.sock`,
+`ssh`, `backup`, `encryption`, `localhost`, `reverse proxy`, `vpn`,
+`tailscale`, `htpasswd`, `friend`, `install`, `first run`
 
 ---
 
@@ -122,8 +307,8 @@ Aplikacja wspiera przegladanie i czytanie logow na zdalnych serwerach przez SSH.
 - Rozwijany kontekst JSON dla kazdego wpisu
 - Kolorowane poziomy w stylu retro terminala (CRT)
 - Vue 3 + Tailwind CSS — bez build step, bez node_modules
-- **Wybór katalogu** — 4 domyslne katalogi (docker, host, home, repository) + wlasne
-- **Bezposrednia sciezka** — szybki dostep do dowolnego pliku przez wpisanie sciezki
+- **Directory selection** — 4 default directories (docker, host, home, repository) + custom
+- **Direct path** — quick access to any file by typing its path
 - **Docker container reader** — czytanie logow z innych kontenerow przez Docker API
 - **SSH** — przegladanie i czytanie logow na zdalnych serwerach
 - **Setup wizard** — konfiguracja pierwszego uruchomienia (klucze, SSH, katalogi)
@@ -173,16 +358,16 @@ Compatible with all `fast-php-logger` directory structures:
 | `/api/ssh/read-file`           | POST   | Read file via SSH                    |
 | `/api/ssh/download-file`       | POST   | Download file via SSH to local cache |
 
-### Kluczowe parametry `/api/entries`
+### Key `/api/entries` parameters
 
-| Parametr        | Opis                                                       |
-|-----------------|------------------------------------------------------------|
-| `file`          | Sciezka do pliku logow (wymagane)                          |
-| `dir`           | Klucz katalogu kontekstowego (dla walidacji dostepu)       |
-| `container_id`  | ID/nazwa kontenera Docker do czytania przez Docker API    |
-| `level`         | Filtruj po poziomie logowania                              |
+| Parameter       | Description                                               |
+|-----------------|-----------------------------------------------------------|
+| `file`          | Path to the log file (required)                           |
+| `dir`           | Context directory key (for access validation)             |
+| `container_id`  | Docker container ID/name to read via Docker API           |
+| `level`         | Filter by log level                                       |
 
-Jesli `container_id` jest ustawiony, `file` jest sciezka WEWNATRZ kontenera (np. `/var/log/nginx/error.log`).
+If `container_id` is set, `file` is the path INSIDE the container (e.g. `/var/log/nginx/error.log`).
 
 ---
 
