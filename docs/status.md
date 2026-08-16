@@ -5,7 +5,7 @@ Ostatnia aktualizacja: 2026-08-16 (sesja z GLM-5.2, wznowienie — porządki git
 ## Drzewo
 
 - Gałąź robocza: `develop` (trackuje `origin/develop`)
-- HEAD `develop`: `7868217` — Docs: add project status snapshot (2026-08-16)
+- HEAD `develop`: `eaf7c0c` (merge) — Fix: recursive directory scan + ISO datetime normalization
 - HEAD `master`: `d30c83c` — DualLogger: add 'repository:data' default + fix php-errors.ini path
 - develop jest **1 commit przed masterem** — czeka na PR `develop → master` (patrz `przepływ-git.md`: master tylko przez PR, nigdy bezpośrednim pushem)
 - Drzewo robocze: **czyste** (wszystko zcommitowane i zpushowane na origin/develop)
@@ -30,7 +30,10 @@ Ostatnia aktualizacja: 2026-08-16 (sesja z GLM-5.2, wznowienie — porządki git
 ## Ostatnie commity na develop (od najnowszego)
 
 ```
+eaf7c0c Merge branch 'fix/duallogger-directory-recursion'
 7868217 Docs: add project status snapshot (2026-08-16)
+cd38042 Docs: add status.md protocol (start/push lifecycle)
+3fb8fdf Docs: update status after git sync (develop 7868217, master d30c83c)
 d30c83c DualLogger: add 'repository:data' default + fix php-errors.ini path
 62b378e Fix: Docker container check shows 'błąd sprawdzania' instead of 'niedozwolony'
 afd65bf Docs: README in English + security guide + technical account
@@ -52,20 +55,20 @@ b411683 Security: deleteSSHConnection must check ownership (Wymaganie 3, kryteri
 - **Start zadania** → dopisz 1-2 linijki pod sekcją „W toku" (co robisz, nad czym pracujesz).
 - **Po push** → usuń te linijki (zadanie zcommitowane = nie „w toku"; historia żyje w git, nie w statusie).
 
-## Co jest W TOKU (przerwane)
+## Co jest W TOKU
 
-### 1. Sortowanie + filtr daty w DataTable NIE DZIAŁAJĄ
-- Mariusz zgłosił: „datatable nie działa, nie sortuje, filtr po dacie nic nie puszcza"
-- Filtr po poziomie (INFO/WARNING) działa ✅
-- Format datetime w entries: `YYYY-MM-DD HH:MM:SS` (z DualLogger/nginx)
-- Podejrzenie: `applyFilters()` w `public/js/store.js:~360` lub `tableSortedData` computed
-- Nie zdiagnozowano — **przerwano**
+*(brak — ostatnie zadanie zcommitowane i zpushowane)*
 
-### 2. `repository:data` nie ładuje plików przez API
-- Dodano `repository:data` do `LogConfig::getDefaultDirectories()` ✅
-- Ale `GET /api/files?dir=repository:data` zwraca `{"error":"Katalog nie istnieje."}`
-- Root cause: `LogController::getFiles()` z `dir` szuka w bazie, nie w defaults
-- Frontend `filesApiUrl()` powinien budować `?path=data/` — **nie zweryfikowano**
+## Zrobione (ostatnia sesja)
+
+### P1.B: Recursive directory scan — `repository:data` ładuje pliki DualLogger
+- `LocalDirectoryReader::findAll()` rekursywnie skanuje podkatalogi (data/YYYY/MM/*.log)
+- Commit `eaf7c0c` na branch `fix/duallogger-directory-recursion` → merged to develop
+
+### P1.A: Sortowanie + filtr daty działa po naprawie P1.B
+- Root cause: `repository:data` nie ładował plików DualLogger (brak rekursji), więc Mariusz testował z `php_errors.log` który ma format `04-May-2026 09:09:37 Europe/Warsaw` — `slice(0,10)` nie pasowało do `YYYY-MM-DD` z inputa.
+- Fix: `LogParser::normalizePhpErrorDate()` konwertuje PHP error datetime do ISO `YYYY-MM-DD HH:MM:SS`.
+- Sort logic i filter logic w `store.js` były poprawne cały czas — problem był w formacie danych.
 
 ## Tech debt (backlog)
 
