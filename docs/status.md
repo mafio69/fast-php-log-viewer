@@ -5,7 +5,7 @@ Ostatnia aktualizacja: 2026-08-16 (sesja z GLM-5.2, wznowienie — porządki git
 ## Drzewo
 
 - Gałąź robocza: `develop` (trackuje `origin/develop`)
-- HEAD `develop`: `eaf7c0c` (merge) — Fix: recursive directory scan + ISO datetime normalization
+- HEAD `develop`: `4a580ca` (merge) — Fix: single source of truth for currentSource (5-280/5-46/5-281)
 - HEAD `master`: `d30c83c` — DualLogger: add 'repository:data' default + fix php-errors.ini path
 - develop jest **1 commit przed masterem** — czeka na PR `develop → master` (patrz `przepływ-git.md`: master tylko przez PR, nigdy bezpośrednim pushem)
 - Drzewo robocze: **czyste** (wszystko zcommitowane i zpushowane na origin/develop)
@@ -58,6 +58,18 @@ b411683 Security: deleteSSHConnection must check ownership (Wymaganie 3, kryteri
 ## Co jest W TOKU
 
 *(brak — ostatnie zadanie zcommitowane i zpushowane)*
+
+## Zrobione (ostatnia sesja)
+
+### 5-281: loadDirectories() preserves selectedDir
+- `loadDirectories()` resetował `selectedDir` na pierwszy default przy każdym wywołaniu — gubił wybór usera po `addAllowedDir`/`deleteDirectoryEntry`/`saveDirectoryShortcut`.
+- Fix: tylko pierwsze ustawienie gdy `selectedDir` jest puste.
+- Commit `4a580ca` na `fix/current-source-single-truth` → merged to develop.
+
+### 5-280/5-46: Single source of truth for currentSource
+- `loadEntries()` ufał `selectedFileContainerId` jako cache — jeśli `selectedDir` się zmienił bez `loadFiles()`, entries szły do złego brancha (docker zamiast host).
+- Fix: `currentContainerId()` helper wylicza container id na żywo z `selectedDir` (saved docker shortcut) lub `selectedFileContainerId` (direct-docker mode).
+- Commit `4a580ca` (j.w.).
 
 ## Zrobione (ostatnia sesja)
 
