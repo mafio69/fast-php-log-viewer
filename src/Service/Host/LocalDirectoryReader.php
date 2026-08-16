@@ -39,27 +39,39 @@ class LocalDirectoryReader
             return [];
         }
 
-        $logFiles = glob($path . '/*.log') ?: [];
-
-        $this->logger?->debug('LocalDirectoryReader::findAll glob results', [
-            'path' => $path,
-            'total' => count($logFiles),
-        ]);
-
         $files = [];
+        $this->scanRecursive($path, '', $files);
+
+        $this->logger?->debug('LocalDirectoryReader::findAll result', ['path' => $path, 'count' => count($files)]);
+
+        return $files;
+    }
+
+    /**
+     * Recursively scan a directory for .log files, preserving the relative
+     * path from the base directory so nested structures (e.g. DualLogger's
+     * YYYY/MM/YYYY-MM-DD.log) are visible to the caller.
+     *
+     * @param array<int, array{file: string, date: string, size: int}> $files
+     */
+    private function scanRecursive(string $absPath, string $relPath, array &$files): void
+    {
+        $logFiles = glob($absPath . '/*.log') ?: [];
         foreach ($logFiles as $filePath) {
             $mtime = $this->safeFilemtime($filePath);
             $size = $this->safeFilesize($filePath);
             $files[] = [
-                'file' => basename($filePath),
+                'file' => $relPath === '' ? basename($filePath) : $relPath . '/' . basename($filePath),
                 'date' => date('Y-m-d H:i:s', $mtime),
                 'size' => $size,
             ];
         }
 
-        $this->logger?->debug('LocalDirectoryReader::findAll result', ['path' => $path, 'count' => count($files)]);
-
-        return $files;
+        $subDirs = glob($absPath . '/*', GLOB_ONLYDIR) ?: [];
+        foreach ($subDirs as $subDir) {
+            $subRel = $relPath === '' ? basename($subDir) : $relPath . '/' . basename($subDir);
+            $this->scanRecursive($subDir, $subRel, $files);
+        }
     }
 
     private function safeFilemtime(string $filePath): int
