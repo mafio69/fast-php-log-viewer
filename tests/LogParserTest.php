@@ -160,6 +160,7 @@ class LogParserTest extends TestCase
 
         $this->assertCount(1, $entries);
         $this->assertSame('ERROR', $entries[0]['level']);
+        $this->assertSame('2026-05-04 09:09:37', $entries[0]['datetime']);
         $this->assertSame('/var/www/index.php:42', $entries[0]['location']);
         $this->assertStringContainsString('Call to undefined function', $entries[0]['message']);
     }

@@ -183,7 +183,7 @@ class LogParser
                 }
 
                 $entries[] = [
-                    'datetime' => $m['datetime'],
+                    'datetime' => self::normalizePhpErrorDate($m['datetime']),
                     'level' => $level,
                     'location' => $location,
                     'message' => $m['message'],
@@ -375,5 +375,23 @@ class LogParser
             return 'CRITICAL';
         }
         return 'INFO';
+    }
+
+    /**
+     * Convert PHP error log datetime (04-May-2026 09:09:37 Europe/Warsaw)
+     * to ISO format (2026-05-04 09:09:37) so date/time filters and sorting
+     * work consistently across all log sources.
+     */
+    private static function normalizePhpErrorDate(string $datetime): string
+    {
+        if (preg_match('/^(\d{2})-(\w{3})-(\d{4}) (\d{2}:\d{2}:\d{2})/', $datetime, $parts)) {
+            $monthMap = [
+                'Jan' => '01', 'Feb' => '02', 'Mar' => '03', 'Apr' => '04', 'May' => '05', 'Jun' => '06',
+                'Jul' => '07', 'Aug' => '08', 'Sep' => '09', 'Oct' => '10', 'Nov' => '11', 'Dec' => '12',
+            ];
+            $month = $monthMap[$parts[2]] ?? '01';
+            return $parts[3] . '-' . $month . '-' . $parts[1] . ' ' . $parts[4];
+        }
+        return $datetime;
     }
 }

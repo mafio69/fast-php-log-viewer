@@ -97,6 +97,20 @@ final class LocalDirectoryReaderTest extends TestCase
         $this->assertNotEmpty($files[0]['date']);
     }
 
+    public function testFindAllRecursesIntoSubdirectories(): void
+    {
+        mkdir($this->tmpDir . '/2026/08', 0755, true);
+        file_put_contents($this->tmpDir . '/app.log', 'test');
+        file_put_contents($this->tmpDir . '/2026/08/2026-08-16.log', 'test');
+
+        $files = $this->reader->findAll($this->tmpDir);
+
+        $this->assertCount(2, $files);
+        $names = array_column($files, 'file');
+        $this->assertContains('app.log', $names);
+        $this->assertContains('2026/08/2026-08-16.log', $names);
+    }
+
     private function removeDir(string $dir): void
     {
         foreach (glob($dir . '/*') ?: [] as $item) {
