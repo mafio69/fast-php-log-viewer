@@ -10,7 +10,7 @@ window.FPLV.components = window.FPLV.components || [];
     F.components.push({
         name: 'Sidebar',
         props: ['store'],
-        emits: ['select-file', 'change-dir', 'load-direct-file', 'refresh-ssh-dir', 'open-ssh-modal', 'open-dir-manager', 'cancel-edit', 'open-auth-modal', 'logout'],
+        emits: ['select-file', 'change-dir', 'load-direct-file', 'refresh-ssh-dir', 'open-ssh-modal', 'open-dir-manager', 'cancel-edit', 'open-auth-modal', 'logout', 'open-paste-logs'],
         template: `
         <aside style="width:350px;min-width:350px;background:#000;border-right:1px solid #00ff00;" class="flex flex-col">
             <div class="px-3 py-3 crt-border" style="border-bottom:1px solid #00ff00;">
@@ -89,6 +89,7 @@ window.FPLV.components = window.FPLV.components || [];
                 </template>
             </div>
             <div class="px-3 py-2" style="border-top:1px solid #00ff00;">
+                <button @click="$emit('open-paste-logs')" class="w-full rounded py-1 text-xs crt-button mb-2" title="Wklej treść logu z hosta (bez montowania wolumenu)">📋 Wklej logi</button>
                 <button @click="$emit('open-ssh-modal'); $emit('cancel-edit')" class="w-full rounded py-1 text-xs crt-button mb-2">🔗 SSH Connections</button>
                 <div v-if="store.currentUser" class="flex gap-2 items-center">
                     <span class="text-xs crt-dim flex-1 truncate" style="color:#6699cc;">👤 {{ store.currentUser.username }}</span>

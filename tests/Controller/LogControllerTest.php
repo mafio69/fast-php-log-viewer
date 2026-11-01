@@ -626,4 +626,59 @@ class LogControllerTest extends TestCase
         $this->assertCount(1, $body);
         $this->assertEquals('WARNING', $body[0]['level']);
     }
+
+    public function testParseEntriesReturnsParsedEntriesFromPastedText(): void
+    {
+        $this->logParser->method('parseString')
+            ->with("line one\nline two")
+            ->willReturn([
+                ['datetime' => '2024-01-01 10:00:00', 'level' => 'INFO', 'location' => 'a:1', 'message' => 'info', 'context' => []],
+                ['datetime' => '2024-01-01 10:01:00', 'level' => 'ERROR', 'location' => 'a:2', 'message' => 'boom', 'context' => []],
+            ]);
+
+        $request = (new RequestFactory())->createRequest('POST', '/api/entries/parse')
+            ->withParsedBody(['content' => "line one\nline two"]);
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $this->controller->parseEntries($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertCount(2, $body);
+        $this->assertSame('INFO', $body[0]['level']);
+        $this->assertSame('ERROR', $body[1]['level']);
+    }
+
+    public function testParseEntriesReturns400WhenContentEmpty(): void
+    {
+        $request = (new RequestFactory())->createRequest('POST', '/api/entries/parse')
+            ->withParsedBody(['content' => '   ']);
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $this->controller->parseEntries($request, $response);
+
+        $this->assertEquals(400, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertSame('empty_content', $body['code']);
+    }
+
+    public function testParseEntriesAppliesLevelFilter(): void
+    {
+        $this->logParser->method('parseString')
+            ->willReturn([
+                ['datetime' => '2024-01-01 10:00:00', 'level' => 'INFO', 'location' => '', 'message' => 'info', 'context' => []],
+                ['datetime' => '2024-01-01 10:01:00', 'level' => 'ERROR', 'location' => '', 'message' => 'boom', 'context' => []],
+            ]);
+
+        $request = (new RequestFactory())->createRequest('POST', '/api/entries/parse')
+            ->withParsedBody(['content' => 'whatever', 'level' => 'ERROR']);
+        $response = (new ResponseFactory())->createResponse();
+
+        $result = $this->controller->parseEntries($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $body = json_decode((string)$result->getBody(), true);
+        $this->assertCount(1, $body);
+        $this->assertSame('ERROR', $body[0]['level']);
+    }
 }

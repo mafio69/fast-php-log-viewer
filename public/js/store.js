@@ -74,6 +74,9 @@ window.FPLV = window.FPLV || {};
         showSSHModal: false,
         showPasswordModal: false,
         showManualFileModal: false,
+        showPasteLogsModal: false,
+        pastedLogsContent: '',
+        pastedLogsLevel: '',
         passwordForConnection: '',
         manualFilePath: '',
         connectingConnectionIndex: -1,
@@ -493,6 +496,49 @@ window.FPLV = window.FPLV || {};
         await loadEntries();
     }
 
+    /**
+     * Parse pasted log text without a file on disk. The user opens a log on
+     * the host (where the file is reachable), copies the contents, and pastes
+     * them into the "Wklej logi" modal — the backend parses the text into the
+     * same structured entries a file read would produce. No file path, no
+     * access checks: the text travels with the request, nothing on disk is
+     * read, so this works even when the host's /var/log is not mounted into
+     * the container.
+     */
+    async function loadPastedEntries() {
+        const content = store.pastedLogsContent.trim();
+        if (!content) {
+            F.setSshStatus('error', 'Wklej treść logu.');
+            return;
+        }
+        store.loading = true;
+        clearExpanded();
+        try {
+            const body = {content};
+            if (store.pastedLogsLevel) body.level = store.pastedLogsLevel;
+            const res = await fetch('/api/entries/parse', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Nie udało się sparsować logu.');
+            }
+            store.entries = data;
+            store.selectedFile = '(wklejone)';
+            store.selectedFileContainerId = '';
+            store.files = [];
+            applyFilters();
+            store.showPasteLogsModal = false;
+        } catch (e) {
+            alert('Nie udało się sparsować logu: ' + e.message);
+            console.error('Paste logs error:', e);
+        } finally {
+            store.loading = false;
+        }
+    }
+
     async function loadEntries() {
         if (!store.selectedFile) return;
         if (store.selectedDir && store.selectedDir.startsWith('ssh:')) {
@@ -806,7 +852,7 @@ window.FPLV = window.FPLV || {};
         tableStartRow, tableEndRow, LEVELS, levelColor, levelDot, rowBg, hasContext,
         openInEditor, formatSize, formatDate, formatDirLabel, bookmarkKey, fetchJson,
         init, loadFiles, loadDirectFile, addAllowedDir, changeDir, selectFile, loadEntries,
-        loadDefaultDirectories, loadDirectories,
+        loadPastedEntries, loadDefaultDirectories, loadDirectories,
         applyFilters, toggle, toggleLevel, isBookmarked, toggleBookmark,
         removeBookmark, goToBookmark, validateBookmarks,
         toggleTableSort, setTablePage, setTablePageSize, tablePrevPage, tableNextPage,

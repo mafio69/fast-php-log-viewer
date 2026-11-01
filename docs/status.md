@@ -57,7 +57,11 @@ b411683 Security: deleteSSHConnection must check ownership (Wymaganie 3, kryteri
 
 ## Co jest W TOKU
 
-*(brak — ostatnie zadanie zcommitowane i zpushowane)*
+### Aktualnie (sesja 2026-08-16, ciąg dalszy)
+- Domyślne lokacje: usunąć host:/var/log i host-home:~/logs (psują się bez volume mount), zostawić tylko kontener + repo.
+- DualLogger: zweryfikować angielski output, udokumentować, ew. dodać php-error log do defaults.
+- Paste logs: pole tekstowe w sidebarze, parsowanie przez LogParser.parseString() bez pliku.
+- File Explorer: osobny moduł public/js/explorer/ (reusable, standalone) — nawigacja katalogami jak desktop.
 
 ## Zrobione (ostatnia sesja)
 

@@ -38,6 +38,7 @@ function asset_version(string $relativePath): string
 <script src="<?= asset_version('js/components/SSHModal.js') ?>"></script>
 <script src="<?= asset_version('js/components/DirManagerModal.js') ?>"></script>
 <script src="<?= asset_version('js/components/AuthModal.js') ?>"></script>
+<script src="<?= asset_version('js/components/PasteLogsModal.js') ?>"></script>
 <script src="<?= asset_version('js/components/Toolbar.js') ?>"></script>
 <script src="<?= asset_version('js/components/DataTable.js') ?>"></script>
 <script src="<?= asset_version('js/components/VApp.js') ?>"></script>

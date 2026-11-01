@@ -150,6 +150,37 @@ class LogController
         return $this->json($response, $entries);
     }
 
+    /**
+     * Parse raw pasted log text without needing a file on disk.
+     *
+     * Use case: the host's /var/log is not mounted into the container (the
+     * default setup), so the user cannot browse host log files directly.
+     * Instead of mounting volumes, they can open the log on the host, copy
+     * the contents, and paste them here — the parser produces the same
+     * structured entries as a file read would.
+     *
+     * No file access checks apply (the text travels with the request, nothing
+     * on disk is read), which is also why this is a POST: the body can be
+     * large and should not end up in a URL or a log line as a query param.
+     */
+    public function parseEntries(Request $request, Response $response): Response
+    {
+        $body = $request->getParsedBody();
+        $content = is_array($body) ? ($body['content'] ?? '') : '';
+        if (!is_string($content) || trim($content) === '') {
+            return $this->json($response, ['error' => 'Brak treści logu.', 'code' => 'empty_content'], 400);
+        }
+
+        $level = is_array($body) && isset($body['level']) ? $body['level'] : null;
+        $entries = $this->logParser->parseString($content);
+
+        if ($level) {
+            $entries = array_values(array_filter($entries, fn ($e) => strtoupper($e['level']) === strtoupper($level)));
+        }
+
+        return $this->json($response, $entries);
+    }
+
     private function getFilesFromContainer(string $containerId, string $dirPath, Response $response): Response
     {
         if (!$this->dockerExec || !$this->dockerExec->isAvailable()) {

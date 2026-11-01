@@ -29,6 +29,7 @@ window.FPLV.components = window.FPLV.components || [];
                 @open-dir-manager="openDirManager"
                 @cancel-edit="cancelEdit"
                 @open-auth-modal="openAuthModal"
+                @open-paste-logs="store.showPasteLogsModal = true"
                 @logout="logout"
             ></sidebar>
             <dir-manager-modal
@@ -43,6 +44,12 @@ window.FPLV.components = window.FPLV.components || [];
                 @submit="submitAuth"
                 @switch-mode="store.authMode = store.authMode === 'register' ? 'login' : 'register'"
             ></auth-modal>
+            <paste-logs-modal
+                v-if="store.showPasteLogsModal"
+                :store="store"
+                @close="store.showPasteLogsModal = false"
+                @parse="loadPastedEntries"
+            ></paste-logs-modal>
             <ssh-modal
                 v-if="store.showSSHModal"
                 :store="store"
@@ -124,6 +131,7 @@ window.FPLV.components = window.FPLV.components || [];
                 tableNextPage: F.tableNextPage,
                 toggle: F.toggle,
                 toggleBookmark: F.toggleBookmark,
+                loadPastedEntries: F.loadPastedEntries,
             };
         }
     });

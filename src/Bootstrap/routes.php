@@ -29,6 +29,8 @@ return function (App $app): void {
     $app->get('/api/directories', [LogController::class, 'getDirectories']);
     $app->get('/api/files', [LogController::class, 'getFiles']);
     $app->get('/api/entries', [LogController::class, 'getEntries']);
+    // Parse pasted log text (no file on disk) — for host logs without a volume mount.
+    $app->post('/api/entries/parse', [LogController::class, 'parseEntries']);
 
     // Directory Config
     $app->post('/api/config/directories', [DirectoryController::class, 'add']);
